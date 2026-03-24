@@ -226,7 +226,7 @@ async fn inbox(
         activity_digest,
         &recipient_id,
     ).await
-        .map_err(|error| {
+        .inspect_err(|error| {
             let log_level = match error {
                 EndpointError::DatabaseError(_) => Level::Error,
                 _ => Level::Warn,
@@ -237,7 +237,6 @@ async fn inbox(
                 error,
                 activity,
             );
-            error
         })?;
     Ok(HttpResponse::Accepted().finish())
 }
@@ -883,13 +882,12 @@ async fn apgateway_inbox_push_view(
         activity_digest,
         recipient_id,
     ).await
-        .map_err(|error| {
+        .inspect_err(|error| {
             log::warn!(
                 "failed to process activity ({}): {}",
                 error,
                 activity,
             );
-            error
         })?;
     Ok(HttpResponse::Accepted().finish())
 }

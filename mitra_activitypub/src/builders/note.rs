@@ -593,9 +593,7 @@ mod tests {
                     "Hashtag": "as:Hashtag",
                     "sensitive": "as:sensitive",
                     "toot": "http://joinmastodon.org/ns#",
-                    "Emoji": "toot:Emoji",
-                    "litepub": "http://litepub.social/ns#",
-                    "EmojiReact": "litepub:EmojiReact"
+                    "Emoji": "toot:Emoji"
                 },
             ],
             "id": "https://server.example/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
@@ -863,9 +861,7 @@ mod tests {
                     "Hashtag": "as:Hashtag",
                     "sensitive": "as:sensitive",
                     "toot": "http://joinmastodon.org/ns#",
-                    "Emoji": "toot:Emoji",
-                    "litepub": "http://litepub.social/ns#",
-                    "EmojiReact": "litepub:EmojiReact"
+                    "Emoji": "toot:Emoji"
                 },
             ],
             "id": "https://server.example/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
@@ -942,9 +938,7 @@ mod tests {
                     "Hashtag": "as:Hashtag",
                     "sensitive": "as:sensitive",
                     "toot": "http://joinmastodon.org/ns#",
-                    "Emoji": "toot:Emoji",
-                    "litepub": "http://litepub.social/ns#",
-                    "EmojiReact": "litepub:EmojiReact"
+                    "Emoji": "toot:Emoji"
                 },
             ],
             "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f",

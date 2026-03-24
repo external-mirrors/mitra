@@ -12,18 +12,15 @@ instance_url: http://127.0.0.1:8380
 instance_title: Mitra
 instance_short_description: My instance
 instance_description: My instance
-instance_staff_public: true
-
-#ipfs_api_url: 'http://127.0.0.1:5001'
-#ipfs_gateway_url: 'http://127.0.0.1:8001'
 
 registration:
   type: open
 
 #blockchains:
-#  # Parameters for local Monero node
 #  - chain_id: monero:regtest
+#    node_url: 'http://127.0.0.1:58081'
 #    wallet_rpc_url: 'http://127.0.0.1:58083'
 #    wallet_name: test
 #    wallet_password: test
-#    account_index: 0
+#  - chain_id: monero:regtest
+#    lightwallet_api_url: 'http://127.0.0.1:58443'

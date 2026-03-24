@@ -2,6 +2,7 @@ use anyhow::Error;
 use clap::Parser;
 
 use mitra_adapters::init::{
+    check_app_directories,
     create_database_client,
     create_database_connection_pool,
     initialize_app,
@@ -31,6 +32,7 @@ async fn main() -> Result<(), Error> {
         },
     };
     let mut config = initialize_app(maybe_override_log_level);
+    check_app_directories(&config);
     let mut db_client_value = create_database_client(&config).await;
     let db_client = &mut db_client_value;
     initialize_database(&mut config, db_client).await;
@@ -60,7 +62,6 @@ async fn main() -> Result<(), Error> {
         SubCommand::SetRole(cmd) => cmd.execute(&db_pool).await,
         SubCommand::RevokeOauthTokens(cmd) => cmd.execute(&db_pool).await,
         SubCommand::ImportObject(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::ReadOutbox(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::LoadReplies(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::FetchObject(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::Webfinger(cmd) => cmd.execute(&config, &db_pool).await,

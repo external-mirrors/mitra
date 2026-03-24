@@ -87,13 +87,14 @@ pub(crate) fn parse_digest_header(
 pub(crate) fn create_content_digest_header(
     digest: &ContentDigest,
 ) -> Result<String, &'static str> {
-    let digest_item = Item::new(BareItem::ByteSeq(digest.digest.clone()));
+    let digest_item = Item::new(BareItem::ByteSequence(digest.digest.clone()));
     let mut digest_dict = Dictionary::new();
     digest_dict.insert(
-        digest.algorithm.to_str().to_owned(),
+        sfv::key_ref(digest.algorithm.to_str()).to_owned(),
         ListEntry::Item(digest_item),
     );
-    let digest_header = digest_dict.serialize_value()?;
+    let digest_header = digest_dict.serialize_value()
+        .map_err(|_| "invalid structured value")?;
     Ok(digest_header)
 }
 
@@ -101,14 +102,15 @@ pub(crate) fn create_content_digest_header(
 pub(crate) fn parse_content_digest_header(
     header_value: &str,
 ) -> Result<ContentDigest, &'static str> {
-    let dict = Parser::parse_dictionary(header_value.as_bytes())
+    let dict = Parser::new(header_value.as_bytes())
+        .parse_dictionary()
         .map_err(|_| "invalid content-digest header")?;
     let (label, list_item) = dict.first()
         .ok_or("invalid content-digest header")?;
-    let algorithm = Algorithm::parse(label)
+    let algorithm = Algorithm::parse(label.as_str())
         .ok_or("unexpected digest algorithm")?;
     let digest = match list_item {
-        ListEntry::Item(Item { bare_item: BareItem::ByteSeq(value), .. }) => {
+        ListEntry::Item(Item { bare_item: BareItem::ByteSequence(value), .. }) => {
             value.clone()
         },
         _ => return Err("invalid digest encoding"),

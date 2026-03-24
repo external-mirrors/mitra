@@ -16,6 +16,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't strip query parameters when converting key ID to actor ID.
 - Return detailed error when decoding Ed25519 key from PEM.
 - Improved error message when signed header has invalid value.
+- Changed MSRV to 1.77.0.
+
+### Deprecated
+
+- Marked `verify_rsa_json_signature` as deprecated.
 
 ## [0.21.0] - 2026-01-27
 

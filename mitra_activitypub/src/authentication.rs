@@ -9,7 +9,6 @@ use apx_core::{
         rsa::{
             deserialize_rsa_public_key,
             rsa_public_key_from_pkcs1_der,
-            RsaPublicKey,
             RsaSerializationError,
         },
     },
@@ -31,7 +30,6 @@ use apx_core::{
         verify::{
             get_json_signature,
             verify_eddsa_json_signature,
-            verify_rsa_json_signature,
             JsonSignatureVerificationError as JsonSignatureError,
             VerificationMethod,
         },
@@ -217,17 +215,6 @@ fn get_signer_ed25519_key(
     Ok(ed25519_public_key)
 }
 
-fn get_signer_rsa_key(
-    profile: &DbActorProfile,
-    key_id: &str,
-) -> Result<RsaPublicKey, AuthenticationError> {
-    let public_key = get_signer_key(profile, key_id)?;
-    let PublicKey::Rsa(rsa_public_key) = public_key else {
-        return Err(AuthenticationError::ActorError("unexpected key type"));
-    };
-    Ok(rsa_public_key)
-}
-
 /// Verifies HTTP signature and returns signer
 pub async fn verify_signed_request(
     ap_client: &ApClient,
@@ -329,19 +316,6 @@ pub async fn verify_signed_object(
                 .map_err(|_| ValidationError("invalid key ID"))?;
             let signer = get_signer(ap_client, db_pool, &signer_id, no_fetch).await?;
             match signature_data.proof_type {
-                #[allow(deprecated)]
-                ProofType::JcsRsaSignature => {
-                    // Check reciprocal claim
-                    let signer_key = get_signer_rsa_key(
-                        &signer,
-                        key_id.as_str(),
-                    )?;
-                    verify_rsa_json_signature(
-                        &signer_key,
-                        &signature_data.object,
-                        &signature_data.signature,
-                    )?;
-                },
                 #[allow(deprecated)]
                 ProofType::JcsEddsaSignature | ProofType::EddsaJcsSignature => {
                     // Check reciprocal claim

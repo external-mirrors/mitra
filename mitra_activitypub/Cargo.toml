@@ -16,7 +16,7 @@ futures = "0.3.13"
 # Used to work with hexadecimal strings
 hex = { version = "0.4.3" }
 # Used to build @context
-indexmap = { version = "2.2.3", features = ["serde"] }
+indexmap = { version = "2.7.0", features = ["serde"] }
 # Used for logging
 log = "0.4.20"
 # Used for working with regular expressions

@@ -317,8 +317,6 @@ pub struct RemoteMoneroSubscription {
     // Legacy profiles may not have minimum amount info
     pub amount_min: Option<u64>, // piconeros per second
     pub object_id: String,
-    #[serde(default)]
-    pub fep_0837_enabled: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -383,7 +381,6 @@ impl PaymentOption {
             price,
             amount_min: Some(amount_min),
             object_id,
-            fep_0837_enabled: true,
         })
     }
 
@@ -1110,7 +1107,7 @@ mod tests {
 
     #[test]
     fn test_payment_option_remote_monero_subscription_serialization() {
-        let json_data = r#"{"payment_type":4,"chain_id":"monero:418015bb9ae982a1975da7d79277c270","price":41387,"amount_min":null,"object_id":"https://social.example/test","fep_0837_enabled":true}"#;
+        let json_data = r#"{"payment_type":4,"chain_id":"monero:418015bb9ae982a1975da7d79277c270","price":41387,"amount_min":null,"object_id":"https://social.example/test"}"#;
         let payment_option: PaymentOption = serde_json::from_str(json_data).unwrap();
         let PaymentOption::RemoteMoneroSubscription(ref payment_info) = payment_option
         else {
@@ -1120,7 +1117,6 @@ mod tests {
         assert_eq!(payment_info.price.get(), 41387);
         assert_eq!(payment_info.amount_min, None);
         assert_eq!(payment_info.object_id, "https://social.example/test");
-        assert_eq!(payment_info.fep_0837_enabled, true);
         let serialized = serde_json::to_string(&payment_option).unwrap();
         assert_eq!(serialized, json_data);
     }

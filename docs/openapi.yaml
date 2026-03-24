@@ -3751,10 +3751,6 @@ components:
           description: Whether new accounts are in read only mode.
           type: boolean
           example: false
-        federated_timeline_restricted:
-          description: Make federated timeline visible only to moderators.
-          type: boolean
-          default: false
         blockchains:
           description: Information about blockchain integrations.
           type: array

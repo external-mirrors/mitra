@@ -49,7 +49,7 @@ Demo instance: https://public.mitra.social/ ([invite-only](https://public.mitra.
 ## Requirements
 
 - PostgreSQL 15+
-- Rust 1.75+ (when building from source)
+- Rust 1.85+ (when building from source)
 - SSL certificates (i.e. `ca-certificates` package).
 
 Minimum system requirements:
@@ -235,7 +235,7 @@ CLI is stable and breaking changes don't happen in minor releases.
 
 The majority of endpoints imitate [Mastodon API](https://docs.joinmastodon.org/client/intro/). Some [Pleroma](https://docs.pleroma.social/backend/development/API/differences_in_mastoapi_responses/) extensions are supported as well. A number of additional endpoints exist for features that are unique to Mitra.
 
-Client API is not stable and may change in minor releases.
+Client API is stable and breaking changes don't happen in minor releases.
 
 [OpenAPI spec](./docs/openapi.yaml)
 

@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Warn about unused parameters in configuration file.
+
+### Changed
+
+- Don't check app directories until configuration is validated.
+- Changed MSRV to 1.77.0.
+
+## [5.0.0] - 2026-03-23
+
+### Changed
+
+- Changed the default value of `limits.posts.attachment_local_limit` to `4`.
+- Allowed access from all web origins by default.
+- Set minimum migration version to 97.
+- Stop tracking remote actors supporting pre-FEP-0837 subscriptions.
+
+### Removed
+
+- Removed `federation.fep_c0e0_emoji_react_enabled` configuration parameter.
+- Removed `http_cors_allow_all` configuration parameter.
+- Removed support for payment links with `https://w3id.org/valueflows/Proposal` rel type.
+- Removed support for `MitraJcsRsaSignature2022` proof type.
+- Removed deprecated `reject-media` and `accept-media` filter actions.
+- Removed `read-outbox` command.
+- Removed `federated_timeline_restricted` property from `/api/v2/instance` response.
+- Removed `GET /api/v1/accounts/identity_proof` endpoint.
+
 ## [4.20.0] - 2026-03-19
 
 ### Added

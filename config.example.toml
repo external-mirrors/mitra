@@ -28,8 +28,9 @@ http_port = 8383
 #http_socket = "127.0.0.1:8383"
 #http_socket_perms = 0o600
 
-# List of allowed origins for CORS (in addition to `instance_url`)
-# Trailing slashes are not allowed.
+# List of allowed origins for CORS (in addition to `instance_url`).
+# By default, all origins are allowed.
+# Origin URLs must not have trailing slashes.
 #http_cors_allowlist = ["http://127.0.0.1:8383"]
 
 # Log level (debug, info, warn)
@@ -79,7 +80,7 @@ default_role = "user"
 [limits.posts]
 #character_limit = 5000
 #attachment_limit = 16
-#attachment_local_limit = 16
+#attachment_local_limit = 4
 
 # Data retention parameters.
 # Objects will be deleted after the specified number of days.

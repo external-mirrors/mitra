@@ -104,15 +104,13 @@ fn serialize_ed25519_secret_key<S>(
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Sender {
-    username: String,
-
     #[serde(
         alias = "rsa_private_key",
         deserialize_with = "deserialize_rsa_secret_key",
         serialize_with = "serialize_rsa_secret_key",
     )]
     rsa_secret_key: RsaSecretKey,
-    rsa_key_id: Option<String>,
+    rsa_key_id: String,
 
     #[serde(
         alias = "ed25519_private_key",
@@ -138,9 +136,8 @@ impl Sender {
             PublicKeyType::Ed25519,
         );
         Self {
-            username: user.profile.username.clone(),
             rsa_secret_key: user.rsa_secret_key.clone(),
-            rsa_key_id: Some(rsa_key_id),
+            rsa_key_id: rsa_key_id,
             ed25519_secret_key: Some(user.ed25519_secret_key),
             ed25519_key_id: Some(ed25519_key_id),
         }
@@ -168,9 +165,8 @@ impl Sender {
         let http_ed25519_key_id = db_url_to_http_url(ed25519_key_id, instance_uri)
             .expect("RSA key ID should be valid");
         let sender = Self {
-            username: user.profile.username.clone(),
             rsa_secret_key: user.rsa_secret_key.clone(),
-            rsa_key_id: Some(http_rsa_key_id),
+            rsa_key_id: http_rsa_key_id,
             ed25519_secret_key: Some(user.ed25519_secret_key),
             ed25519_key_id: Some(http_ed25519_key_id),
         };
@@ -198,7 +194,6 @@ pub struct Recipient {
     pub is_gone: bool,
 
     // Local portable actor (HTTP request is not needed)
-    #[serde(default)]
     pub is_local: bool,
 }
 
@@ -277,16 +272,7 @@ pub(super) async fn deliver_activity_worker(
 ) -> Result<(), DelivererError> {
     assert!(instance.federation.enabled);
     let rsa_secret_key = sender.rsa_secret_key;
-    let rsa_key_id = if let Some(rsa_key_id) = sender.rsa_key_id {
-        rsa_key_id
-    } else {
-        log::warn!("deliverer job data doesn't contain key ID");
-        let actor_id = local_actor_id(
-            instance.uri_str(),
-            &sender.username,
-        );
-        local_actor_key_id(&actor_id, PublicKeyType::RsaPkcs1)
-    };
+    let rsa_key_id = sender.rsa_key_id;
 
     let mut deliveries = vec![];
     let mut sent = vec![];
@@ -421,9 +407,8 @@ mod tests {
         let rsa_secret_key = generate_weak_rsa_key().unwrap();
         let ed25519_secret_key = generate_weak_ed25519_key();
         let sender = Sender {
-            username: "test".to_string(),
             rsa_secret_key: rsa_secret_key.clone(),
-            rsa_key_id: Some("https://social.example/rsa-key".to_string()),
+            rsa_key_id: "https://social.example/rsa-key".to_string(),
             ed25519_secret_key: Some(ed25519_secret_key),
             ed25519_key_id: Some("https://social.example/ed25519-key".to_string()),
         };
@@ -431,31 +416,5 @@ mod tests {
         let sender: Sender = serde_json::from_value(value).unwrap();
         assert_eq!(sender.rsa_secret_key, rsa_secret_key);
         assert_eq!(sender.ed25519_secret_key, Some(ed25519_secret_key));
-    }
-
-    #[test]
-    fn test_sender_serialization_deserialization_legacy() {
-        let rsa_secret_key = generate_weak_rsa_key().unwrap();
-        let ed25519_secret_key = generate_weak_ed25519_key();
-        let sender = Sender {
-            username: "test".to_string(),
-            rsa_secret_key: rsa_secret_key.clone(),
-            rsa_key_id: Some("https://social.example/rsa-key".to_string()),
-            ed25519_secret_key: Some(ed25519_secret_key),
-            ed25519_key_id: Some("https://social.example/ed25519-key".to_string()),
-        };
-        let value = serde_json::to_value(sender).unwrap();
-        let rsa_secret_key_json = &value["rsa_secret_key"];
-        let ed25519_secret_key_json = &value["ed25519_secret_key"];
-        let value = serde_json::json!({
-            "username": "test",
-            "rsa_private_key": rsa_secret_key_json,
-            "ed25519_private_key": ed25519_secret_key_json,
-        });
-        let sender: Sender = serde_json::from_value(value).unwrap();
-        assert_eq!(sender.rsa_secret_key, rsa_secret_key);
-        assert_eq!(sender.rsa_key_id, None);
-        assert_eq!(sender.ed25519_secret_key, Some(ed25519_secret_key));
-        assert_eq!(sender.ed25519_key_id, None);
     }
 }

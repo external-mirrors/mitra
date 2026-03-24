@@ -879,7 +879,7 @@ checksum = "5041cc499144891f3790297212f32a74fb938e5136a14943f338ef9e0ae276cf"
 dependencies = [
  "cfg-if",
  "crossbeam-utils",
- "hashbrown",
+ "hashbrown 0.14.5",
  "lock_api",
  "once_cell",
  "parking_lot_core",
@@ -1403,6 +1403,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
 
 [[package]]
+name = "hashbrown"
+version = "0.15.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1"
+
+[[package]]
 name = "heck"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1668,12 +1674,12 @@ checksum = "e8a5a9a0ff0086c7a148acb942baaabeadf9504d10400b5a05645853729b9cd2"
 
 [[package]]
 name = "indexmap"
-version = "2.5.0"
+version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68b900aa2f7301e21c36462b170ee99994de34dff39a4a6a528e80e7376d07e5"
+checksum = "62f822373a4fe84d4bb149bf54e584a7f4abec90e072ed49cda0edea5b95471f"
 dependencies = [
  "equivalent",
- "hashbrown",
+ "hashbrown 0.15.5",
  "serde",
 ]
 
@@ -1923,7 +1929,7 @@ dependencies = [
 
 [[package]]
 name = "mitra"
-version = "4.20.0"
+version = "5.0.1-dev"
 dependencies = [
  "anyhow",
  "clap",
@@ -1937,7 +1943,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_activitypub"
-version = "4.20.0"
+version = "5.0.1-dev"
 dependencies = [
  "apx_core",
  "apx_sdk",
@@ -1964,7 +1970,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_adapters"
-version = "4.20.0"
+version = "5.0.1-dev"
 dependencies = [
  "apx_core",
  "chrono",
@@ -1986,7 +1992,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_api"
-version = "4.20.0"
+version = "5.0.1-dev"
 dependencies = [
  "actix-cors",
  "actix-files",
@@ -2025,7 +2031,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_cli"
-version = "4.20.0"
+version = "5.0.1-dev"
 dependencies = [
  "anyhow",
  "apx_core",
@@ -2048,7 +2054,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_config"
-version = "4.20.0"
+version = "5.0.1-dev"
 dependencies = [
  "apx_core",
  "dotenvy",
@@ -2056,6 +2062,7 @@ dependencies = [
  "mitra_utils",
  "regex",
  "serde",
+ "serde_ignored",
  "serde_yaml",
  "thiserror",
  "toml",
@@ -2063,7 +2070,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_models"
-version = "4.20.0"
+version = "5.0.1-dev"
 dependencies = [
  "apx_core",
  "chrono",
@@ -2091,7 +2098,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_services"
-version = "4.20.0"
+version = "5.0.1-dev"
 dependencies = [
  "anyhow",
  "apx_core",
@@ -2115,7 +2122,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_utils"
-version = "4.20.0"
+version = "5.0.1-dev"
 dependencies = [
  "ammonia",
  "apx_core",
@@ -2140,7 +2147,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_validators"
-version = "4.20.0"
+version = "5.0.1-dev"
 dependencies = [
  "apx_core",
  "mitra_models",
@@ -2153,7 +2160,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_workers"
-version = "4.20.0"
+version = "5.0.1-dev"
 dependencies = [
  "anyhow",
  "apx_sdk",
@@ -2788,6 +2795,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "ref-cast"
+version = "1.0.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f354300ae66f76f1c85c5f84693f0ce81d747e2c3f21a45fef496d89c960bf7d"
+dependencies = [
+ "ref-cast-impl",
+]
+
+[[package]]
+name = "ref-cast-impl"
+version = "1.0.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7186006dcb21920990093f30e3dea63b7d6e977bf1256be20c3563a5db070da"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.87",
+]
+
+[[package]]
 name = "refinery"
 version = "0.8.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2967,16 +2994,6 @@ dependencies = [
  "base64 0.21.4",
  "blake2b_simd",
  "constant_time_eq",
-]
-
-[[package]]
-name = "rust_decimal"
-version = "1.37.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "faa7de2ba56ac291bd90c6b9bece784a52ae1411f9506544b3eae36dd2356d50"
-dependencies = [
- "arrayvec",
- "num-traits",
 ]
 
 [[package]]
@@ -3230,6 +3247,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_ignored"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "115dffd5f3853e06e746965a20dcbae6ee747ae30b543d91b0e089668bb07798"
+dependencies = [
+ "serde",
+ "serde_core",
+]
+
+[[package]]
 name = "serde_json"
 version = "1.0.132"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3335,13 +3362,13 @@ dependencies = [
 
 [[package]]
 name = "sfv"
-version = "0.10.4"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fa1f336066b758b7c9df34ed049c0e693a426afe2b27ff7d5b14f410ab1a132"
+checksum = "dcb06c0da8bc20b8e9f0349d655d1d29ce732b919c13c8d0ed7a14a8fcb9c90f"
 dependencies = [
  "base64 0.22.1",
  "indexmap",
- "rust_decimal",
+ "ref-cast",
 ]
 
 [[package]]

@@ -34,11 +34,11 @@ default-members = [
 resolver = "2"
 
 [workspace.package]
-version = "4.20.0"
+version = "5.0.1-dev"
 license = "AGPL-3.0-only"
 
 edition = "2021"
-rust-version = "1.75.0"
+rust-version = "1.77.0"
 
 publish = false
 
@@ -82,3 +82,9 @@ semicolon_if_nothing_returned = "warn"
 significant_drop_in_scrutinee = "warn"
 unused_async = "warn"
 unwrap_used = "warn"
+
+[profile.dev]
+# This fixes stack overflow error in incoming_activity_queue_executor
+# It occurs when incoming Create activity contains a mention:
+#0  0x00005555572eb841 in reqwest::connect::{impl#0}::connect_via_proxy::{async_fn#0} () at src/connect.rs:364
+opt-level = 1

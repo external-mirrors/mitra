@@ -1,5 +1,3 @@
-use std::os::unix::fs::MetadataExt;
-use std::path::Path;
 use std::str::FromStr;
 
 use super::blockchain::{
@@ -16,6 +14,7 @@ use super::instance::{
 
 const DEFAULT_CONFIG_PATH: &str = "config.yaml";
 
+// Default is set at compile time
 fn default_config_path() -> &'static str {
     let maybe_path = option_env!("DEFAULT_CONFIG_PATH");
     maybe_path.unwrap_or(DEFAULT_CONFIG_PATH)
@@ -45,39 +44,30 @@ fn parse_env() -> EnvConfig {
     }
 }
 
-extern "C" {
-    fn geteuid() -> u32;
-}
-
-fn check_directory_owner(path: &Path) -> () {
-    let metadata = std::fs::metadata(path)
-        .expect("can't read file metadata");
-    let owner_uid = metadata.uid();
-    let current_uid = unsafe { geteuid() };
-    if owner_uid != current_uid {
-        panic!(
-            "{} owner ({}) is different from the current user ({})",
-            path.display(),
-            owner_uid,
-            current_uid,
-        );
-    };
-}
-
-pub fn parse_config() -> (Config, Vec<&'static str>) {
+pub fn parse_config() -> (Config, Vec<String>) {
     let env = parse_env();
     let config_text = std::fs::read_to_string(&env.config_path)
         .unwrap_or_else(|_| {
             panic!("failed to read config from {}", env.config_path);
         });
+    let mut unused_parameters = vec![];
     let mut config: Config = if env.config_path.ends_with(".toml") {
-        toml::from_str(&config_text)
-            .expect("invalid TOML config file")
+        let deserializer = toml::Deserializer::parse(&config_text)
+            .expect("invalid TOML config file");
+        serde_ignored::deserialize(deserializer, |path| {
+            unused_parameters.push(path.to_string());
+        }).expect("invalid TOML config file")
     } else {
-        serde_yaml::from_str(&config_text)
-            .expect("invalid YAML config file")
+        let deserializer = serde_yaml::Deserializer::from_str(&config_text);
+        serde_ignored::deserialize(deserializer, |path| {
+            unused_parameters.push(path.to_string());
+        }).expect("invalid YAML config file")
     };
     let mut warnings = vec![];
+    for parameter in unused_parameters {
+        let message = format!("unused configuration parameter: {parameter}");
+        warnings.push(message);
+    };
 
     // Set parameters from environment
     config.config_path = env.config_path;
@@ -87,18 +77,6 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     };
 
     // Validate config
-    if !config.storage_dir.exists() {
-        panic!("storage directory does not exist");
-    };
-    check_directory_owner(&config.storage_dir);
-    if let Some(ref web_client_dir) = config.web_client_dir {
-        if !web_client_dir.exists() {
-            panic!(
-                "web client directory does not exist: {}",
-                web_client_dir.display(),
-            );
-        };
-    };
     config.http_socket();
     #[cfg(feature = "mini")]
     let instance_url = &config.gateway_url;
@@ -108,22 +86,27 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     let instance_uri = parse_instance_url(instance_url)
         .expect("invalid instance URL");
     if !is_correct_uri_scheme(&instance_uri) {
-        warnings.push("instance_url may have incorrect URL scheme");
+        let message = "instance_url may have incorrect URL scheme";
+        warnings.push(message.to_owned());
     };
     if config.authentication_methods.is_empty() {
         panic!("authentication_methods must not be empty");
     };
     if !config.federation.ssrf_protection_enabled {
-        warnings.push("SSRF protection disabled");
+        let message = "SSRF protection disabled";
+        warnings.push(message.to_owned());
     };
     if !config.federation.fep_1b12_full_enabled {
-        warnings.push("federation.fep_1b12_full_enabled parameter is deprecated");
+        let message = "federation.fep_1b12_full_enabled parameter is deprecated";
+        warnings.push(message.to_owned());
     };
     if config.blocked_instances.is_some() {
-        warnings.push("blocked_instances parameter is deprecated (use `mitra add-filter-rule`)");
+        let message = "blocked_instances parameter is deprecated (use `mitra add-filter-rule`)";
+        warnings.push(message.to_owned());
     };
     if config.allowed_instances.is_some() {
-        warnings.push("allowed_instances parameter is deprecated (use `mitra add-filter-rule`)");
+        let message = "allowed_instances parameter is deprecated (use `mitra add-filter-rule`)";
+        warnings.push(message.to_owned());
     };
     for blockchain_config in config.blockchains() {
         match blockchain_config {

@@ -72,8 +72,6 @@ pub struct Config {
     pub http_socket_perms: Option<u32>,
 
     pub http_cors_allowlist: Option<Vec<String>>,
-    #[serde(default)]
-    pub http_cors_allow_all: bool,
 
     // Domain name or <IP address>:<port>
     // URI scheme is optional

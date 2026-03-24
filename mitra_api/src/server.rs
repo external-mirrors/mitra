@@ -5,10 +5,7 @@ use std::path::Path;
 use actix_cors::{Cors, CorsError};
 use actix_web::{
     dev::Service,
-    http::{
-        header as http_header,
-        Method,
-    },
+    http::{header as http_header},
     middleware::{
         ErrorHandlers,
         ErrorHandlerResponse,
@@ -20,7 +17,6 @@ use actix_web::{
     HttpResponse,
     HttpServer,
 };
-use apx_core::url::http_url_whatwg::get_hostname;
 use log::Level;
 
 use mitra_config::{Config, Environment};
@@ -63,10 +59,13 @@ pub async fn run_server(
                 Cors::permissive()
             },
             Environment::Production => {
+                // By default, all origins and all methods are allowed.
+                // This is done for compatibility with 3rd party web clients.
+                // Cookies are not used, so the default configuration should be safe.
+                // ***
                 // Mastodon: https://github.com/mastodon/mastodon/blob/v4.4.5/config/initializers/cors.rb
                 let mut cors_config = Cors::default();
-                // TODO: allow all origins if `http_cors_allowlist` is not set
-                if !config.http_cors_allow_all {
+                if config.http_cors_allowlist.is_some() {
                     // Strict mode
                     let allowlist = config.http_cors_allowlist
                         .clone()
@@ -75,24 +74,7 @@ pub async fn run_server(
                         cors_config = cors_config.allowed_origin(&origin);
                     };
                     cors_config = cors_config
-                        .allowed_origin(config.instance().uri_str())
-                        // TODO: don't accept GET requests from disallowed origins
-                        // TODO: don't automatically allow localhost in strict mode
-                        .allowed_origin_fn(|origin, req_head| {
-                            if req_head.method == Method::GET {
-                                // Allow all GET requests
-                                return true;
-                            };
-                            let maybe_hostname = origin.to_str().ok()
-                                .and_then(|origin| get_hostname(origin).ok());
-                            match maybe_hostname {
-                                Some(hostname) => {
-                                    hostname == "localhost" ||
-                                    hostname == "127.0.0.1"
-                                },
-                                None => false,
-                            }
-                        });
+                        .allowed_origin(config.instance().uri_str());
                 } else {
                     cors_config = cors_config.allow_any_origin();
                 };

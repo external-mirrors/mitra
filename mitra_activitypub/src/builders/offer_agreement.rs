@@ -131,7 +131,6 @@ mod tests {
             price: NonZeroU64::new(20000).unwrap(),
             amount_min: Some(1_000_000_000),
             object_id: proposal_id.to_string(),
-            fep_0837_enabled: true,
         };
         let invoice_id = uuid!("46d160ae-af12-484d-9f44-419f00fc1b31");
         let invoice_amount = 200000;
@@ -154,8 +153,6 @@ mod tests {
                     "sensitive": "as:sensitive",
                     "toot": "http://joinmastodon.org/ns#",
                     "Emoji": "toot:Emoji",
-                    "litepub": "http://litepub.social/ns#",
-                    "EmojiReact": "litepub:EmojiReact",
                     "vf": "https://w3id.org/valueflows/ont/vf#",
                     "om2": "http://www.ontology-of-units-of-measure.org/resource/om-2/",
                     "Proposal": "vf:Proposal",

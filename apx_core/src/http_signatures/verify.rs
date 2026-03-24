@@ -276,12 +276,13 @@ pub fn parse_http_signature_rfc9421(
         .ok_or(VerificationError::NoSignature)?
         .to_str()
         .map_err(|_| VerificationError::header_value("Signature"))?;
-    let signature_dict = Parser::parse_dictionary(signature_header.as_bytes())
+    let signature_dict = Parser::new(signature_header.as_bytes())
+        .parse_dictionary()
         .map_err(|_| VerificationError::ParseError("invalid 'signature' dictionary"))?;
     let (signature_label, signature_value_item) = signature_dict.first()
         .ok_or(VerificationError::ParseError("invalid 'signature' dictionary"))?;
     let signature_value = match signature_value_item {
-        ListEntry::Item(Item { bare_item: BareItem::ByteSeq(value), .. }) => {
+        ListEntry::Item(Item { bare_item: BareItem::ByteSequence(value), .. }) => {
             value.clone()
         },
         _ => return Err(VerificationError::ParseError("invalid signature value")),
@@ -292,7 +293,8 @@ pub fn parse_http_signature_rfc9421(
         .ok_or(VerificationError::NoSignature)?
         .to_str()
         .map_err(|_| VerificationError::header_value("Signature-Input"))?;
-    let signature_input_dict = Parser::parse_dictionary(signature_input_header.as_bytes())
+    let signature_input_dict = Parser::new(signature_input_header.as_bytes())
+        .parse_dictionary()
         .map_err(|_| VerificationError::ParseError("invalid 'signature-input' dictionary"))?;
     let signature_param_list = signature_input_dict.get(signature_label)
         .ok_or(VerificationError::ParseError("signature parameters not found"))?;
@@ -304,29 +306,31 @@ pub fn parse_http_signature_rfc9421(
     };
     let key_id = signature_param_list.params.get("keyid")
         .ok_or(VerificationError::ParseError("parameter 'keyid' not found"))?
-        .as_str()
-        .ok_or(VerificationError::ParseError("invalid encoding of 'keyid'"))?
-        .to_owned();
-    let key_id = VerificationMethod::parse(&key_id)
+        .as_string()
+        .ok_or(VerificationError::ParseError("invalid encoding of 'keyid'"))?;
+    let key_id = VerificationMethod::parse(key_id.as_str())
         .map_err(|_| VerificationError::ParseError("invalid key ID"))?;
     let expires_at = if let Some(expires_item) = signature_param_list.params.get("expires") {
-        let expires = expires_item.as_int()
-            .ok_or(VerificationError::ParseError("invalid encoding of 'expires'"))?;
+        let expires = expires_item.as_integer()
+            .ok_or(VerificationError::ParseError("invalid encoding of 'expires'"))?
+            .into();
         Utc.timestamp_opt(expires, 0).single()
             .ok_or(VerificationError::ParseError("invalid timestamp"))?
     } else {
         let created = signature_param_list.params.get("created")
             .ok_or(VerificationError::ParseError("parameter 'created' not found"))?
-            .as_int()
-            .ok_or(VerificationError::ParseError("invalid encoding of 'created'"))?;
+            .as_integer()
+            .ok_or(VerificationError::ParseError("invalid encoding of 'created'"))?
+            .into();
         let created_at = Utc.timestamp_opt(created, 0).single()
             .ok_or(VerificationError::ParseError("invalid timestamp"))?;
         created_at + TimeDelta::hours(SIGNATURE_EXPIRES_IN)
     };
     let mut components = vec![];
     for list_item in &signature_param_list.items {
-        let component_id = list_item.bare_item.as_str()
-            .ok_or(VerificationError::ParseError("invalid encoding of signature parameter"))?;
+        let component_id = list_item.bare_item.as_string()
+            .ok_or(VerificationError::ParseError("invalid encoding of signature parameter"))?
+            .as_str();
         components.push(component_id);
     };
 

@@ -365,9 +365,6 @@ async fn create_invoice_view(
             .payment_options
             .find_subscription_option(&invoice_data.chain_id)
             .ok_or(ValidationError("recipient can't accept payment"))?;
-        if !subscription_option.fep_0837_enabled {
-            return Err(MastodonError::OperationError("recipient doesn't support FEP-0837"));
-        };
         let db_invoice = create_remote_invoice(
             db_client,
             sender.id,
