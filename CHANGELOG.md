@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Don't check app directories until configuration is validated.
+- Changed MSRV to 1.76.0.
 
 ## [5.0.0] - 2026-03-23
 
