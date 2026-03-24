@@ -17,6 +17,8 @@ log = { version = "0.4.20", features = ["serde"] }
 regex = "1.10.6"
 # Used for serialization/deserialization
 serde = { version = "1.0.210", features = ["derive"] }
+# Used to find extraneous parameters in config file
+serde_ignored = "0.1.14"
 # Used to parse YAML config file
 serde_yaml = "0.9.25"
 # Used for creating error types

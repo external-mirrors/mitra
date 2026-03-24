@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Warn about unused parameters in configuration file.
+
 ### Changed
 
 - Don't check app directories until configuration is validated.
