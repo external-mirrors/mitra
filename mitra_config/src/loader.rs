@@ -16,6 +16,7 @@ use super::instance::{
 
 const DEFAULT_CONFIG_PATH: &str = "config.yaml";
 
+// Default is set at compile time
 fn default_config_path() -> &'static str {
     let maybe_path = option_env!("DEFAULT_CONFIG_PATH");
     maybe_path.unwrap_or(DEFAULT_CONFIG_PATH)
