@@ -4,6 +4,7 @@ use http::Method;
 use sfv::{
     BareItem,
     Dictionary,
+    Error as SfvError,
     InnerList,
     Item,
     ListEntry,
@@ -82,6 +83,12 @@ pub enum HttpSignatureError {
 
     #[error("signing error")]
     SigningError(#[from] RsaError),
+}
+
+impl From<SfvError> for HttpSignatureError {
+    fn from(_: SfvError) -> Self {
+        Self::SerializationError
+    }
 }
 
 /// Creates HTTP signature according to the old HTTP Signatures Spec  
@@ -205,11 +212,18 @@ pub fn create_http_signature_rfc9421(
     };
 
     let component_list_items = signature_base_entries.iter()
-        .map(|(name, _)| Item::new(BareItem::String(name.to_string())))
+        .map(|(name, _)| sfv::string_ref(name).to_owned())
+        .map(|string| Item::new(BareItem::String(string)))
         .collect();
     let mut parameters = Parameters::new();
-    parameters.insert("keyid".to_owned(), BareItem::String(signer.key_id.clone()));
-    parameters.insert("created".to_owned(), BareItem::Integer(created));
+    parameters.insert(
+        sfv::key_ref("keyid").to_owned(),
+        BareItem::String(signer.key_id.clone().try_into()?),
+    );
+    parameters.insert(
+        sfv::key_ref("created").to_owned(),
+        BareItem::Integer(created.try_into()?),
+    );
     let signature_param_list =
         InnerList::with_params(component_list_items, parameters);
     let signature_params = vec![ListEntry::InnerList(signature_param_list.clone())]
@@ -239,7 +253,7 @@ pub fn create_http_signature_rfc9421(
     // Create Signature-Input header
     let mut signature_input_dict = Dictionary::new();
     signature_input_dict.insert(
-        RFC9421_SIGNATURE_LABEL.to_owned(),
+        sfv::key_ref(RFC9421_SIGNATURE_LABEL).to_owned(),
         ListEntry::InnerList(signature_param_list),
     );
     let signature_input_header = signature_input_dict.serialize_value()
@@ -247,8 +261,8 @@ pub fn create_http_signature_rfc9421(
     // Create Signature header
     let mut signature_dict = Dictionary::new();
     signature_dict.insert(
-        RFC9421_SIGNATURE_LABEL.to_owned(),
-        ListEntry::Item(Item::new(BareItem::ByteSeq(signature))),
+        sfv::key_ref(RFC9421_SIGNATURE_LABEL).to_owned(),
+        ListEntry::Item(Item::new(BareItem::ByteSequence(signature))),
     );
     let signature_header = signature_dict.serialize_value()
         .map_err(|_| HttpSignatureError::SerializationError)?;
