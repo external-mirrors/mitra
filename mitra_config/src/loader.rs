@@ -1,5 +1,3 @@
-use std::os::unix::fs::MetadataExt;
-use std::path::Path;
 use std::str::FromStr;
 
 use super::blockchain::{
@@ -46,25 +44,6 @@ fn parse_env() -> EnvConfig {
     }
 }
 
-extern "C" {
-    fn geteuid() -> u32;
-}
-
-fn check_directory_owner(path: &Path) -> () {
-    let metadata = std::fs::metadata(path)
-        .expect("can't read file metadata");
-    let owner_uid = metadata.uid();
-    let current_uid = unsafe { geteuid() };
-    if owner_uid != current_uid {
-        panic!(
-            "{} owner ({}) is different from the current user ({})",
-            path.display(),
-            owner_uid,
-            current_uid,
-        );
-    };
-}
-
 pub fn parse_config() -> (Config, Vec<&'static str>) {
     let env = parse_env();
     let config_text = std::fs::read_to_string(&env.config_path)
@@ -88,18 +67,6 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     };
 
     // Validate config
-    if !config.storage_dir.exists() {
-        panic!("storage directory does not exist");
-    };
-    check_directory_owner(&config.storage_dir);
-    if let Some(ref web_client_dir) = config.web_client_dir {
-        if !web_client_dir.exists() {
-            panic!(
-                "web client directory does not exist: {}",
-                web_client_dir.display(),
-            );
-        };
-    };
     config.http_socket();
     let instance_uri = parse_instance_url(&config.instance_url)
         .expect("invalid instance URL");
