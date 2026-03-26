@@ -183,6 +183,9 @@ pub struct FetchObject {
     gateway: Option<String>,
     #[arg(long)]
     as_user: Option<String>,
+    /// Set custom `User-Agent` header
+    #[arg(long)]
+    user_agent: Option<String>,
     #[arg(long)]
     skip_verification: bool,
 }
@@ -202,8 +205,16 @@ impl FetchObject {
         } else {
             None
         };
+        let mut instance = config.instance();
+        match self.user_agent.as_deref() {
+            Some("") =>
+                instance.user_agent = None,
+            Some(user_agent) =>
+                instance.user_agent = Some(user_agent.to_owned()),
+            None => (), // default
+        };
         let agent = build_federation_agent(
-            &config.instance(),
+            &instance,
             maybe_user.as_ref(),
         );
         let gateways = self.gateway

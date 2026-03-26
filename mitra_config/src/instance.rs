@@ -57,9 +57,19 @@ pub fn is_correct_uri_scheme(uri: &HttpUri) -> bool {
     uri.scheme() == guess_protocol(uri.hostname().as_str())
 }
 
+fn user_agent(instance_uri: &HttpUri) -> String {
+    format!(
+        "{name} {version}; {instance_uri}",
+        name=SOFTWARE_NAME,
+        version=SOFTWARE_VERSION,
+        instance_uri=instance_uri,
+    )
+}
+
 #[derive(Clone)]
 pub struct Instance {
     _uri: HttpUri,
+    pub user_agent: Option<String>,
     pub federation: FederationConfig,
     pub ed25519_secret_key: Ed25519SecretKey,
     pub rsa_secret_key: RsaSecretKey,
@@ -67,14 +77,18 @@ pub struct Instance {
 
 impl Instance {
     pub(crate) fn from_config(config: &Config) -> Self {
+        let instance_uri = parse_instance_url(&config.instance_url)
+            .expect("instance URL should be already validated");
+        let mut maybe_user_agent = Some(user_agent(&instance_uri));
         let mut federation_config = config.federation.clone();
         if matches!(config.environment, Environment::Development) {
             // Private instance doesn't send activities and sign requests
+            maybe_user_agent = None;
             federation_config.enabled = false;
         };
         Self {
-            _uri: parse_instance_url(&config.instance_url)
-                .expect("instance URL should be already validated"),
+            _uri: instance_uri,
+            user_agent: maybe_user_agent,
             federation: federation_config,
             ed25519_secret_key: config.instance_ed25519_key
                 .expect("instance Ed25519 key should be already generated"),
@@ -95,15 +109,6 @@ impl Instance {
     pub fn hostname(&self) -> String {
         self._uri.hostname().to_string()
     }
-
-    pub fn agent(&self) -> String {
-        format!(
-            "{name} {version}; {instance_uri}",
-            name=SOFTWARE_NAME,
-            version=SOFTWARE_VERSION,
-            instance_uri=self.uri(),
-        )
-    }
 }
 
 #[cfg(any(test, feature = "test-utils"))]
@@ -117,6 +122,7 @@ impl Instance {
         };
         Self {
             _uri: parse_instance_url(url).unwrap(),
+            user_agent: None,
             federation: FederationConfig {
                 enabled: false,
                 ..Default::default()
@@ -165,17 +171,24 @@ mod tests {
     }
 
     #[test]
+    fn test_user_agent() {
+        let instance_uri = HttpUri::parse("https://social.example").unwrap();
+        let agent = user_agent(&instance_uri);
+        assert_eq!(
+            agent,
+            format!("Mitra {}; https://social.example", SOFTWARE_VERSION),
+        );
+    }
+
+    #[test]
     fn test_instance_url_https_dns() {
         let instance_url = "https://example.com/";
         let instance = Instance::for_test(instance_url);
 
         assert_eq!(instance.uri_str(), "https://example.com");
         assert_eq!(instance.hostname(), "example.com");
-        assert_eq!(
-            instance.agent(),
-            format!("Mitra {}; https://example.com", SOFTWARE_VERSION),
-        );
         // Test instance is private
+        assert_eq!(instance.user_agent, None);
         assert!(!instance.federation.enabled);
     }
 
