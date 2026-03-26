@@ -29,6 +29,7 @@ use super::limits::Limits;
 use super::metrics::Metrics;
 use super::registration::RegistrationConfig;
 use super::retention::RetentionConfig;
+use super::software::SoftwareMetadata;
 
 fn default_log_level() -> LogLevel { LogLevel::Info }
 
@@ -40,6 +41,9 @@ const fn default_instance_staff_public() -> bool { true }
 #[derive(Clone, Deserialize)]
 pub struct Config {
     // Properties auto-populated from the environment
+    #[serde(skip)]
+    pub software: SoftwareMetadata,
+
     #[serde(skip)]
     pub environment: Environment,
 

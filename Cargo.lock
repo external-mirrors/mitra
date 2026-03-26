@@ -1937,6 +1937,7 @@ dependencies = [
  "mitra_adapters",
  "mitra_api",
  "mitra_cli",
+ "mitra_config",
  "mitra_workers",
  "tokio",
 ]

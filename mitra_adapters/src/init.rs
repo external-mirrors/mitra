@@ -21,8 +21,7 @@ use log::Level;
 use mitra_config::{
     parse_config,
     Config,
-    SOFTWARE_NAME,
-    SOFTWARE_VERSION,
+    SoftwareMetadata,
 };
 use mitra_models::{
     database::{
@@ -49,15 +48,16 @@ use mitra_services::media::MediaStorage;
 use crate::logger::configure_logger;
 
 pub fn initialize_app(
+    with_metadata: SoftwareMetadata,
     override_log_level: Option<Level>,
 ) -> Config {
-    let (config, config_warnings) = parse_config();
+    let (config, config_warnings) = parse_config(with_metadata);
     let log_level = override_log_level.unwrap_or(config.log_level);
     configure_logger(log_level);
     log::info!(
         "{} v{}, environment = '{:?}'",
-        SOFTWARE_NAME,
-        SOFTWARE_VERSION,
+        config.software.name,
+        config.software.version,
         config.environment,
     );
     log::info!("config loaded from {}", config.config_path);

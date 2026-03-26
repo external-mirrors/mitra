@@ -10,8 +10,17 @@ use mitra_adapters::init::{
     initialize_storage,
 };
 use mitra_api::server::run_server;
+use mitra_config::SoftwareMetadata;
 use mitra_cli::cli::{print_completer, Cli, SubCommand};
 use mitra_workers::workers::start_workers;
+
+fn get_software_metadata() -> SoftwareMetadata {
+    SoftwareMetadata {
+        name: "Mitra",
+        version: env!("CARGO_PKG_VERSION"),
+        repository: "https://codeberg.org/silverpill/mitra",
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -20,7 +29,7 @@ async fn main() -> Result<(), Error> {
     if let SubCommand::Completion { shell } = opts.subcmd {
         print_completer(shell);
         return Ok(());
-    }
+    };
 
     let maybe_override_log_level = match opts.subcmd {
         SubCommand::Server | SubCommand::Worker(_) => {
@@ -31,7 +40,10 @@ async fn main() -> Result<(), Error> {
             Some(opts.log_level)
         },
     };
-    let mut config = initialize_app(maybe_override_log_level);
+    let mut config = initialize_app(
+        get_software_metadata(),
+        maybe_override_log_level,
+    );
     check_app_directories(&config);
     let mut db_client_value = create_database_client(&config).await;
     let db_client = &mut db_client_value;

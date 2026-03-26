@@ -13,8 +13,7 @@ use super::{
     config::Config,
     environment::Environment,
     federation::FederationConfig,
-    SOFTWARE_NAME,
-    SOFTWARE_VERSION,
+    software::SoftwareMetadata,
 };
 
 // Normalize HTTP origin:
@@ -57,11 +56,14 @@ pub fn is_correct_uri_scheme(uri: &HttpUri) -> bool {
     uri.scheme() == guess_protocol(uri.hostname().as_str())
 }
 
-fn user_agent(instance_uri: &HttpUri) -> String {
+fn user_agent(
+    software: SoftwareMetadata,
+    instance_uri: &HttpUri,
+) -> String {
     format!(
         "{name} {version}; {instance_uri}",
-        name=SOFTWARE_NAME,
-        version=SOFTWARE_VERSION,
+        name=software.name,
+        version=software.version,
         instance_uri=instance_uri,
     )
 }
@@ -79,7 +81,10 @@ impl Instance {
     pub(crate) fn from_config(config: &Config) -> Self {
         let instance_uri = parse_instance_url(&config.instance_url)
             .expect("instance URL should be already validated");
-        let mut maybe_user_agent = Some(user_agent(&instance_uri));
+        let mut maybe_user_agent = Some(user_agent(
+            config.software,
+            &instance_uri,
+        ));
         let mut federation_config = config.federation.clone();
         if matches!(config.environment, Environment::Development) {
             // Private instance doesn't send activities and sign requests
@@ -172,11 +177,16 @@ mod tests {
 
     #[test]
     fn test_user_agent() {
+        let software = SoftwareMetadata {
+            name: "Mitra",
+            version: "1.0.0",
+            ..Default::default()
+        };
         let instance_uri = HttpUri::parse("https://social.example").unwrap();
-        let agent = user_agent(&instance_uri);
+        let agent = user_agent(software, &instance_uri);
         assert_eq!(
             agent,
-            format!("Mitra {}; https://social.example", SOFTWARE_VERSION),
+            format!("Mitra 1.0.0; https://social.example"),
         );
     }
 

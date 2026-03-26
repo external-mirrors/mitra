@@ -4,9 +4,7 @@ use serde::Serialize;
 use mitra_config::{
     Config,
     RegistrationType,
-    SOFTWARE_NAME,
-    SOFTWARE_REPOSITORY,
-    SOFTWARE_VERSION,
+    SoftwareMetadata,
 };
 
 const ATOM_SERVICE: &str = "atom1.0";
@@ -18,11 +16,11 @@ struct Software20 {
     version: String,
 }
 
-impl Default for Software20 {
-    fn default() -> Self {
+impl From<SoftwareMetadata> for Software20 {
+    fn from(software: SoftwareMetadata) -> Self {
         Self {
-            name: SOFTWARE_NAME.to_lowercase(),
-            version: SOFTWARE_VERSION.to_string(),
+            name: software.name.to_lowercase(),
+            version: software.version.to_owned(),
         }
     }
 }
@@ -34,12 +32,12 @@ struct Software21 {
     repository: String,
 }
 
-impl Default for Software21 {
-    fn default() -> Self {
+impl From<SoftwareMetadata> for Software21 {
+    fn from(software: SoftwareMetadata) -> Self {
         Self {
-            name: SOFTWARE_NAME.to_lowercase(),
-            version: SOFTWARE_VERSION.to_string(),
-            repository: SOFTWARE_REPOSITORY.to_string(),
+            name: software.name.to_lowercase(),
+            version: software.version.to_owned(),
+            repository: software.repository.to_owned(),
         }
     }
 }
@@ -123,7 +121,7 @@ impl NodeInfo20 {
     pub fn new(config: &Config, usage: Usage, metadata: Metadata) -> Self {
         Self {
             version: "2.0",
-            software: Software20::default(),
+            software: Software20::from(config.software),
             protocols: vec![ACTIVITYPUB_PROTOCOL],
             services: Services::default(),
             open_registrations: has_open_registrations(config),
@@ -149,12 +147,30 @@ impl NodeInfo21 {
     pub fn new(config: &Config, usage: Usage, metadata: Metadata) -> Self {
         Self {
             version: "2.1",
-            software: Software21::default(),
+            software: Software21::from(config.software),
             protocols: vec![ACTIVITYPUB_PROTOCOL],
             services: Services::default(),
             open_registrations: has_open_registrations(config),
             usage,
             metadata,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_software() {
+        let software_metadata = SoftwareMetadata {
+            name: "Mastodon",
+            version: "4.5.0",
+            repository: "https://example.com",
+        };
+        let software_2_0 = Software20::from(software_metadata);
+        assert_eq!(software_2_0.name, "mastodon");
+        let software_2_1 = Software20::from(software_metadata);
+        assert_eq!(software_2_1.name, "mastodon");
     }
 }
