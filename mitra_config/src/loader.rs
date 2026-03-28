@@ -1,15 +1,18 @@
 use std::str::FromStr;
 
-use super::blockchain::{
-    BlockchainConfig,
-    MoneroConfig,
-    MoneroLightConfig,
-};
-use super::config::Config;
-use super::environment::Environment;
-use super::instance::{
-    is_correct_uri_scheme,
-    parse_instance_url,
+use super::{
+    blockchain::{
+        BlockchainConfig,
+        MoneroConfig,
+        MoneroLightConfig,
+    },
+    config::Config,
+    environment::Environment,
+    instance::{
+        is_correct_uri_scheme,
+        parse_instance_url,
+    },
+    software::SoftwareMetadata,
 };
 
 const DEFAULT_CONFIG_PATH: &str = "config.yaml";
@@ -44,7 +47,9 @@ fn parse_env() -> EnvConfig {
     }
 }
 
-pub fn parse_config() -> (Config, Vec<String>) {
+pub fn parse_config(
+    software_metadata: SoftwareMetadata,
+) -> (Config, Vec<String>) {
     let env = parse_env();
     let config_text = std::fs::read_to_string(&env.config_path)
         .unwrap_or_else(|_| {
@@ -69,6 +74,8 @@ pub fn parse_config() -> (Config, Vec<String>) {
         warnings.push(message);
     };
 
+    // Set software metadata
+    config.software = software_metadata;
     // Set parameters from environment
     config.config_path = env.config_path;
     config.environment = env.environment;

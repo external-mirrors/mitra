@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use apx_sdk::{
-    addresses::WebfingerAddress,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
     core::{
         multihash::encode_sha256_multihash,
@@ -12,6 +11,7 @@ use apx_sdk::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use mitra_adapters::profiles::profile_address;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     attachments::types::AttachmentType,
@@ -20,7 +20,6 @@ use mitra_models::{
         queries::get_post_author,
         types::{PostDetailed, Visibility},
     },
-    profiles::types::WebfingerHostname,
     relationships::queries::{get_followers, get_subscribers},
 };
 use mitra_services::media::MediaServer;
@@ -244,16 +243,12 @@ pub fn build_note(
 
     let mut tags = vec![];
     for profile in &post.mentions {
-        let tag_name = match profile.hostname() {
-            WebfingerHostname::Local => {
-                WebfingerAddress::new_unchecked(
-                    &profile.username, instance_uri.hostname().as_str()).handle()
-            },
-            WebfingerHostname::Remote(hostname) => {
-                WebfingerAddress::new_unchecked(
-                    &profile.username, &hostname).handle()
-            },
-            WebfingerHostname::Unknown => format!("@{}", profile.username),
+        let tag_name = match profile_address(
+            instance_uri.hostname().as_str(),
+            profile,
+        ) {
+            Some(address) => address.handle(),
+            None => format!("@{}", profile.username),
         };
         let actor_id = compatible_profile_actor_id(authority, profile);
         if !primary_audience.contains(&actor_id) {

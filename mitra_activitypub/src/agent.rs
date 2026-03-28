@@ -24,12 +24,6 @@ pub(super) fn build_federation_agent_with_key(
     signer_key: RsaSecretKey,
     signer_key_id: String,
 ) -> FederationAgent {
-    // Public instances should set User-Agent header
-    let maybe_user_agent = if instance.federation.enabled {
-        Some(instance.agent())
-    } else {
-        None
-    };
     // Public instances should sign requests
     let maybe_signer = if instance.federation.enabled {
         let signer = HttpSigner::new_rsa(signer_key, signer_key_id);
@@ -38,7 +32,7 @@ pub(super) fn build_federation_agent_with_key(
         None
     };
     FederationAgent {
-        user_agent: maybe_user_agent,
+        user_agent: instance.user_agent.clone(),
         ssrf_protection_enabled: instance.federation.ssrf_protection_enabled,
         response_size_limit: RESPONSE_SIZE_LIMIT,
         fetcher_timeout: instance.federation.fetcher_timeout,
@@ -114,9 +108,10 @@ mod tests {
     fn test_build_federation_agent() {
         let instance_uri = "https://social.example";
         let mut instance = Instance::for_test(instance_uri);
+        instance.user_agent = Some("Mozilla/5.0".to_owned());
         instance.federation.enabled = true;
         let agent = build_federation_agent(&instance, None);
-        assert_eq!(agent.user_agent.unwrap().ends_with(instance_uri), true);
+        assert_eq!(agent.user_agent.unwrap(), "Mozilla/5.0");
         assert_eq!(agent.ssrf_protection_enabled, true);
         assert_eq!(agent.response_size_limit, RESPONSE_SIZE_LIMIT);
         let request_signer = agent.signer.unwrap();

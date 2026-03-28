@@ -20,6 +20,7 @@ tokio = { version = "~1.38.0", features = ["macros", "rt-multi-thread"] }
 
 mitra_adapters = { path = "../mitra_adapters" }
 mitra_api = { path = "../mitra_api" }
+mitra_config = { path = "../mitra_config" }
 mitra_cli = { path = "../mitra_cli" }
 mitra_workers = { path = "../mitra_workers" }
 

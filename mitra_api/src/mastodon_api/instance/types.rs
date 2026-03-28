@@ -14,9 +14,7 @@ use mitra_config::{
     MoneroConfig,
     MoneroLightConfig,
     RegistrationType,
-    SOFTWARE_NAME,
-    SOFTWARE_REPOSITORY,
-    SOFTWARE_VERSION,
+    SoftwareMetadata,
 };
 use mitra_models::users::types::User;
 use mitra_utils::markdown::markdown_to_html;
@@ -272,12 +270,12 @@ pub struct InstanceInfo {
     pleroma: PleromaInfo,
 }
 
-fn get_full_api_version(version: &str) -> String {
+fn get_full_api_version(software: SoftwareMetadata) -> String {
     format!(
         "{api_version} (compatible; {name} {version})",
         api_version=MASTODON_API_VERSION,
-        name=SOFTWARE_NAME,
-        version=version,
+        name=software.name,
+        version=software.version,
     )
 }
 
@@ -297,7 +295,7 @@ impl InstanceInfo {
             title: config.instance_title.clone(),
             short_description: config.instance_short_description.clone(),
             description: markdown_to_html(&config.instance_description),
-            version: get_full_api_version(SOFTWARE_VERSION),
+            version: get_full_api_version(config.software),
             registrations:
                 config.registration.registration_type !=
                 RegistrationType::Invite,
@@ -431,8 +429,8 @@ impl InstanceInfoV2 {
             title: config.instance_title.clone(),
             description: config.instance_short_description.clone(),
             extended_description: markdown_to_html(&config.instance_description),
-            version: get_full_api_version(SOFTWARE_VERSION),
-            source_url: SOFTWARE_REPOSITORY.to_string(),
+            version: get_full_api_version(config.software),
+            source_url: config.software.repository.to_owned(),
             usage: Usage {
                 users: UsageUsers {
                     active_month: user_count_active_month,
@@ -559,7 +557,12 @@ mod tests {
 
     #[test]
     fn test_get_full_api_version() {
-        let full_version = get_full_api_version("2.0.0");
+        let software = SoftwareMetadata {
+            name: "Mitra",
+            version: "2.0.0",
+            ..Default::default()
+        };
+        let full_version = get_full_api_version(software);
         assert_eq!(full_version, "4.0.0 (compatible; Mitra 2.0.0)");
     }
 }

@@ -13,8 +13,7 @@ use super::{
     config::Config,
     environment::Environment,
     federation::FederationConfig,
-    SOFTWARE_NAME,
-    SOFTWARE_VERSION,
+    software::SoftwareMetadata,
 };
 
 #[cfg(feature = "mini")]
@@ -60,9 +59,22 @@ pub fn is_correct_uri_scheme(uri: &HttpUri) -> bool {
     uri.scheme() == guess_protocol(uri.hostname().as_str())
 }
 
+fn user_agent(
+    software: SoftwareMetadata,
+    instance_uri: &HttpUri,
+) -> String {
+    format!(
+        "{name} {version}; {instance_uri}",
+        name=software.name,
+        version=software.version,
+        instance_uri=instance_uri,
+    )
+}
+
 #[derive(Clone)]
 pub struct Instance {
     _uri: HttpUri,
+    pub user_agent: Option<String>,
     pub federation: FederationConfig,
     pub ed25519_secret_key: Ed25519SecretKey,
     pub rsa_secret_key: RsaSecretKey,
@@ -70,18 +82,25 @@ pub struct Instance {
 
 impl Instance {
     pub(crate) fn from_config(config: &Config) -> Self {
-        let mut federation_config = config.federation.clone();
-        if matches!(config.environment, Environment::Development) {
-            // Private instance doesn't send activities and sign requests
-            federation_config.enabled = false;
-        };
         #[cfg(feature = "mini")]
         let instance_url = &config.gateway_url;
         #[cfg(not(feature = "mini"))]
         let instance_url = &config.instance_url;
+        let instance_uri = parse_instance_url(instance_url)
+            .expect("instance URL should be already validated");
+        let mut maybe_user_agent = Some(user_agent(
+            config.software,
+            &instance_uri,
+        ));
+        let mut federation_config = config.federation.clone();
+        if matches!(config.environment, Environment::Development) {
+            // Private instance doesn't send activities and sign requests
+            maybe_user_agent = None;
+            federation_config.enabled = false;
+        };
         Self {
-            _uri: parse_instance_url(instance_url)
-                .expect("instance URL should be already validated"),
+            _uri: instance_uri,
+            user_agent: maybe_user_agent,
             federation: federation_config,
             ed25519_secret_key: config.instance_ed25519_key
                 .expect("instance Ed25519 key should be already generated"),
@@ -101,15 +120,6 @@ impl Instance {
     /// Returns instance host name (without port number)
     pub fn hostname(&self) -> String {
         self._uri.hostname().to_string()
-    }
-
-    pub fn agent(&self) -> String {
-        format!(
-            "{name} {version}; {instance_uri}",
-            name=SOFTWARE_NAME,
-            version=SOFTWARE_VERSION,
-            instance_uri=self.uri(),
-        )
     }
 
     #[cfg(feature = "mini")]
@@ -132,6 +142,7 @@ impl Instance {
         };
         Self {
             _uri: parse_instance_url(url).unwrap(),
+            user_agent: None,
             federation: FederationConfig {
                 enabled: false,
                 ..Default::default()
@@ -180,17 +191,29 @@ mod tests {
     }
 
     #[test]
+    fn test_user_agent() {
+        let software = SoftwareMetadata {
+            name: "Mitra",
+            version: "1.0.0",
+            ..Default::default()
+        };
+        let instance_uri = HttpUri::parse("https://social.example").unwrap();
+        let agent = user_agent(software, &instance_uri);
+        assert_eq!(
+            agent,
+            format!("Mitra 1.0.0; https://social.example"),
+        );
+    }
+
+    #[test]
     fn test_instance_url_https_dns() {
         let instance_url = "https://example.com/";
         let instance = Instance::for_test(instance_url);
 
         assert_eq!(instance.uri_str(), "https://example.com");
         assert_eq!(instance.hostname(), "example.com");
-        assert_eq!(
-            instance.agent(),
-            format!("Mitra {}; https://example.com", SOFTWARE_VERSION),
-        );
         // Test instance is private
+        assert_eq!(instance.user_agent, None);
         assert!(!instance.federation.enabled);
     }
 
