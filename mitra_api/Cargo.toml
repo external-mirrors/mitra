@@ -72,6 +72,7 @@ mitra_models = { path = "../mitra_models", features = ["test-utils"] }
 mitra_services = { path = "../mitra_services", features = ["test-utils"] }
 
 [features]
+mini = []
 production = ["mitra_config/production"]
 
 [lints]

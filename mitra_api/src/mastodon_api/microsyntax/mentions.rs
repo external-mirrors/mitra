@@ -84,6 +84,11 @@ pub async fn find_mentioned_profiles(
     let mentions = find_mentions(instance_hostname, text);
     let mut accts = vec![];
     for address in mentions {
+        #[cfg(feature = "mini")]
+        if address.hostname() == instance_hostname {
+            // Gateway user?
+            accts.push(address.to_string());
+        };
         accts.push(address.acct(instance_hostname));
     };
     // If acct doesn't exist in database, mention is ignored
