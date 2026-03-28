@@ -34,6 +34,7 @@ pub type JsonOrQsForm<T> = Either<Json<T>, QsForm<T>>;
 pub type MultiQuery<T> = QsQuery<T>;
 
 pub type RatelimitConfig = GovernorConfig<RealIpKeyExtractor, NoOpMiddleware>;
+pub use actix_governor::Governor;
 
 pub fn ratelimit_config(
     num_requests: u32,

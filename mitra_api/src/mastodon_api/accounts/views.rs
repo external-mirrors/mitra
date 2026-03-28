@@ -667,7 +667,7 @@ async fn lookup_acct(
 }
 
 // https://docs.joinmastodon.org/methods/accounts/#search
-async fn search_by_acct(
+pub async fn search_by_acct(
     auth: Option<BearerAuth>,
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
