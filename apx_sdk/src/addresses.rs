@@ -22,7 +22,7 @@ impl WebfingerAddressError {
 }
 
 /// WebFinger address (user@host)
-#[derive(Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct WebfingerAddress {
     username: String,
     hostname: String, // does not include port number
