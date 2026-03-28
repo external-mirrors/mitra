@@ -8,10 +8,11 @@ use apx_core::url::hostname::guess_protocol;
 
 // https://swicg.github.io/activitypub-webfinger/#names
 // username: RFC-3986 unreserved plus % for percent encoding; case-sensitive
-// hostname: normalized (ASCII) or IP literals
-//   https://datatracker.ietf.org/doc/html/rfc3986#section-3.2.2
+// hostname: normalized (ASCII) or IP literals. No port number.
+//   https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.2
 const WEBFINGER_ADDRESS_RE: &str = r"^(?P<username>[A-Za-z0-9\-\._~%]+)@(?P<hostname>[a-z0-9\.-]+|[0-9\.]+|\[[0-9a-f:]+\])$";
 
+/// Error that may occur during the parsing of a WebFinger address
 #[derive(Debug, Error)]
 #[error("{0}")]
 pub struct WebfingerAddressError(&'static str);
@@ -20,6 +21,7 @@ impl WebfingerAddressError {
     pub fn message(&self) -> &'static str { self.0 }
 }
 
+/// WebFinger address (user@host)
 #[derive(Eq, Ord, PartialEq, PartialOrd)]
 pub struct WebfingerAddress {
     username: String,
@@ -48,14 +50,17 @@ impl WebfingerAddress {
         Ok(address)
     }
 
+    /// Returns the 'user' part of the address
     pub fn username(&self) -> &str {
         &self.username
     }
 
+    /// Returns the 'host' part of the address
     pub fn hostname(&self) -> &str {
         &self.hostname
     }
 
+    /// Parses an @user@host handle
     pub fn from_handle(
         handle: &str,
     ) -> Result<Self, WebfingerAddressError> {
@@ -66,6 +71,7 @@ impl WebfingerAddress {
         Ok(address)
     }
 
+    /// Returns the @user@host handle
     pub fn handle(&self) -> String {
         format!("@{}", self)
     }
@@ -80,11 +86,13 @@ impl WebfingerAddress {
         }
     }
 
-    // https://datatracker.ietf.org/doc/html/rfc7565#section-7
+    /// Returns the 'acct' URI  
+    /// <https://www.rfc-editor.org/rfc/rfc7565.html>
     pub fn to_acct_uri(&self) -> String {
         format!("acct:{}", self)
     }
 
+    /// Parses an 'acct' URI
     pub fn from_acct_uri(
         uri: &str,
     ) -> Result<Self, WebfingerAddressError> {
