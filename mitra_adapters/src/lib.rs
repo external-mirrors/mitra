@@ -5,4 +5,5 @@ pub mod media;
 pub mod payments;
 pub mod permissions;
 pub mod posts;
+pub mod profiles;
 pub mod roles;

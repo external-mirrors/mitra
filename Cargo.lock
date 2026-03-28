@@ -1974,6 +1974,7 @@ name = "mitra_adapters"
 version = "5.0.1-dev"
 dependencies = [
  "apx_core",
+ "apx_sdk",
  "chrono",
  "env_logger",
  "log",

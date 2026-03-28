@@ -28,6 +28,7 @@ tokio = { version = "1.38.0", features = ["macros"] }
 uuid = "1.12.1"
 
 apx_core = { path = "../apx_core" }
+apx_sdk = { path = "../apx_sdk" }
 mitra_config = { path = "../mitra_config" }
 mitra_models = { path = "../mitra_models" }
 mitra_services = { path = "../mitra_services" }
