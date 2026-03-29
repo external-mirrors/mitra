@@ -278,10 +278,11 @@ async fn outbox(
         OrderedCollection::PAGE_SIZE,
     ).await?;
     add_related_posts(db_client, posts.iter_mut().collect()).await?;
+    let authority = Authority::from(&instance);
     let media_server = MediaServer::new(&config);
     let activities = posts.iter().map(|post| {
         if post.repost_of_id.is_some() {
-            let activity = build_announce(instance.uri_str(), post);
+            let activity = build_announce(&authority, post);
             serde_json::to_value(activity)
                 .expect("activity should be serializable")
         } else {
