@@ -27,7 +27,7 @@ use super::announce::{
 };
 
 #[derive(Serialize)]
-struct UndoAnnounce {
+pub struct UndoAnnounce {
     #[serde(rename = "@context")]
     context: Context,
 
@@ -42,7 +42,7 @@ struct UndoAnnounce {
     cc: Vec<String>,
 }
 
-fn build_undo_announce(
+pub fn build_undo_announce(
     authority: &Authority,
     actor_profile: &DbActorProfile,
     repost_id: Uuid,
