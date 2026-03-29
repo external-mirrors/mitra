@@ -869,7 +869,7 @@ pub enum CollectionOrder {
     Reverse,
 }
 
-pub async fn import_collection(
+pub async fn import_collection_with_failed(
     config: &Config,
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
@@ -877,13 +877,14 @@ pub async fn import_collection(
     maybe_item_type: Option<CollectionItemType>,
     order: CollectionOrder,
     limit: usize,
-) -> Result<Vec<String>, HandlerError> {
+) -> Result<(Vec<String>, Vec<JsonValue>), HandlerError> {
     let mut imported = vec![];
+    let mut failed = vec![];
     let items = fetch_collection(ap_client, collection_id, limit).await?;
     let item_type = match &items[..] {
         [] => {
             log::info!("collection is empty");
-            return Ok(imported);
+            return Ok((imported, failed));
         },
         [item, ..] => {
             log::info!("fetched {} items", items.len());
@@ -916,6 +917,7 @@ pub async fn import_collection(
     let ap_client = &ap_client_no_user;
     for item in items {
         let item_id = get_object_id(&item)?.to_string();
+        let item_clone = item.clone();
         let result = match item_type {
             CollectionItemType::Object => {
                 log::info!("importing object {item_id}");
@@ -939,9 +941,31 @@ pub async fn import_collection(
             },
             Err(error) => {
                 log::warn!("failed to process item ({error}): {item_id}");
+                failed.push(item_clone);
             },
         };
     };
+    Ok((imported, failed))
+}
+
+pub async fn import_collection(
+    config: &Config,
+    ap_client: &ApClient,
+    db_pool: &DatabaseConnectionPool,
+    collection_id: &str,
+    maybe_item_type: Option<CollectionItemType>,
+    order: CollectionOrder,
+    limit: usize,
+) -> Result<Vec<String>, HandlerError> {
+    let (imported, _failed) = import_collection_with_failed(
+        config,
+        ap_client,
+        db_pool,
+        collection_id,
+        maybe_item_type,
+        order,
+        limit,
+    ).await?;
     Ok(imported)
 }
 
