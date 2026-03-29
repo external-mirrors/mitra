@@ -160,6 +160,9 @@ pub async fn create_user(
         avatar: None,
         banner: None,
         is_automated: false,
+        #[cfg(feature = "mini")]
+        manually_approves_followers: true,
+        #[cfg(not(feature = "mini"))]
         manually_approves_followers: false,
         mention_policy: MentionPolicy::None,
         public_keys: vec![],
