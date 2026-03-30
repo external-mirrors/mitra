@@ -869,6 +869,11 @@ pub enum CollectionOrder {
     Reverse,
 }
 
+pub enum CollectionItemResult {
+    Ok(String),
+    Failed(JsonValue),
+}
+
 pub async fn import_collection_with_failed(
     config: &Config,
     ap_client: &ApClient,
@@ -877,14 +882,13 @@ pub async fn import_collection_with_failed(
     maybe_item_type: Option<CollectionItemType>,
     order: CollectionOrder,
     limit: usize,
-) -> Result<(Vec<String>, Vec<JsonValue>), HandlerError> {
+) -> Result<Vec<CollectionItemResult>, HandlerError> {
     let mut imported = vec![];
-    let mut failed = vec![];
     let items = fetch_collection(ap_client, collection_id, limit).await?;
     let item_type = match &items[..] {
         [] => {
             log::info!("collection is empty");
-            return Ok((imported, failed));
+            return Ok(imported);
         },
         [item, ..] => {
             log::info!("fetched {} items", items.len());
@@ -937,15 +941,15 @@ pub async fn import_collection_with_failed(
         match result {
             Ok(imported_item_id) => {
                 // Canonical ID is returned
-                imported.push(imported_item_id);
+                imported.push(CollectionItemResult::Ok(imported_item_id));
             },
             Err(error) => {
                 log::warn!("failed to process item ({error}): {item_id}");
-                failed.push(item_clone);
+                imported.push(CollectionItemResult::Failed(item_clone));
             },
         };
     };
-    Ok((imported, failed))
+    Ok(imported)
 }
 
 pub async fn import_collection(
@@ -957,7 +961,7 @@ pub async fn import_collection(
     order: CollectionOrder,
     limit: usize,
 ) -> Result<Vec<String>, HandlerError> {
-    let (imported, _failed) = import_collection_with_failed(
+    let results = import_collection_with_failed(
         config,
         ap_client,
         db_pool,
@@ -966,6 +970,12 @@ pub async fn import_collection(
         order,
         limit,
     ).await?;
+    let imported = results.into_iter()
+        .filter_map(|result| match result {
+            CollectionItemResult::Ok(id) => Some(id),
+            CollectionItemResult::Failed(_) => None,
+        })
+        .collect();
     Ok(imported)
 }
 
