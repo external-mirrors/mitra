@@ -160,6 +160,8 @@ pub struct Note {
     pub cc: Vec<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    quote: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     quote_url: Option<String>,
 
     published: DateTime<Utc>,
@@ -393,6 +395,7 @@ pub fn build_note(
         end_time: end_time,
         to: primary_audience,
         cc: secondary_audience,
+        quote: maybe_quote_url.clone(),
         quote_url: maybe_quote_url,
         published: post.created_at,
         updated: post.updated_at,
