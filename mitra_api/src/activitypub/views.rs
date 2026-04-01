@@ -1,3 +1,4 @@
+use actix_governor::Governor;
 use actix_web::{
     body::{BoxBody, EitherBody},
     delete,
@@ -127,6 +128,7 @@ use mitra_validators::errors::ValidationError;
 use crate::{
     errors::HttpError,
     http::{get_request_full_uri, log_response_error},
+    ratelimit::RatelimitConfigs,
     web_client::urls::{
         get_post_page_url,
         get_profile_page_url,
@@ -761,7 +763,6 @@ async fn apgateway_metadata_view(
     HttpResponse::Ok().json(metadata)
 }
 
-#[post("")]
 async fn apgateway_create_actor_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
@@ -1065,6 +1066,7 @@ async fn apgateway_outbox_pull_view(
 
 pub fn gateway_scope(
     gateway_enabled: bool,
+    ratelimit_configs: RatelimitConfigs,
 ) -> Scope<impl ServiceFactory<
     ServiceRequest,
     Config = (),
@@ -1082,9 +1084,12 @@ pub fn gateway_scope(
     if !gateway_enabled {
         return scope;
     };
+    let create_actor_limited = web::resource("")
+        .post(apgateway_create_actor_view)
+        .wrap(Governor::new(&ratelimit_configs.registration));
     scope
         .service(apgateway_metadata_view)
-        .service(apgateway_create_actor_view)
+        .service(create_actor_limited)
         // Inbox and outbox services go before generic gateway service
         .service(apgateway_inbox_push_view)
         .service(apgateway_inbox_pull_view)

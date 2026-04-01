@@ -147,7 +147,10 @@ pub async fn run_server(
             .service(activitypub::tag_view)
             .service(activitypub::conversation_view)
             .service(activitypub::activity_view)
-            .service(activitypub::gateway_scope(config.federation.fep_ef61_gateway_enabled))
+            .service(activitypub::gateway_scope(
+                config.federation.fep_ef61_gateway_enabled,
+                ratelimit_configs.clone(),
+            ))
             .service(activitypub::media_gateway_scope(config.federation.fep_ef61_gateway_enabled))
             .service(atom_scope())
             .service(nodeinfo::get_nodeinfo_jrd)
