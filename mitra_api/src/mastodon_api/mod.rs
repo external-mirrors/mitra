@@ -19,7 +19,10 @@ use serde_qs::{
     Config as QsConfig,
 };
 
-use crate::http::log_response_error;
+use crate::{
+    http::log_response_error,
+    ratelimit::RatelimitConfigs,
+};
 
 mod accounts;
 mod admin;
@@ -102,6 +105,7 @@ fn mastodon_qs_config() -> QsConfig {
 
 pub fn mastodon_api_scope(
     payload_size_limit: usize,
+    ratelimit_configs: RatelimitConfigs,
 ) -> Scope<impl ServiceFactory<
     ServiceRequest,
     Config = (),
@@ -133,7 +137,7 @@ pub fn mastodon_api_scope(
         .app_data(multipart_form_config)
         .app_data(multiquery_config)
         .wrap(create_error_handlers())
-        .service(accounts::views::account_api_scope())
+        .service(accounts::views::account_api_scope(ratelimit_configs))
         .service(admin::posts::views::admin_post_api_scope())
         .service(admin::accounts::views::admin_account_api_scope())
         .service(apps::views::application_api_scope())

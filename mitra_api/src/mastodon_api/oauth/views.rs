@@ -54,7 +54,7 @@ use crate::{
         auth::get_current_user,
         errors::MastodonError,
     },
-    ratelimit::ratelimit_config,
+    ratelimit::RatelimitConfigs,
 };
 
 use super::types::{
@@ -316,18 +316,19 @@ async fn revoke_token_view(
     Ok(HttpResponse::Ok().json(empty))
 }
 
-pub fn oauth_api_scope() -> ActixScope<impl ServiceFactory<
+pub fn oauth_api_scope(
+    ratelimit_configs: RatelimitConfigs,
+) -> ActixScope<impl ServiceFactory<
     ServiceRequest,
     Config = (),
     Response = ServiceResponse<EitherBody<BoxBody>>,
     Error = ActixError,
     InitError = (),
 >> {
-    let token_limit = ratelimit_config(5, 120, false);
     let token_view_limited = web::resource("/token").route(
         web::post()
             .to(token_view)
-            .wrap(Governor::new(&token_limit)));
+            .wrap(Governor::new(&ratelimit_configs.login)));
     web::scope("/oauth")
         .wrap(ErrorHandlers::new()
             .default_handler_client(|response| {

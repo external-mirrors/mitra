@@ -58,3 +58,20 @@ pub fn ratelimit_config(
         .finish()
         .expect("governor parameters should be non-zero")
 }
+
+#[derive(Clone)]
+pub struct RatelimitConfigs {
+    pub registration: RatelimitConfig,
+    pub login: RatelimitConfig,
+    pub search: RatelimitConfig,
+}
+
+impl Default for RatelimitConfigs {
+    fn default() -> Self {
+        Self {
+            registration: ratelimit_config(2, 300, false),
+            login: ratelimit_config(5, 120, false),
+            search: ratelimit_config(2, 30, true),
+        }
+    }
+}

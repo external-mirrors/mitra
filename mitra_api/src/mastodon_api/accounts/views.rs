@@ -138,7 +138,7 @@ use crate::{
         search::helpers::search_profiles_only,
         statuses::helpers::get_paginated_status_list,
     },
-    ratelimit::ratelimit_config,
+    ratelimit::RatelimitConfigs,
 };
 
 use super::helpers::{
@@ -1190,16 +1190,16 @@ async fn load_activities(
     Ok(HttpResponse::NoContent().finish())
 }
 
-pub fn account_api_scope() -> Scope {
+pub fn account_api_scope(
+    ratelimit_configs: RatelimitConfigs,
+) -> Scope {
     // Two requests per 30 seconds; to be used with extractor
-    let search_limit = ratelimit_config(2, 30, true);
     let search_by_acct_limited = web::resource("/search")
         .get(search_by_acct)
-        .wrap(Governor::new(&search_limit));
-    let registration_limit = ratelimit_config(2, 300, false);
+        .wrap(Governor::new(&ratelimit_configs.search));
     let create_account_limited = web::resource("")
         .post(create_account)
-        .wrap(Governor::new(&registration_limit));
+        .wrap(Governor::new(&ratelimit_configs.registration));
     web::scope("/v1/accounts")
         // Routes without account ID
         .service(create_account_limited)
