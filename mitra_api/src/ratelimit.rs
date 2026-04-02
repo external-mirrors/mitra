@@ -1,7 +1,13 @@
 use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
 
-use actix_governor::{KeyExtractor, SimpleKeyExtractionError};
+use actix_governor::{
+    governor::middleware::NoOpMiddleware,
+    GovernorConfig,
+    GovernorConfigBuilder,
+    KeyExtractor,
+    SimpleKeyExtractionError,
+};
 use actix_web::dev::ServiceRequest;
 
 // Based on https://github.com/AaronErhardt/actix-governor/blob/v0.8.0/examples/custom_key_ip.rs
@@ -35,4 +41,20 @@ impl KeyExtractor for RealIpKeyExtractor {
             },
         }
     }
+}
+
+pub type RatelimitConfig = GovernorConfig<RealIpKeyExtractor, NoOpMiddleware>;
+
+pub fn ratelimit_config(
+    num_requests: u32,
+    period: u64,
+    permissive: bool,
+) -> RatelimitConfig {
+    GovernorConfigBuilder::default()
+        .key_extractor(RealIpKeyExtractor)
+        .burst_size(num_requests)
+        .seconds_per_request(period)
+        .permissive(permissive)
+        .finish()
+        .expect("governor parameters should be non-zero")
 }

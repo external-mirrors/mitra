@@ -47,7 +47,6 @@ use mitra_validators::errors::ValidationError;
 use crate::{
     http::{
         log_response_error,
-        ratelimit_config,
         ContentSecurityPolicy,
         JsonOrForm,
     },
@@ -55,6 +54,7 @@ use crate::{
         auth::get_current_user,
         errors::MastodonError,
     },
+    ratelimit::ratelimit_config,
 };
 
 use super::types::{

@@ -123,20 +123,22 @@ use mitra_validators::{
     users::validate_local_username,
 };
 
-use crate::http::{
-    get_request_base_url,
-    ratelimit_config,
-    JsonOrForm,
-    MultiQuery,
-};
-use crate::mastodon_api::{
-    auth::get_current_user,
-    errors::MastodonError,
-    lists::types::List,
-    media_server::ClientMediaServer,
-    pagination::{get_last_item, get_paginated_response},
-    search::helpers::search_profiles_only,
-    statuses::helpers::get_paginated_status_list,
+use crate::{
+    http::{
+        get_request_base_url,
+        JsonOrForm,
+        MultiQuery,
+    },
+    mastodon_api::{
+        auth::get_current_user,
+        errors::MastodonError,
+        lists::types::List,
+        media_server::ClientMediaServer,
+        pagination::{get_last_item, get_paginated_response},
+        search::helpers::search_profiles_only,
+        statuses::helpers::get_paginated_status_list,
+    },
+    ratelimit::ratelimit_config,
 };
 
 use super::helpers::{

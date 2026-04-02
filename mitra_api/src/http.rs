@@ -1,10 +1,5 @@
 use std::collections::BTreeMap;
 
-use actix_governor::{
-    governor::middleware::NoOpMiddleware,
-    GovernorConfig,
-    GovernorConfigBuilder,
-};
 use actix_web::{
     body::MessageBody,
     dev::{ConnectionInfo, ServiceResponse},
@@ -23,7 +18,6 @@ use serde_qs::actix::{QsForm, QsQuery};
 
 use crate::{
     errors::HttpError,
-    ratelimit::RealIpKeyExtractor,
 };
 
 pub type JsonOrForm<T> = Either<Json<T>, Form<T>>;
@@ -32,22 +26,6 @@ pub type JsonOrQsForm<T> = Either<Json<T>, QsForm<T>>;
 // actix currently doesn't support parameter arrays
 // https://github.com/actix/actix-web/issues/2044
 pub type MultiQuery<T> = QsQuery<T>;
-
-pub type RatelimitConfig = GovernorConfig<RealIpKeyExtractor, NoOpMiddleware>;
-
-pub fn ratelimit_config(
-    num_requests: u32,
-    period: u64,
-    permissive: bool,
-) -> RatelimitConfig {
-    GovernorConfigBuilder::default()
-        .key_extractor(RealIpKeyExtractor)
-        .burst_size(num_requests)
-        .seconds_per_request(period)
-        .permissive(permissive)
-        .finish()
-        .expect("governor parameters should be non-zero")
-}
 
 pub struct ContentSecurityPolicy {
     directives: BTreeMap<String, String>,
