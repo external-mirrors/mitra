@@ -10,10 +10,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added documentation to `apx_sdk::addresses` module.
 - Implemented `Hash` for `WebfingerAddress`.
+- Added `actor_id` method to `JsonResourceDescriptor` type.
 
 ### Changed
 
 - Renamed `WebfingerAddress::acct` to `short_address`.
+- Renamed `find_actor_id` method on `JsonResourceDescriptor` to `actor_id_for_type`.
 
 ## [0.22.0] - 2026-03-27
 

@@ -93,7 +93,6 @@ use crate::{
         UuidOrUsername,
     },
     ownership::{get_object_id, is_local_origin, verify_object_owner},
-    vocabulary::GROUP,
 };
 
 // Gateway pool for resolving 'ap' URIs
@@ -459,8 +458,7 @@ pub(crate) async fn perform_webfinger_query(
         Some(JRD_MEDIA_TYPE),
     ).await?;
     let jrd: JsonResourceDescriptor = serde_json::from_value(jrd_value)?;
-    // Prefer Group actor if webfinger results are ambiguous
-    let actor_id = jrd.find_actor_id(GROUP)
+    let actor_id = jrd.actor_id()
         .ok_or(ValidationError("actor ID is not found in JRD"))?;
     Ok(actor_id)
 }
