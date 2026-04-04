@@ -1,0 +1,19 @@
+#!/sbin/openrc-run
+
+name="mitra"
+description="Federated social network"
+pidfile="/run/mitra.pid"
+command="/usr/bin/mitra"
+command_args="server"
+command_background="yes"
+command_user="mitra:mitra"
+required_files="/etc/mitra/config.yaml"
+directory="/var/lib/mitra"
+
+start_pre() {
+	checkpath --directory --owner mitra:mitra /var/lib/mitra
+}
+
+depend() {
+	need postgresql
+}
