@@ -649,7 +649,7 @@ pub async fn create_portable_user(
         SET
             portable_user_id = actor_profile.id,
             hostname = NULL,
-            acct = actor_profile.username
+            webfinger_hostname = NULL
         WHERE id = $1
         RETURNING actor_profile
         ",

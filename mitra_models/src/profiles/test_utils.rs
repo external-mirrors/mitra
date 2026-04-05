@@ -115,6 +115,7 @@ impl DbActorProfile {
         let profile = Self {
             username: username.to_string(),
             hostname: Some(hostname.clone()),
+            webfinger_hostname: Some(hostname.clone()),
             acct: Some(acct),
             actor_json: Some(actor_data),
             actor_id: Some(actor_id),

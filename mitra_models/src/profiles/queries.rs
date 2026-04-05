@@ -44,15 +44,20 @@ use super::types::{
 async fn prevent_acct_conflict(
     db_client: &impl DatabaseClient,
     profile_id: Uuid,
-    acct: &str,
+    username: &str,
+    webfinger_hostname: &str,
 ) -> Result<(), DatabaseError> {
     db_client.execute(
         "
         UPDATE actor_profile
-        SET acct = NULL
-        WHERE id != $1 AND acct = $2 AND actor_json IS NOT NULL
+        SET webfinger_hostname = NULL
+        WHERE
+            id != $1
+            AND username = $2
+            AND webfinger_hostname = $3
+            AND actor_json IS NOT NULL
         ",
-        &[&profile_id, &acct],
+        &[&profile_id, &username, &webfinger_hostname],
     ).await?;
     Ok(())
 }
@@ -155,19 +160,17 @@ pub async fn create_profile(
     if let WebfingerHostname::Remote(ref hostname) = profile_data.hostname {
         create_instance(&transaction, hostname).await?;
     };
-    let profile_acct = match profile_data.hostname {
-        WebfingerHostname::Local => Some(profile_data.username.clone()),
+    match profile_data.hostname {
+        WebfingerHostname::Local => (),
         WebfingerHostname::Remote(ref hostname) => {
-            let profile_acct =
-                format!("{}@{}", profile_data.username, hostname);
             prevent_acct_conflict(
                 &transaction,
                 profile_id,
-                &profile_acct,
+                &profile_data.username,
+                hostname,
             ).await?;
-            Some(profile_acct)
         },
-        WebfingerHostname::Unknown => None,
+        WebfingerHostname::Unknown => (),
     };
     let row = transaction.query_one(
         "
@@ -175,7 +178,7 @@ pub async fn create_profile(
             id,
             username,
             hostname,
-            acct,
+            webfinger_hostname,
             display_name,
             bio,
             avatar,
@@ -197,7 +200,7 @@ pub async fn create_profile(
             &profile_id,
             &profile_data.username,
             &profile_data.hostname.as_str(),
-            &profile_acct,
+            &profile_data.hostname.as_str(),
             &profile_data.display_name,
             &profile_data.bio,
             &profile_data.avatar,
@@ -260,17 +263,15 @@ pub async fn update_profile(
         create_instance(&transaction, hostname).await?;
     };
 
-    let profile_acct = match profile_data.hostname {
-        WebfingerHostname::Local => Some(profile_data.username.clone()),
+    match profile_data.hostname {
+        WebfingerHostname::Local => (),
         WebfingerHostname::Remote(ref hostname) => {
-            let profile_acct =
-                format!("{}@{}", profile_data.username, hostname);
             prevent_acct_conflict(
                 &transaction,
                 profile_id,
-                &profile_acct,
+                &profile_data.username,
+                hostname,
             ).await?;
-            Some(profile_acct)
         },
         // Webfinger hostname must be known
         WebfingerHostname::Unknown => return Err(DatabaseTypeError.into()),
@@ -281,7 +282,7 @@ pub async fn update_profile(
         SET
             username = $1,
             hostname = $2,
-            acct = $3,
+            webfinger_hostname = $3,
             display_name = $4,
             bio = $5,
             bio_source = $6,
@@ -304,7 +305,7 @@ pub async fn update_profile(
         &[
             &profile_data.username,
             &profile_data.hostname.as_str(),
-            &profile_acct,
+            &profile_data.hostname.as_str(),
             &profile_data.display_name,
             &profile_data.bio,
             &profile_data.bio_source,
@@ -1087,7 +1088,8 @@ mod tests {
         let profile = create_profile(db_client, profile_data).await.unwrap();
         assert_eq!(profile.username, "test");
         assert_eq!(profile.hostname, None);
-        assert_eq!(profile.acct.unwrap(), "test");
+        assert_eq!(profile.webfinger_hostname, None);
+        assert_eq!(profile.acct, None); // profile without account
         assert_eq!(profile.identity_proofs.into_inner().len(), 0);
         assert_eq!(profile.payment_options.inner().len(), 1);
         assert_eq!(profile.extra_fields.into_inner().len(), 0);
@@ -1186,10 +1188,12 @@ mod tests {
             ..Default::default()
         };
         let profile_2 = create_profile(db_client, profile_data_2).await.unwrap();
+        assert_eq!(profile_2.webfinger_hostname.unwrap(), "social.example");
         assert_eq!(profile_2.acct.unwrap(), "test@social.example");
 
         let profile_1_updated =
             get_profile_by_id(db_client, profile_1.id).await.unwrap();
+        assert_eq!(profile_1_updated.webfinger_hostname, None);
         assert_eq!(profile_1_updated.acct, None);
     }
 

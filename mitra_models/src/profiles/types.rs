@@ -644,6 +644,7 @@ pub struct DbActorProfile {
     pub(crate) portable_user_id: Option<Uuid>,
     pub username: String,
     pub(crate) hostname: Option<String>,
+    pub(crate) webfinger_hostname: Option<String>,
     pub(crate) acct: Option<String>, // unique acct string
     pub display_name: Option<String>,
     pub bio: Option<String>, // html
@@ -676,7 +677,7 @@ pub struct DbActorProfile {
 // Profile identifiers:
 // id (local profile UUID): never changes
 // actor_id of remote actor: must not change
-// acct (webfinger): may change if actor ID remains the same
+// webfinger address (and 'acct'): may change if actor ID remains the same
 // actor RSA key: can be updated at any time by the instance admin
 // identity proofs: TBD (likely will do "Trust on first use" (TOFU))
 
@@ -742,16 +743,17 @@ impl DbActorProfile {
                 };
             },
             WebfingerHostname::Remote(hostname) => {
-                // Acct can be empty if there's a conflict
-                if let Some(ref acct) = self.acct {
-                    if acct != &format!("{}@{}", self.username, hostname) {
-                        return Err(DatabaseTypeError);
-                    };
+                let acct = self.acct.as_ref().ok_or(DatabaseTypeError)?;
+                if acct != &format!("{}@{}", self.username, hostname) {
+                    return Err(DatabaseTypeError);
+                };
+                if self.hostname != Some(hostname) {
+                    return Err(DatabaseTypeError);
                 };
             },
             WebfingerHostname::Unknown if self.is_local() => {
                 // Creating local account
-                if self.acct.as_ref() != Some(&self.username) {
+                if self.acct.is_some() {
                     return Err(DatabaseTypeError);
                 };
             },
@@ -797,7 +799,7 @@ impl DbActorProfile {
     }
 
     pub fn webfinger_hostname(&self) -> WebfingerHostname {
-        if let Some(ref hostname) = self.hostname {
+        if let Some(ref hostname) = self.webfinger_hostname {
             WebfingerHostname::Remote(hostname.clone())
         } else if self.has_account() {
             WebfingerHostname::Local
@@ -904,6 +906,7 @@ impl Default for DbActorProfile {
             portable_user_id: None,
             username: "test".to_string(),
             hostname: None,
+            webfinger_hostname: None,
             acct: Some("test".to_string()),
             display_name: None,
             bio: None,
