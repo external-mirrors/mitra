@@ -803,6 +803,8 @@ mod tests {
         };
         let user = create_user(db_client, user_data).await.unwrap();
         assert_eq!(user.profile.username, "myname");
+        assert_eq!(user.profile.webfinger_hostname(), WebfingerHostname::Local);
+        assert_eq!(user.profile.acct.as_ref().unwrap(), "myname");
         assert!(user.profile.has_user_account());
         assert_eq!(user.role, Role::NormalUser);
         assert_eq!(user.client_config, ClientConfig::default());
@@ -908,7 +910,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_crete_automated_account() {
+    async fn test_create_automated_account() {
         let db_client = &mut create_test_database().await;
         let account_data = AutomatedAccountData {
             username: "myname".to_string(),
@@ -923,6 +925,8 @@ mod tests {
 
         let profile = get_profile_by_id(db_client, account_id).await.unwrap();
         assert_eq!(profile.username, "myname");
+        assert_eq!(profile.webfinger_hostname(), WebfingerHostname::Local);
+        assert_eq!(profile.acct.as_ref().unwrap(), "myname");
         assert_eq!(profile.is_automated, true);
         assert!(!profile.has_user_account());
 
@@ -948,7 +952,8 @@ mod tests {
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();
         profile.check_consistency().unwrap();
-        assert!(matches!(profile.hostname(), WebfingerHostname::Unknown));
+        assert_eq!(profile.webfinger_hostname(), WebfingerHostname::Unknown);
+        assert_eq!(profile.acct, None);
         let rsa_secret_key = generate_weak_rsa_key().unwrap();
         let ed25519_secret_key = generate_weak_ed25519_key();
         let invite_code =
@@ -964,7 +969,8 @@ mod tests {
         assert_eq!(user.rsa_secret_key, rsa_secret_key);
         assert_eq!(user.ed25519_secret_key, ed25519_secret_key);
         assert!(user.profile.has_portable_account());
-        assert!(matches!(user.profile.hostname(), WebfingerHostname::Local));
+        assert_eq!(user.profile.webfinger_hostname(), WebfingerHostname::Local);
+        assert_eq!(user.profile.acct.unwrap(), "test");
     }
 
     #[tokio::test]

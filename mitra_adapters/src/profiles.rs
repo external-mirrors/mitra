@@ -5,7 +5,7 @@ pub fn profile_address(
     local_hostname: &str,
     profile: &DbActorProfile,
 ) -> Option<WebfingerAddress> {
-    let maybe_hostname = profile.hostname();
+    let maybe_hostname = profile.webfinger_hostname();
     let hostname = match maybe_hostname {
         WebfingerHostname::Remote(ref hostname) => hostname,
         WebfingerHostname::Local => local_hostname,

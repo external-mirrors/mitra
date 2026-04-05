@@ -644,7 +644,7 @@ pub struct DbActorProfile {
     pub(crate) portable_user_id: Option<Uuid>,
     pub username: String,
     pub(crate) hostname: Option<String>,
-    pub acct: Option<String>, // unique acct string
+    pub(crate) acct: Option<String>, // unique acct string
     pub display_name: Option<String>,
     pub bio: Option<String>, // html
     pub bio_source: Option<String>, // plaintext or markdown
@@ -735,7 +735,7 @@ impl DbActorProfile {
                 return Err(DatabaseTypeError);
             };
         };
-        match self.hostname() {
+        match self.webfinger_hostname() {
             WebfingerHostname::Local => {
                 if self.acct.as_ref() != Some(&self.username) {
                     return Err(DatabaseTypeError);
@@ -747,6 +747,12 @@ impl DbActorProfile {
                     if acct != &format!("{}@{}", self.username, hostname) {
                         return Err(DatabaseTypeError);
                     };
+                };
+            },
+            WebfingerHostname::Unknown if self.is_local() => {
+                // Creating local account
+                if self.acct.as_ref() != Some(&self.username) {
+                    return Err(DatabaseTypeError);
                 };
             },
             WebfingerHostname::Unknown => {
@@ -790,10 +796,10 @@ impl DbActorProfile {
         Ok(())
     }
 
-    pub fn hostname(&self) -> WebfingerHostname {
+    pub fn webfinger_hostname(&self) -> WebfingerHostname {
         if let Some(ref hostname) = self.hostname {
             WebfingerHostname::Remote(hostname.clone())
-        } else if self.actor_json.is_none() || self.portable_user_id.is_some() {
+        } else if self.has_account() {
             WebfingerHostname::Local
         } else {
             WebfingerHostname::Unknown
@@ -806,6 +812,12 @@ impl DbActorProfile {
 
     pub fn has_portable_account(&self) -> bool {
         self.portable_user_id.is_some()
+    }
+
+    pub fn has_account(&self) -> bool {
+        self.has_user_account()
+            || self.automated_account_id.is_some()
+            || self.has_portable_account()
     }
 
     /// Is actor local (managed)?
@@ -1032,7 +1044,7 @@ impl ProfileUpdateData {
 impl From<&DbActorProfile> for ProfileUpdateData {
     fn from(profile: &DbActorProfile) -> Self {
         let profile = profile.clone();
-        let hostname = profile.hostname();
+        let hostname = profile.webfinger_hostname();
         Self {
             username: profile.username,
             hostname: hostname,

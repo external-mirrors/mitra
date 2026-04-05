@@ -1108,7 +1108,11 @@ mod tests {
         let profile = create_profile(db_client, profile_data).await.unwrap();
         profile.check_consistency().unwrap();
         assert_eq!(profile.username, "test");
-        assert_eq!(profile.hostname.unwrap(), "example.com");
+        assert_eq!(profile.hostname.as_ref().unwrap(), "example.com");
+        assert_eq!(
+            profile.webfinger_hostname(),
+            WebfingerHostname::Remote("example.com".to_owned()),
+        );
         assert_eq!(profile.acct.unwrap(), "test@example.com");
         assert_eq!(
             profile.actor_id.unwrap(),
@@ -1219,7 +1223,7 @@ mod tests {
             "test",
             "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
         ).await;
-        assert_eq!(user.profile.hostname(), WebfingerHostname::Local);
+        assert_eq!(user.profile.webfinger_hostname(), WebfingerHostname::Local);
         let mut profile_data = ProfileUpdateData::from(&user.profile);
         let bio = "test bio";
         profile_data.bio = Some(bio.to_string());
@@ -1229,7 +1233,10 @@ mod tests {
             profile_data,
         ).await.unwrap();
         assert_eq!(profile_updated.acct, user.profile.acct);
-        assert_eq!(profile_updated.hostname(), user.profile.hostname());
+        assert_eq!(
+            profile_updated.webfinger_hostname(),
+            user.profile.webfinger_hostname(),
+        );
     }
 
     #[tokio::test]

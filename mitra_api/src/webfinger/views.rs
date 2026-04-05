@@ -69,7 +69,7 @@ async fn get_jrd(
                 &authority,
                 &canonical_uri,
             ).await?;
-            match profile.hostname() {
+            match profile.webfinger_hostname() {
                 WebfingerHostname::Local => profile.username, // has account
                 _ => return Err(HttpError::NotFound("user")),
             }
