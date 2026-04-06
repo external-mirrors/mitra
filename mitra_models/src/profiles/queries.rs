@@ -1050,7 +1050,10 @@ mod tests {
             views::refresh_latest_post_view,
         },
         profiles::{
-            test_utils::create_test_local_profile,
+            test_utils::{
+                create_test_local_profile,
+                create_test_remote_profile,
+            },
             types::{
                 DbActor,
                 DbActorKey,
@@ -1378,14 +1381,12 @@ mod tests {
     async fn test_set_reachability_status() {
         let db_client = &mut create_test_database().await;
         let actor_id = "https://example.com/users/test";
-        let profile_data = ProfileCreateData {
-            username: "test".to_string(),
-            hostname: WebfingerHostname::Remote("example.com".to_string()),
-            public_keys: vec![DbActorKey::default()],
-            actor_json: Some(DbActor::for_test(actor_id)),
-            ..Default::default()
-        };
-        let profile = create_profile(db_client, profile_data).await.unwrap();
+        let profile = create_test_remote_profile(
+            db_client,
+            "test_1",
+            "example.com",
+            actor_id,
+        ).await;
         let statuses = vec![(actor_id.to_string(), true)];
         set_reachability_status(db_client, statuses).await.unwrap();
         let profile = get_profile_by_id(db_client, profile.id).await.unwrap();

@@ -53,7 +53,10 @@ impl ProfileCreateData {
         ProfileCreateData {
             username: username.to_string(),
             hostname: hostname,
-            public_keys: vec![DbActorKey::default()],
+            public_keys: vec![DbActorKey {
+                id: format!("{}#main-key", db_actor.id),
+                ..DbActorKey::default()
+            }],
             actor_json: Some(db_actor),
             ..Default::default()
         }

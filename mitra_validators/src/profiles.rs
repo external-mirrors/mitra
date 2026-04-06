@@ -362,7 +362,7 @@ pub fn clean_profile_update_data(
 
 #[cfg(test)]
 mod tests {
-    use mitra_models::profiles::types::DbActor;
+    use mitra_models::profiles::types::DbActorProfile;
     use super::*;
 
     #[test]
@@ -455,19 +455,23 @@ mod tests {
 
     #[test]
     fn test_clean_profile_create_data() {
-        let mut profile_data = ProfileCreateData {
-            username: "test".to_string(),
-            hostname: WebfingerHostname::Remote("social.example".to_string()),
-            display_name: Some("Test Test".to_string()),
-            actor_json: Some(DbActor {
-                id: "https://social.example/test".to_string(),
-                inbox: "https://social.example/test/inbox".to_string(),
-                outbox: "https://social.example/test/outbox".to_string(),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
+        let mut profile_data = ProfileCreateData::remote_for_test(
+            "test",
+            "social.example",
+            "https://social.example/test",
+        );
         let result = clean_profile_create_data(&mut profile_data);
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
+    fn test_clean_profile_update_data() {
+        let profile = DbActorProfile::remote_for_test(
+            "test",
+            "https://social.example/test",
+        );
+        let mut profile_data = ProfileUpdateData::from(&profile);
+        let result = clean_profile_update_data(&mut profile_data);
         assert_eq!(result.is_ok(), true);
     }
 }
