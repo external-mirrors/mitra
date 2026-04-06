@@ -272,6 +272,7 @@ pub async fn update_profile(
             ).await?;
             Some(profile_acct)
         },
+        // Webfinger hostname must be known
         WebfingerHostname::Unknown => return Err(DatabaseTypeError.into()),
     };
     let maybe_row = transaction.query_opt(

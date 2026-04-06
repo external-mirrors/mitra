@@ -945,12 +945,17 @@ impl ProfileCreateData {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
         let origin = if let Some(actor_data) = self.actor_json.as_ref() {
             actor_data.check_consistency()?;
+            if !actor_data.is_portable() && self.hostname.as_str().is_none() {
+                // Non-portable remote profiles should always have webfinger hostname.
+                // Portable profiles may have local accounts.
+                return Err(DatabaseTypeError);
+            };
             Origin::Remote
         } else {
+            if self.hostname.as_str().is_some() {
+                return Err(DatabaseTypeError);
+            };
             Origin::Local
-        };
-        if self.hostname.as_str().is_some() && matches!(origin, Origin::Local) {
-            return Err(DatabaseTypeError);
         };
         check_public_keys(&self.public_keys, origin)?;
         check_identity_proofs(&self.identity_proofs)?;
@@ -985,12 +990,17 @@ impl ProfileUpdateData {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
         let origin = if let Some(actor_data) = self.actor_json.as_ref() {
             actor_data.check_consistency()?;
+            if !actor_data.is_portable() && self.hostname.as_str().is_none() {
+                // Non-portable remote profiles should always have webfinger hostname.
+                // Portable profiles may have local accounts.
+                return Err(DatabaseTypeError);
+            };
             Origin::Remote
         } else {
+            if self.hostname.as_str().is_some() {
+                return Err(DatabaseTypeError);
+            };
             Origin::Local
-        };
-        if self.hostname.as_str().is_some() && matches!(origin, Origin::Local) {
-            return Err(DatabaseTypeError);
         };
         check_public_keys(&self.public_keys, origin)?;
         check_identity_proofs(&self.identity_proofs)?;

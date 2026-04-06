@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't check app directories until configuration is validated.
 - Changed MSRV to 1.77.0.
 - Rate-limit portable actor registrations.
+- Raise data integrity error if webfinger hostname is missing in remote profile data.
 
 ### Fixed
 

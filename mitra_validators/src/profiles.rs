@@ -269,10 +269,6 @@ fn validate_profile_create_data(
     };
     let is_remote = if let Some(ref actor) = profile_data.actor_json {
         validate_actor_data(actor)?;
-        if !actor.is_portable() && profile_data.hostname.as_str().is_none() {
-            return Err(ValidationError(
-                "non-portable remote profile should have hostname"));
-        };
         true
     } else {
         false
@@ -314,18 +310,11 @@ fn validate_profile_update_data(
     if let WebfingerHostname::Remote(ref hostname) = profile_data.hostname {
         validate_hostname(hostname)?;
     };
-    if let WebfingerHostname::Unknown = profile_data.hostname {
-        return Err(ValidationError("unknown hostname"));
-    };
     if let Some(display_name) = &profile_data.display_name {
         validate_display_name(display_name)?;
     };
     let is_remote = if let Some(ref actor) = profile_data.actor_json {
         validate_actor_data(actor)?;
-        if !actor.is_portable() && profile_data.hostname.as_str().is_none() {
-            return Err(ValidationError(
-                "non-portable remote profile should have hostname"));
-        };
         true
     } else {
         false
