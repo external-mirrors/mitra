@@ -72,7 +72,7 @@ use crate::{
         proposal::{parse_proposal, Proposal},
     },
     identifiers::canonicalize_id,
-    importers::{perform_webfinger_query, ApClient},
+    importers::ApClient,
     keys::{Multikey, PublicKeyPem},
     ownership::is_same_origin,
     vocabulary::{
@@ -85,6 +85,7 @@ use crate::{
         SERVICE,
         VERIFIABLE_IDENTITY_STATEMENT,
     },
+    webfinger::perform_webfinger_query,
 };
 
 use super::{

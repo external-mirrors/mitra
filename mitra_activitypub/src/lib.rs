@@ -20,3 +20,4 @@ pub mod ownership;
 pub mod queues;
 pub mod utils;
 pub mod vocabulary;
+pub mod webfinger;

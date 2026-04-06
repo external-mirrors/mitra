@@ -16,12 +16,10 @@ use apx_sdk::{
     authentication::verify_portable_object,
     deserialization::{deserialize_into_object_id_opt, object_to_id},
     fetch::{
-        fetch_json,
         fetch_object,
         FetchError,
         FetchObjectOptions,
     },
-    jrd::{JsonResourceDescriptor, JRD_MEDIA_TYPE},
     utils::{get_core_type, CoreType},
 };
 use chrono::{TimeDelta, Utc};
@@ -93,6 +91,7 @@ use crate::{
         UuidOrUsername,
     },
     ownership::{get_object_id, is_local_origin, verify_object_owner},
+    webfinger::perform_webfinger_query,
 };
 
 // Gateway pool for resolving 'ap' URIs
@@ -443,24 +442,6 @@ pub fn is_actor_importer_error(error: &HandlerError) -> bool {
             HandlerError::DatabaseError(DatabaseError::NotFound(_)) |
             HandlerError::Filtered(_)
     )
-}
-
-pub(crate) async fn perform_webfinger_query(
-    agent: &FederationAgent,
-    webfinger_address: &WebfingerAddress,
-) -> Result<String, HandlerError> {
-    let webfinger_resource = webfinger_address.to_acct_uri();
-    let webfinger_uri = webfinger_address.endpoint_uri();
-    let jrd_value = fetch_json(
-        agent,
-        &webfinger_uri,
-        &[("resource", &webfinger_resource)],
-        Some(JRD_MEDIA_TYPE),
-    ).await?;
-    let jrd: JsonResourceDescriptor = serde_json::from_value(jrd_value)?;
-    let actor_id = jrd.actor_id()
-        .ok_or(ValidationError("actor ID is not found in JRD"))?;
-    Ok(actor_id)
 }
 
 pub async fn import_profile_by_webfinger_address(
