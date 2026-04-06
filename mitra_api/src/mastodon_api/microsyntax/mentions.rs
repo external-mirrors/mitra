@@ -27,7 +27,7 @@ const MENTION_SEARCH_SECONDARY_RE: &str = r"(?x)
     ";
 
 fn caps_to_address(
-    instance_hostname: &str,
+    local_hostname: &str,
     caps: &Captures,
 ) -> Option<WebfingerAddress> {
     let username = &caps["username"];
@@ -35,7 +35,7 @@ fn caps_to_address(
         .map(|match_| encode_hostname(match_.as_str()))
         .transpose()
     {
-        maybe_hostname.unwrap_or(instance_hostname.to_string())
+        maybe_hostname.unwrap_or(local_hostname.to_string())
     } else {
         // Invalid hostname
         return None;
@@ -49,7 +49,7 @@ fn caps_to_address(
 
 /// Finds everything that looks like a mention
 fn find_mentions(
-    instance_hostname: &str,
+    local_hostname: &str,
     text: &str,
 ) -> Vec<WebfingerAddress> {
     let mention_re = Regex::new(MENTION_SEARCH_RE)
@@ -64,7 +64,7 @@ fn find_mentions(
             continue;
         };
         if let Some(secondary_caps) = mention_secondary_re.captures(&caps["mention"]) {
-            let Some(address) = caps_to_address(instance_hostname, &secondary_caps) else {
+            let Some(address) = caps_to_address(local_hostname, &secondary_caps) else {
                 // Invalid mention
                 continue;
             };
@@ -78,19 +78,19 @@ fn find_mentions(
 
 pub async fn find_mentioned_profiles(
     db_client: &impl DatabaseClient,
-    instance_hostname: &str,
+    local_hostname: &str,
     text: &str,
 ) -> Result<IndexMap<WebfingerAddress, DbActorProfile>, DatabaseError> {
-    let mentions = find_mentions(instance_hostname, text);
+    let mentions = find_mentions(local_hostname, text);
     let mut accts = vec![];
     for address in mentions {
-        accts.push(address.acct(instance_hostname));
+        accts.push(address.acct(local_hostname));
     };
     // If acct doesn't exist in database, mention is ignored
     let profiles = get_profiles_by_accts(db_client, accts).await?;
     let mut mention_map = IndexMap::new();
     for profile in profiles {
-        let Some(address) = profile_address(instance_hostname, &profile) else {
+        let Some(address) = profile_address(local_hostname, &profile) else {
             // get_profiles_by_accts should not return profiles without address
             return Err(DatabaseError::type_error());
         };
@@ -101,7 +101,7 @@ pub async fn find_mentioned_profiles(
 
 pub fn replace_mentions(
     mention_map: &IndexMap<WebfingerAddress, DbActorProfile>,
-    instance_hostname: &str,
+    local_hostname: &str,
     authority: &Authority,
     text: &str,
 ) -> String {
@@ -116,7 +116,7 @@ pub fn replace_mentions(
             return caps[0].to_string();
         };
         if let Some(secondary_caps) = mention_secondary_re.captures(&caps["mention"]) {
-            let address = if let Some(address) = caps_to_address(instance_hostname, &secondary_caps) {
+            let address = if let Some(address) = caps_to_address(local_hostname, &secondary_caps) {
                 address
             } else {
                 // Invalid mention
@@ -162,10 +162,10 @@ mod tests {
         "some text",
     );
 
-    fn find_mentions(instance_hostname: &str, text: &str) -> Vec<String> {
-        super::find_mentions(instance_hostname, text)
+    fn find_mentions(local_hostname: &str, text: &str) -> Vec<String> {
+        super::find_mentions(local_hostname, text)
             .into_iter()
-            .map(|address| address.acct(instance_hostname))
+            .map(|address| address.acct(local_hostname))
             .collect()
     }
 

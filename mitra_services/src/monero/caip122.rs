@@ -162,13 +162,13 @@ pub struct Caip122SessionData {
 
 pub async fn verify_monero_caip122_signature(
     config: &MoneroConfig,
-    instance_hostname: &str,
+    local_hostname: &str,
     expected_statement: &str,
     message_str: &str,
     signature: &str,
 ) -> Result<Caip122SessionData, Caip122Error> {
     let message: Caip122Message = message_str.parse()?;
-    if message.domain != instance_hostname {
+    if message.domain != local_hostname {
         return Err(Caip122Error::InvalidMessage("domain doesn't match instance hostname"));
     };
     let statement = message.statement.as_ref()

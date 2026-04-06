@@ -21,14 +21,14 @@ pub struct Eip4361SessionData {
 pub fn verify_eip4361_signature(
     message: &str,
     signature: &str,
-    instance_hostname: &str,
+    local_hostname: &str,
     expected_statement: &str,
 ) -> Result<Eip4361SessionData, Eip4361Error> {
     let message: Message = message.parse()
         .map_err(|_| Eip4361Error("invalid EIP-4361 message"))?;
     let signature_bytes = <[u8; 65]>::from_hex(signature.trim_start_matches("0x"))
         .map_err(|_| Eip4361Error("invalid signature string"))?;
-    if message.domain != instance_hostname {
+    if message.domain != local_hostname {
         return Err(Eip4361Error("domain doesn't match instance hostname"));
     };
     let statement = message.statement.as_ref()

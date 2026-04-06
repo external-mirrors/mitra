@@ -268,7 +268,7 @@ impl ValidatedActor {
 // Determine hostname part of 'acct' URI
 async fn get_webfinger_hostname(
     agent: &FederationAgent,
-    instance_hostname: &str,
+    local_hostname: &str,
     actor: &ValidatedActor,
     has_portable_account: bool,
 ) -> Result<WebfingerHostname, HandlerError> {
@@ -284,9 +284,9 @@ async fn get_webfinger_hostname(
         CanonicalUri::Ap(_) => {
             if let Some(gateway) = actor.gateways.first() {
                 // Primary gateway
-                let hostname = get_hostname(gateway)
+                let gateway_hostname = get_hostname(gateway)
                     .map_err(|_| ValidationError("invalid gateway URL"))?;
-                if hostname == instance_hostname {
+                if gateway_hostname == local_hostname {
                     // Portable actor with local account (unmanaged)
                     if has_portable_account {
                         return Ok(WebfingerHostname::Local);
@@ -297,7 +297,7 @@ async fn get_webfinger_hostname(
                 };
                 let webfinger_address = WebfingerAddress::new_unchecked(
                     &actor.preferred_username,
-                    &hostname,
+                    &gateway_hostname,
                 );
                 let webfinger_actor_id = perform_webfinger_query(
                     agent,
@@ -307,7 +307,7 @@ async fn get_webfinger_hostname(
                     .map_err(|_| ValidationError("invalid actor ID in JRD"))?;
                 if canonical_webfinger_actor_id == canonical_actor_id {
                     // Actor is hosted by this gateway
-                    WebfingerHostname::Remote(hostname)
+                    WebfingerHostname::Remote(gateway_hostname)
                 } else {
                     return Err(ValidationError("unexpected actor ID in JRD").into());
                 }
