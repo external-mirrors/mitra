@@ -654,7 +654,7 @@ async fn lookup_acct(
     };
     let acct = WebfingerAddress::parse(&address)
         .map_err(|error| ValidationError(error.message()))?
-        .acct(&local_hostname);
+        .short_address(&local_hostname);
     let profile = get_profile_by_acct(db_client, &acct).await?;
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());

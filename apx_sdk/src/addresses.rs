@@ -76,9 +76,9 @@ impl WebfingerAddress {
         format!("@{}", self)
     }
 
-    /// Returns 'acct' string (short address).
-    /// Used in Mastodon API.
-    pub fn acct(&self, local_hostname: &str) -> String {
+    /// Returns short address (without the 'host' part if account is local).
+    /// This is an `acct` string in Mastodon API.
+    pub fn short_address(&self, local_hostname: &str) -> String {
         if self.hostname == local_hostname {
             self.username.clone()
         } else {
@@ -143,7 +143,7 @@ mod tests {
             "user@local.example",
         );
         assert_eq!(
-            address.acct(local_hostname),
+            address.short_address(local_hostname),
             "user",
         );
     }
@@ -160,7 +160,7 @@ mod tests {
             "user@remote.example",
         );
         assert_eq!(
-            address.acct(local_hostname),
+            address.short_address(local_hostname),
             "user@remote.example",
         );
     }

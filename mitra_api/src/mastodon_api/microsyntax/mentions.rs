@@ -84,7 +84,7 @@ pub async fn find_mentioned_profiles(
     let mentions = find_mentions(local_hostname, text);
     let mut accts = vec![];
     for address in mentions {
-        accts.push(address.acct(local_hostname));
+        accts.push(address.short_address(local_hostname));
     };
     // If acct doesn't exist in database, mention is ignored
     let profiles = get_profiles_by_accts(db_client, accts).await?;
@@ -165,7 +165,7 @@ mod tests {
     fn find_mentions(local_hostname: &str, text: &str) -> Vec<String> {
         super::find_mentions(local_hostname, text)
             .into_iter()
-            .map(|address| address.acct(local_hostname))
+            .map(|address| address.short_address(local_hostname))
             .collect()
     }
 

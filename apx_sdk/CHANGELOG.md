@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added documentation to `apx_sdk::addresses` module.
 - Implemented `Hash` for `WebfingerAddress`.
 
+### Changed
+
+- Renamed `WebfingerAddress::acct` to `short_address`.
+
 ## [0.22.0] - 2026-03-27
 
 ### Added

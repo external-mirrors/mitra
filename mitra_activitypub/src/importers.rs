@@ -486,7 +486,7 @@ pub async fn get_or_import_profile_by_webfinger_address(
     webfinger_address: &WebfingerAddress,
 ) -> Result<DbActorProfile, HandlerError> {
     let instance = &ap_client.instance;
-    let acct = webfinger_address.acct(&instance.hostname());
+    let acct = webfinger_address.short_address(&instance.hostname());
     let maybe_profile = get_profile_by_acct(
         db_client_await!(db_pool),
         &acct,
