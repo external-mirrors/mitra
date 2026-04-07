@@ -17,6 +17,7 @@ use mitra_models::{
         DatabaseError,
     },
     filter_rules::types::FilterAction,
+    profiles::queries::get_remote_profiles_by_actor_ids,
     relationships::queries::is_local_or_followed,
 };
 use mitra_validators::errors::ValidationError;
@@ -60,11 +61,18 @@ async fn check_unsolicited_message(
     if !audience.iter().any(is_public) {
         return Ok(());
     };
-    // TODO: FEP-EF61: find portable local recipients
     let has_local_recipients = audience.iter().any(|actor_id| {
         parse_local_actor_id(authority, actor_id).is_ok()
     });
     if has_local_recipients {
+        return Ok(());
+    };
+    let has_portable_local_recipients =
+        get_remote_profiles_by_actor_ids(db_client, &audience)
+            .await?
+            .into_iter()
+            .any(|profile| profile.has_portable_account());
+    if has_portable_local_recipients {
         return Ok(());
     };
     // is_local_or_followed returns true if actor has local account
