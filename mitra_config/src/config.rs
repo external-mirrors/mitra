@@ -82,6 +82,8 @@ pub struct Config {
     #[serde(alias = "instance_uri")]
     pub(super) instance_url: String,
 
+    pub(super) webfinger_hostname: Option<String>,
+
     pub instance_title: String,
     pub instance_short_description: String,
     pub instance_description: String,

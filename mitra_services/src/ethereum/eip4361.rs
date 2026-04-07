@@ -2,6 +2,7 @@
 use apx_core::{
     caip2::ChainId,
     caip10::AccountId,
+    url::http_uri::HttpUri,
 };
 use hex::FromHex;
 use siwe::Message;
@@ -21,14 +22,14 @@ pub struct Eip4361SessionData {
 pub fn verify_eip4361_signature(
     message: &str,
     signature: &str,
-    local_hostname: &str,
+    instance_uri: &HttpUri,
     expected_statement: &str,
 ) -> Result<Eip4361SessionData, Eip4361Error> {
     let message: Message = message.parse()
         .map_err(|_| Eip4361Error("invalid EIP-4361 message"))?;
     let signature_bytes = <[u8; 65]>::from_hex(signature.trim_start_matches("0x"))
         .map_err(|_| Eip4361Error("invalid signature string"))?;
-    if message.domain != local_hostname {
+    if message.domain != instance_uri.hostname().as_str() {
         return Err(Eip4361Error("domain doesn't match instance hostname"));
     };
     let statement = message.statement.as_ref()
@@ -57,11 +58,12 @@ pub fn verify_eip4361_signature(
 mod tests {
     use super::*;
 
-    const INSTANCE_HOSTNAME: &str = "example.com";
+    const INSTANCE_URI: &str = "https://example.com";
     const LOGIN_MESSAGE: &str = "test";
 
     #[test]
     fn test_verify_eip4361_signature() {
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let message = "example.com wants you to sign in with your Ethereum account:
 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
 
@@ -74,8 +76,9 @@ Nonce: 3cb7760eac2f
 Issued At: 2022-02-14T22:27:35.500Z";
         let signature = "0x9059c9a69c31e87d887262a574abcc33f320d5b778bea8a35c6fbdea94a17e9652b99f7cdd146ed67fa8e4bb02462774b958a129c421fe8d743a43bf67dcbcd61c";
         let session_data = verify_eip4361_signature(
-            message, signature,
-            INSTANCE_HOSTNAME,
+            message,
+            signature,
+            &instance_uri,
             LOGIN_MESSAGE,
         ).unwrap();
         assert_eq!(session_data.account_id.chain_id, ChainId::ethereum_mainnet());
@@ -85,11 +88,13 @@ Issued At: 2022-02-14T22:27:35.500Z";
 
     #[test]
     fn test_verify_eip4361_signature_invalid() {
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let message = "abc";
         let signature = "xyz";
         let error = verify_eip4361_signature(
-            message, signature,
-            INSTANCE_HOSTNAME,
+            message,
+            signature,
+            &instance_uri,
             LOGIN_MESSAGE,
         ).err().unwrap();
         assert_eq!(error.to_string(), "invalid EIP-4361 message");

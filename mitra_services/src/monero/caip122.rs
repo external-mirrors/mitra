@@ -4,6 +4,7 @@ use std::str::FromStr;
 use apx_core::{
     caip2::ChainId,
     caip10::AccountId,
+    url::http_uri::HttpUri,
 };
 use chrono::{DateTime, Utc};
 use monero::{
@@ -162,13 +163,13 @@ pub struct Caip122SessionData {
 
 pub async fn verify_monero_caip122_signature(
     config: &MoneroConfig,
-    local_hostname: &str,
+    instance_uri: &HttpUri,
     expected_statement: &str,
     message_str: &str,
     signature: &str,
 ) -> Result<Caip122SessionData, Caip122Error> {
     let message: Caip122Message = message_str.parse()?;
-    if message.domain != local_hostname {
+    if message.domain != instance_uri.hostname().as_str() {
         return Err(Caip122Error::InvalidMessage("domain doesn't match instance hostname"));
     };
     let statement = message.statement.as_ref()

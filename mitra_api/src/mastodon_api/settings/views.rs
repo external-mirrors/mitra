@@ -283,7 +283,7 @@ async fn export_followers_view(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let csv = export_followers(
         db_client,
-        &config.instance().hostname(),
+        &config.instance().webfinger_hostname(),
         current_user.id,
     ).await?;
     let response = HttpResponse::Ok()
@@ -302,7 +302,7 @@ async fn export_follows_view(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let csv = export_follows(
         db_client,
-        &config.instance().hostname(),
+        &config.instance().webfinger_hostname(),
         current_user.id,
     ).await?;
     let response = HttpResponse::Ok()

@@ -223,7 +223,7 @@ pub async fn create_account(
         let session_data = verify_eip4361_signature(
             message,
             signature,
-            &instance.hostname(),
+            instance.uri(),
             &config.login_message,
         ).map_err(|err| MastodonError::ValidationError(err.to_string()))?;
         // Don't remember nonce to avoid extra signature requests
@@ -241,7 +241,7 @@ pub async fn create_account(
             .ok_or(MastodonError::NotSupported)?;
         let session_data = verify_monero_caip122_signature(
             monero_config,
-            &instance.hostname(),
+            instance.uri(),
             &config.login_message,
             message,
             signature,
@@ -646,7 +646,7 @@ async fn lookup_acct(
     query_params: web::Query<LookupAcctQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let local_hostname = config.instance().hostname();
+    let local_hostname = config.instance().webfinger_hostname();
     let address =  if query_params.acct.contains('@') {
         query_params.acct.clone()
     } else {

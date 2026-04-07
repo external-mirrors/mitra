@@ -71,6 +71,7 @@ fn user_agent(
 #[derive(Clone)]
 pub struct Instance {
     _uri: HttpUri,
+    webfinger_hostname: Option<String>,
     pub user_agent: Option<String>,
     pub federation: FederationConfig,
     pub ed25519_secret_key: Ed25519SecretKey,
@@ -93,6 +94,7 @@ impl Instance {
         };
         Self {
             _uri: instance_uri,
+            webfinger_hostname: config.webfinger_hostname.clone(),
             user_agent: maybe_user_agent,
             federation: federation_config,
             ed25519_secret_key: config.instance_ed25519_key
@@ -110,9 +112,9 @@ impl Instance {
         self._uri.as_str()
     }
 
-    /// Returns instance host name (without port number)
-    pub fn hostname(&self) -> String {
-        self._uri.hostname().to_string()
+    pub fn webfinger_hostname(&self) -> String {
+        self.webfinger_hostname.clone()
+            .unwrap_or(self._uri.hostname().to_string())
     }
 }
 
@@ -127,6 +129,7 @@ impl Instance {
         };
         Self {
             _uri: parse_instance_url(url).unwrap(),
+            webfinger_hostname: None,
             user_agent: None,
             federation: FederationConfig {
                 enabled: false,
@@ -196,7 +199,7 @@ mod tests {
         let instance = Instance::for_test(instance_url);
 
         assert_eq!(instance.uri_str(), "https://example.com");
-        assert_eq!(instance.hostname(), "example.com");
+        assert_eq!(instance.webfinger_hostname(), "example.com");
         // Test instance is private
         assert_eq!(instance.user_agent, None);
         assert!(!instance.federation.enabled);
@@ -208,6 +211,6 @@ mod tests {
         let instance = Instance::for_test(instance_url);
 
         assert_eq!(instance.uri_str(), "http://1.2.3.4:3777");
-        assert_eq!(instance.hostname(), "1.2.3.4");
+        assert_eq!(instance.webfinger_hostname(), "1.2.3.4");
     }
 }

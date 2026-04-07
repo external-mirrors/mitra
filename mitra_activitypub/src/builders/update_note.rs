@@ -38,12 +38,14 @@ struct UpdateNote {
 
 fn build_update_note(
     instance_uri: &HttpUri,
+    instance_webfinger_hostname: &str,
     media_server: &MediaServer,
     post: &PostDetailed,
 ) -> UpdateNote {
     let authority = Authority::server(instance_uri);
     let object = build_note(
         instance_uri,
+        instance_webfinger_hostname,
         &authority,
         media_server,
         post,
@@ -78,6 +80,7 @@ pub async fn prepare_update_note(
     assert_eq!(author.id, post.author.id);
     let activity = build_update_note(
         instance.uri(),
+        &instance.webfinger_hostname(),
         media_server,
         post,
     );
@@ -101,6 +104,7 @@ mod tests {
     use super::*;
 
     const INSTANCE_URI: &str = "https://social.example";
+    const INSTANCE_HOSTNAME: &str = "social.example";
 
     #[test]
     fn test_build_update_note() {
@@ -116,6 +120,7 @@ mod tests {
         };
         let activity = build_update_note(
             &instance_uri,
+            INSTANCE_HOSTNAME,
             &media_server,
             &post,
         );

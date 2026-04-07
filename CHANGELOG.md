@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add `quote` property to `Note` object when post contains a quote.
 - Convert `Image` objects into posts with an attached image.
 - Discover real webfinger address when importing an actor.
+- Added `webfinger_hostname` configuration parameter for split-domain setups.
 
 ### Changed
 
