@@ -32,6 +32,7 @@ use mitra_models::{
     },
     filter_rules::types::FilterAction,
     profiles::queries::{
+        delete_profile,
         get_remote_profile_by_actor_id,
         set_reachability_status,
     },
@@ -380,6 +381,35 @@ pub fn outgoing_queue_backoff(failure_count: u32) -> u32 {
     30 * (10_u32.pow(failure_count) + 10)
 }
 
+async fn delete_gone_actors(
+    db_client: &mut impl DatabaseClient,
+    gone_actors: &[String],
+) -> Result<(), DatabaseError> {
+    // The number of gone actors is expected to be small
+    for actor_id in gone_actors {
+        match get_remote_profile_by_actor_id(
+            db_client,
+            actor_id,
+        ).await {
+            Ok(profile) => {
+                if profile.has_account() {
+                    // Do not delete if actor has a local account
+                    continue;
+                };
+                let deletion_queue = delete_profile(db_client, profile.id).await?;
+                deletion_queue.into_job(db_client).await?;
+                log::warn!("deleted profile {profile} (410 Gone)");
+            },
+            Err(DatabaseError::NotFound(_)) => {
+                // Profile was deleted while the delivery was being processed
+                continue;
+            },
+            Err(other_error) => return Err(other_error),
+        };
+    };
+    Ok(())
+}
+
 pub async fn process_queued_outgoing_activities(
     config: &Config,
     db_pool: &DatabaseConnectionPool,
@@ -443,7 +473,7 @@ pub async fn process_queued_outgoing_activities(
             &mut recipients,
         ).await;
 
-        let db_client = &**get_database_client(db_pool).await?;
+        let db_client = &mut **get_database_client(db_pool).await?;
         match worker_result {
             Ok(_) => (),
             Err(error) => {
@@ -510,6 +540,7 @@ pub async fn process_queued_outgoing_activities(
             // Update reachability statuses if all deliveries are successful
             // or if retry limit is reached
             // TODO: track reachability status of servers, not actors
+            let mut gone = vec![];
             let statuses = recipients
                 .into_iter()
                 // Group by actor ID (could have many inboxes)
@@ -520,10 +551,8 @@ pub async fn process_queued_outgoing_activities(
                 })
                 .into_iter()
                 .inspect(|(actor_id, inboxes)| {
-                    // Log "gone" actors
-                    // TODO: delete
                     if inboxes.iter().all(|inbox| inbox.is_gone) {
-                        log::warn!("actor is gone: {actor_id}");
+                        gone.push(actor_id.clone());
                     };
                 })
                 .map(|(actor_id, inboxes)| {
@@ -535,6 +564,7 @@ pub async fn process_queued_outgoing_activities(
                 .collect();
             set_reachability_status(db_client, statuses).await?;
             log::info!("reachability statuses updated");
+            delete_gone_actors(db_client, &gone).await?;
         };
         delete_job_from_queue(db_client, job.id).await?;
     };
