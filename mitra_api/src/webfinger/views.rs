@@ -76,11 +76,20 @@ async fn get_jrd(
         };
         WebfingerAddress::new_unchecked(&username, &instance.webfinger_hostname())
     };
-    if webfinger_address.hostname() != instance.webfinger_hostname() {
+    let webfinger_address = if webfinger_address.hostname() == instance.webfinger_hostname() {
+        webfinger_address
+    } else if webfinger_address.hostname() == instance.uri().hostname().as_str() {
+        // Split-domain setup
+        WebfingerAddress::new_unchecked(
+            webfinger_address.username(),
+            &instance.webfinger_hostname(),
+        )
+    } else {
         // Wrong instance
         return Err(HttpError::NotFound("user"));
     };
     let links = if webfinger_address.username() == instance.webfinger_hostname() {
+        // Server actor
         let actor_id = local_instance_actor_id(instance.uri_str());
         let actor_link = Link::actor(&actor_id);
         // Add remote interaction template
