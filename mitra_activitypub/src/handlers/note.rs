@@ -311,7 +311,10 @@ impl AttributedObject {
         self.quote.as_ref()
             // Ignore Bookwyrm quotes
             // https://github.com/bookwyrm-social/bookwyrm/issues/3731
-            .filter(|_| !self.id.contains("/quotation/"))
+            .filter(|_| {
+                self.object_type == QUOTATION ||
+                !self.id.contains("/quotation/")
+            })
             .or(self.quote_url.as_ref())
     }
 }

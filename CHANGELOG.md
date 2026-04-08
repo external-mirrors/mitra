@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Use global ratelimiters instead of local for each thread.
 - Prevent internal server error when IP address can't be extracted from a request.
 - Don't reject unsolicited messages where target is a portable account.
+- Fixed error during the processing of Gush `Quotation` objects.
 
 ## [5.0.0] - 2026-03-23
 
