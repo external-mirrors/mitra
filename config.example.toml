@@ -51,6 +51,9 @@ instance_staff_public = true
 # Make instance (local) timeline public
 instance_timeline_public = false
 
+# WebFinger domain for split-domain setup
+#webfinger_hostname = "example.tld"
+
 # Possible values: password, eip4361, caip122_monero. Default: only password.
 #authentication_methods = ["password", "eip4361", "caip122_monero"]
 
