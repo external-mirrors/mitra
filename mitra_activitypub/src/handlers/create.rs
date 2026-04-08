@@ -56,14 +56,24 @@ async fn check_unsolicited_message(
     sender_id: &str,
 ) -> Result<(), HandlerError> {
     let canonical_sender_id = canonicalize_id(sender_id)?.to_string();
-    // is_local_or_followed returns true if actor has local account
-    let sender_has_followers =
-        is_local_or_followed(db_client, &canonical_sender_id).await?;
     let audience = get_audience(object)?;
+    if !audience.iter().any(is_public) {
+        return Ok(());
+    };
     // TODO: FEP-EF61: find portable local recipients
     let has_local_recipients = audience.iter().any(|actor_id| {
         parse_local_actor_id(authority, actor_id).is_ok()
     });
+    if has_local_recipients {
+        return Ok(());
+    };
+    // is_local_or_followed returns true if actor has local account
+    // Possible cause: a failure to process Undo(Follow)
+    let sender_has_followers =
+        is_local_or_followed(db_client, &canonical_sender_id).await?;
+    if sender_has_followers {
+        return Ok(());
+    };
     // Is it a reply to a known post?
     let is_disconnected = if let Some(ref in_reply_to_id) = object.in_reply_to {
         let canonical_in_reply_to_id = canonicalize_id(in_reply_to_id)?;
@@ -79,18 +89,12 @@ async fn check_unsolicited_message(
     } else {
         true
     };
-    let is_unsolicited =
-        is_disconnected &&
-        audience.iter().any(is_public) &&
-        !has_local_recipients &&
-        // Possible cause: a failure to process Undo(Follow)
-        !sender_has_followers;
-    if is_unsolicited {
-        let error_message =
-            format!("unsolicited message from {canonical_sender_id}");
-        return Err(HandlerError::Filtered(error_message));
+    if !is_disconnected {
+        return Ok(());
     };
-    Ok(())
+    let error_message =
+        format!("unsolicited message from {canonical_sender_id}");
+    Err(HandlerError::Filtered(error_message))
 }
 
 #[derive(Deserialize)]
