@@ -49,6 +49,7 @@ struct DeleteNote {
 
 fn build_delete_note(
     instance_uri: &HttpUri,
+    instance_webfinger_hostname: &str,
     media_server: &MediaServer,
     post: &PostDetailed,
 ) -> DeleteNote {
@@ -66,6 +67,7 @@ fn build_delete_note(
     let authority = Authority::server(instance_uri);
     let Note { to, cc, .. } = build_note(
         instance_uri,
+        instance_webfinger_hostname,
         &authority,
         media_server,
         post,
@@ -98,6 +100,7 @@ pub async fn prepare_delete_note(
     add_related_posts(db_client, vec![&mut post]).await?;
     let activity = build_delete_note(
         instance.uri(),
+        &instance.webfinger_hostname(),
         media_server,
         &post,
     );
@@ -120,6 +123,7 @@ mod tests {
     use super::*;
 
     const INSTANCE_URI: &str = "https://example.com";
+    const INSTANCE_HOSTNAME: &str = "example.com";
 
     #[test]
     fn test_build_delete_note() {
@@ -133,6 +137,7 @@ mod tests {
         };
         let activity = build_delete_note(
             &instance_uri,
+            INSTANCE_HOSTNAME,
             &media_server,
             &post,
         );

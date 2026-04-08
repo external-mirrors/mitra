@@ -449,7 +449,7 @@ pub async fn import_profile_by_webfinger_address(
     db_pool: &DatabaseConnectionPool,
     webfinger_address: &WebfingerAddress,
 ) -> Result<DbActorProfile, HandlerError> {
-    if webfinger_address.hostname() == ap_client.instance.hostname() {
+    if webfinger_address.hostname() == ap_client.instance.webfinger_hostname() {
         return Err(HandlerError::LocalObject);
     };
     let agent = ap_client.agent();
@@ -465,14 +465,14 @@ pub async fn get_or_import_profile_by_webfinger_address(
     webfinger_address: &WebfingerAddress,
 ) -> Result<DbActorProfile, HandlerError> {
     let instance = &ap_client.instance;
-    let acct = webfinger_address.short_address(&instance.hostname());
+    let acct = webfinger_address.short_address(&instance.webfinger_hostname());
     let maybe_profile = get_profile_by_acct(
         db_client_await!(db_pool),
         &acct,
     ).await;
     let profile = match maybe_profile {
         Ok(profile) => {
-            if webfinger_address.hostname() == instance.hostname() {
+            if profile.is_local() {
                 profile
             } else {
                 refresh_remote_profile(
@@ -484,7 +484,7 @@ pub async fn get_or_import_profile_by_webfinger_address(
             }
         },
         Err(db_error @ DatabaseError::NotFound(_)) => {
-            if webfinger_address.hostname() == instance.hostname() {
+            if webfinger_address.hostname() == instance.webfinger_hostname() {
                 return Err(db_error.into());
             };
             import_profile_by_webfinger_address(

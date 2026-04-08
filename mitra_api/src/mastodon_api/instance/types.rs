@@ -291,7 +291,7 @@ impl InstanceInfo {
         peer_count: i64,
     ) -> Self {
         Self {
-            uri: config.instance().hostname(),
+            uri: config.instance().webfinger_hostname(),
             title: config.instance_title.clone(),
             short_description: config.instance_short_description.clone(),
             description: markdown_to_html(&config.instance_description),
@@ -425,7 +425,7 @@ impl InstanceInfoV2 {
         user_count_active_month: i64,
     ) -> Self {
         Self {
-            domain: config.instance().hostname(),
+            domain: config.instance().webfinger_hostname(),
             title: config.instance_title.clone(),
             description: config.instance_short_description.clone(),
             extended_description: markdown_to_html(&config.instance_description),

@@ -221,7 +221,7 @@ async fn token_view(
             let session_data = verify_eip4361_signature(
                 message,
                 signature,
-                &config.instance().hostname(),
+                config.instance().uri(),
                 &config.login_message,
             ).map_err(|err| MastodonError::ValidationError(err.to_string()))?;
             if !is_valid_caip122_nonce(
@@ -245,7 +245,7 @@ async fn token_view(
                 .ok_or(MastodonError::NotSupported)?;
             let session_data = verify_monero_caip122_signature(
                 monero_config,
-                &config.instance().hostname(),
+                config.instance().uri(),
                 &config.login_message,
                 message,
                 signature,

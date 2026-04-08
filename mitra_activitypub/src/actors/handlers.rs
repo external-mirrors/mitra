@@ -2,7 +2,7 @@ use apx_core::{
     url::{
         canonical::CanonicalUri,
         common::Origin,
-        http_uri::Hostname,
+        http_uri::{Hostname, HttpUri},
         http_url_whatwg::get_hostname,
     },
 };
@@ -272,7 +272,7 @@ impl ValidatedActor {
 // Determine hostname part of 'acct' URI
 async fn get_webfinger_hostname(
     agent: &FederationAgent,
-    local_hostname: &str,
+    instance_uri: &HttpUri,
     actor: &ValidatedActor,
     has_portable_account: bool,
 ) -> Result<(Option<String>, WebfingerHostname), HandlerError> {
@@ -303,7 +303,7 @@ async fn get_webfinger_hostname(
                 // Primary gateway
                 let gateway_hostname = get_hostname(gateway)
                     .map_err(|_| ValidationError("invalid gateway URL"))?;
-                if gateway_hostname == local_hostname {
+                if gateway_hostname == instance_uri.hostname().as_str() {
                     // Portable actor with local account (unmanaged)
                     if has_portable_account {
                         return Ok((None, WebfingerHostname::Local));
@@ -659,7 +659,7 @@ pub async fn create_remote_profile(
     let Actor { inner: actor, value: actor_json } = actor;
     let (server_hostname, webfinger_hostname) = get_webfinger_hostname(
         &ap_client.agent(),
-        &ap_client.instance.hostname(),
+        ap_client.instance.uri(),
         &actor,
         false,
     ).await?;
@@ -742,7 +742,7 @@ pub async fn update_remote_profile(
     assert_eq!(actor_data_old.id, actor_data.id, "actor ID shouldn't change");
     let (server_hostname, webfinger_hostname) = get_webfinger_hostname(
         &ap_client.agent(),
-        &ap_client.instance.hostname(),
+        ap_client.instance.uri(),
         &actor,
         profile.has_portable_account(),
     ).await?;

@@ -299,6 +299,7 @@ async fn outbox(
         } else {
             let activity = build_create_note(
                 instance.uri(),
+                &instance.webfinger_hostname(),
                 &media_server,
                 post,
             );
@@ -440,6 +441,7 @@ async fn featured_collection(
     let objects = posts.iter().map(|post| {
         let note = build_note(
             instance.uri(),
+            &instance.webfinger_hostname(),
             &authority,
             &media_server,
             post,
@@ -576,6 +578,7 @@ pub async fn object_view(
     let media_server = MediaServer::new(&config);
     let object = build_note(
         instance.uri(),
+        &instance.webfinger_hostname(),
         &authority,
         &media_server,
         &post,
