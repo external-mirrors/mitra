@@ -797,6 +797,9 @@ impl DbActorProfile {
 
     pub fn webfinger_hostname(&self) -> WebfingerHostname {
         if let Some(ref hostname) = self.webfinger_hostname {
+            // `webfinger_hostname` has higher priority than `has_account`
+            // because an actor with a portable account
+            // might have different primary gateway
             WebfingerHostname::Remote(hostname.clone())
         } else if self.has_account() {
             WebfingerHostname::Local
