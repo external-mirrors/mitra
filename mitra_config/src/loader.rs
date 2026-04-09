@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use apx_core::url::hostname::is_subdomain_of;
+use apx_core::url::hostname::is_same_apex_domain;
 
 use super::{
     blockchain::{
@@ -94,7 +94,7 @@ pub fn parse_config(
         warnings.push(message.to_owned());
     };
     if let Some(ref webfinger_hostname) = config.webfinger_hostname {
-        if !is_subdomain_of(instance_uri.hostname().as_str(), webfinger_hostname) {
+        if !is_same_apex_domain(instance_uri.hostname().as_str(), webfinger_hostname) {
             panic!("invalid webfinger_hostname");
         };
     };

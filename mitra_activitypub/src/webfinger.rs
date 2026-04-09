@@ -2,7 +2,7 @@ use apx_sdk::{
     addresses::WebfingerAddress,
     agent::FederationAgent,
     core::url::{
-        hostname::is_subdomain_of,
+        hostname::is_same_apex_domain,
         http_uri::HttpUri,
     },
     fetch::fetch_json,
@@ -41,7 +41,7 @@ pub(super) async fn perform_webfinger_query(
 }
 
 // Discover preferred webfinger hostname
-// https://swicg.github.io/activitypub-webfinger/#reverse-discovery
+// https://correct.webfinger-canary.fietkau.software
 pub(super) async fn peform_reverse_webfinger_query(
     agent: &FederationAgent,
     username: &str,
@@ -61,7 +61,7 @@ pub(super) async fn peform_reverse_webfinger_query(
     };
     if discovered_address.hostname() != server_hostname {
         // Validate
-        if !is_subdomain_of(&server_hostname, discovered_address.hostname()) {
+        if !is_same_apex_domain(&server_hostname, discovered_address.hostname()) {
             return Err(ValidationError("discovered address has unexpected hostname").into());
         };
         let discovered_actor_id =

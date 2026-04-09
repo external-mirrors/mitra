@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Allow split-domain setups where two different subdomains are used.
+
 ## [5.1.0] - 2026-04-08
 
 ### Added
