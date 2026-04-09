@@ -162,7 +162,7 @@ async fn search_profiles_or_import(
     offset: u16,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     if let Some(ref hostname) = maybe_hostname {
-        if hostname == &ap_client.instance.hostname() {
+        if hostname == &ap_client.instance.webfinger_hostname() {
             // This is a local profile
             maybe_hostname = None;
         };

@@ -86,6 +86,8 @@ pub struct Config {
     #[cfg(feature = "mini")]
     pub(super) gateway_url: String,
 
+    pub(super) webfinger_hostname: Option<String>,
+
     pub instance_title: String,
     pub instance_short_description: String,
     pub instance_description: String,

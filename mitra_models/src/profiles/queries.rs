@@ -44,15 +44,20 @@ use super::types::{
 async fn prevent_acct_conflict(
     db_client: &impl DatabaseClient,
     profile_id: Uuid,
-    acct: &str,
+    username: &str,
+    webfinger_hostname: &str,
 ) -> Result<(), DatabaseError> {
     db_client.execute(
         "
         UPDATE actor_profile
-        SET acct = NULL
-        WHERE id != $1 AND acct = $2 AND actor_json IS NOT NULL
+        SET webfinger_hostname = NULL
+        WHERE
+            id != $1
+            AND username = $2
+            AND webfinger_hostname = $3
+            AND actor_json IS NOT NULL
         ",
-        &[&profile_id, &acct],
+        &[&profile_id, &username, &webfinger_hostname],
     ).await?;
     Ok(())
 }
@@ -152,22 +157,20 @@ pub async fn create_profile(
     profile_data.check_consistency()?;
     let transaction = db_client.transaction().await?;
     let profile_id = profile_data.id.unwrap_or(generate_ulid());
-    if let WebfingerHostname::Remote(ref hostname) = profile_data.hostname {
+    if let Some(ref hostname) = profile_data.hostname {
         create_instance(&transaction, hostname).await?;
     };
-    let profile_acct = match profile_data.hostname {
-        WebfingerHostname::Local => Some(profile_data.username.clone()),
+    match profile_data.webfinger_hostname {
+        WebfingerHostname::Local => (),
         WebfingerHostname::Remote(ref hostname) => {
-            let profile_acct =
-                format!("{}@{}", profile_data.username, hostname);
             prevent_acct_conflict(
                 &transaction,
                 profile_id,
-                &profile_acct,
+                &profile_data.username,
+                hostname,
             ).await?;
-            Some(profile_acct)
         },
-        WebfingerHostname::Unknown => None,
+        WebfingerHostname::Unknown => (),
     };
     let row = transaction.query_one(
         "
@@ -175,7 +178,7 @@ pub async fn create_profile(
             id,
             username,
             hostname,
-            acct,
+            webfinger_hostname,
             display_name,
             bio,
             avatar,
@@ -196,8 +199,8 @@ pub async fn create_profile(
         &[
             &profile_id,
             &profile_data.username,
-            &profile_data.hostname.as_str(),
-            &profile_acct,
+            &profile_data.hostname,
+            &profile_data.webfinger_hostname.as_str(),
             &profile_data.display_name,
             &profile_data.bio,
             &profile_data.avatar,
@@ -250,28 +253,25 @@ pub async fn update_profile(
         .flatten()
         .filter_map(|image| image.clone().into_file_name())
         .collect();
-    if profile_data.hostname.as_str() != profile.hostname.as_deref() &&
-        !profile.is_portable()
-    {
-        // Only portable actors can change hostname
+    if profile_data.hostname != profile.hostname && !profile.is_portable() {
+        // Only portable actors can change server hostname
         return Err(DatabaseTypeError.into());
     };
-    if let WebfingerHostname::Remote(ref hostname) = profile_data.hostname {
+    if let Some(ref hostname) = profile_data.hostname {
         create_instance(&transaction, hostname).await?;
     };
 
-    let profile_acct = match profile_data.hostname {
-        WebfingerHostname::Local => Some(profile_data.username.clone()),
+    match profile_data.webfinger_hostname {
+        WebfingerHostname::Local => (),
         WebfingerHostname::Remote(ref hostname) => {
-            let profile_acct =
-                format!("{}@{}", profile_data.username, hostname);
             prevent_acct_conflict(
                 &transaction,
                 profile_id,
-                &profile_acct,
+                &profile_data.username,
+                hostname,
             ).await?;
-            Some(profile_acct)
         },
+        // Webfinger hostname must be known
         WebfingerHostname::Unknown => return Err(DatabaseTypeError.into()),
     };
     let maybe_row = transaction.query_opt(
@@ -280,7 +280,7 @@ pub async fn update_profile(
         SET
             username = $1,
             hostname = $2,
-            acct = $3,
+            webfinger_hostname = $3,
             display_name = $4,
             bio = $5,
             bio_source = $6,
@@ -302,8 +302,8 @@ pub async fn update_profile(
         ",
         &[
             &profile_data.username,
-            &profile_data.hostname.as_str(),
-            &profile_acct,
+            &profile_data.hostname,
+            &profile_data.webfinger_hostname.as_str(),
             &profile_data.display_name,
             &profile_data.bio,
             &profile_data.bio_source,
@@ -1050,7 +1050,10 @@ mod tests {
             views::refresh_latest_post_view,
         },
         profiles::{
-            test_utils::create_test_local_profile,
+            test_utils::{
+                create_test_local_profile,
+                create_test_remote_profile,
+            },
             types::{
                 DbActor,
                 DbActorKey,
@@ -1083,7 +1086,8 @@ mod tests {
         let profile = create_profile(db_client, profile_data).await.unwrap();
         assert_eq!(profile.username, "test");
         assert_eq!(profile.hostname, None);
-        assert_eq!(profile.acct.unwrap(), "test");
+        assert_eq!(profile.webfinger_hostname, None);
+        assert_eq!(profile.acct, None); // profile without account
         assert_eq!(profile.identity_proofs.into_inner().len(), 0);
         assert_eq!(profile.payment_options.inner().len(), 1);
         assert_eq!(profile.extra_fields.into_inner().len(), 0);
@@ -1095,7 +1099,8 @@ mod tests {
     async fn test_create_profile_remote() {
         let profile_data = ProfileCreateData {
             username: "test".to_string(),
-            hostname: WebfingerHostname::Remote("example.com".to_string()),
+            hostname: Some("example.com".to_owned()),
+            webfinger_hostname: WebfingerHostname::Remote("example.com".to_string()),
             public_keys: vec![DbActorKey::default()],
             actor_json: Some(DbActor::for_test("https://example.com/users/test")),
             ..Default::default()
@@ -1104,12 +1109,38 @@ mod tests {
         let profile = create_profile(db_client, profile_data).await.unwrap();
         profile.check_consistency().unwrap();
         assert_eq!(profile.username, "test");
-        assert_eq!(profile.hostname.unwrap(), "example.com");
+        assert_eq!(profile.hostname.as_ref().unwrap(), "example.com");
+        assert_eq!(
+            profile.webfinger_hostname(),
+            WebfingerHostname::Remote("example.com".to_owned()),
+        );
         assert_eq!(profile.acct.unwrap(), "test@example.com");
         assert_eq!(
             profile.actor_id.unwrap(),
             "https://example.com/users/test",
         );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_profile_remote_with_split_domain() {
+        let profile_data = ProfileCreateData {
+            username: "test".to_string(),
+            hostname: Some("ap.example.com".to_owned()),
+            webfinger_hostname: WebfingerHostname::Remote("example.com".to_string()),
+            public_keys: vec![DbActorKey::default()],
+            actor_json: Some(DbActor::for_test("https://example.com/users/test")),
+            ..Default::default()
+        };
+        let db_client = &mut create_test_database().await;
+        let profile = create_profile(db_client, profile_data).await.unwrap();
+        profile.check_consistency().unwrap();
+        assert_eq!(profile.hostname.as_ref().unwrap(), "ap.example.com");
+        assert_eq!(
+            profile.webfinger_hostname(),
+            WebfingerHostname::Remote("example.com".to_owned()),
+        );
+        assert_eq!(profile.acct.unwrap(), "test@example.com");
     }
 
     #[tokio::test]
@@ -1140,7 +1171,8 @@ mod tests {
         let actor_id = "https://example.com/users/test";
         let profile_data_1 = ProfileCreateData {
             username: "test-1".to_string(),
-            hostname: WebfingerHostname::Remote("example.com".to_string()),
+            hostname: Some("example.com".to_owned()),
+            webfinger_hostname: WebfingerHostname::Remote("example.com".to_string()),
             public_keys: vec![DbActorKey::default()],
             actor_json: Some(DbActor::for_test(actor_id)),
             ..Default::default()
@@ -1148,7 +1180,8 @@ mod tests {
         create_profile(db_client, profile_data_1).await.unwrap();
         let profile_data_2 = ProfileCreateData {
             username: "test-2".to_string(),
-            hostname: WebfingerHostname::Remote("example.com".to_string()),
+            hostname: Some("example.com".to_owned()),
+            webfinger_hostname: WebfingerHostname::Remote("example.com".to_string()),
             public_keys: vec![DbActorKey::default()],
             actor_json: Some(DbActor::for_test(actor_id)),
             ..Default::default()
@@ -1163,7 +1196,8 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let profile_data_1 = ProfileCreateData {
             username: "test".to_string(),
-            hostname: WebfingerHostname::Remote("social.example".to_string()),
+            hostname: Some("social.example".to_owned()),
+            webfinger_hostname: WebfingerHostname::Remote("social.example".to_string()),
             public_keys: vec![DbActorKey::default()],
             actor_json: Some(DbActor::for_test("https://social.example/users/1")),
             ..Default::default()
@@ -1172,16 +1206,19 @@ mod tests {
         assert_eq!(profile_1.acct.unwrap(), "test@social.example");
         let profile_data_2 = ProfileCreateData {
             username: "test".to_string(),
-            hostname: WebfingerHostname::Remote("social.example".to_string()),
+            hostname: Some("social.example".to_owned()),
+            webfinger_hostname: WebfingerHostname::Remote("social.example".to_string()),
             public_keys: vec![DbActorKey::default()],
             actor_json: Some(DbActor::for_test("https://social.example/users/2")),
             ..Default::default()
         };
         let profile_2 = create_profile(db_client, profile_data_2).await.unwrap();
+        assert_eq!(profile_2.webfinger_hostname.unwrap(), "social.example");
         assert_eq!(profile_2.acct.unwrap(), "test@social.example");
 
         let profile_1_updated =
             get_profile_by_id(db_client, profile_1.id).await.unwrap();
+        assert_eq!(profile_1_updated.webfinger_hostname, None);
         assert_eq!(profile_1_updated.acct, None);
     }
 
@@ -1215,7 +1252,7 @@ mod tests {
             "test",
             "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
         ).await;
-        assert_eq!(user.profile.hostname(), WebfingerHostname::Local);
+        assert_eq!(user.profile.webfinger_hostname(), WebfingerHostname::Local);
         let mut profile_data = ProfileUpdateData::from(&user.profile);
         let bio = "test bio";
         profile_data.bio = Some(bio.to_string());
@@ -1225,7 +1262,10 @@ mod tests {
             profile_data,
         ).await.unwrap();
         assert_eq!(profile_updated.acct, user.profile.acct);
-        assert_eq!(profile_updated.hostname(), user.profile.hostname());
+        assert_eq!(
+            profile_updated.webfinger_hostname(),
+            user.profile.webfinger_hostname(),
+        );
     }
 
     #[tokio::test]
@@ -1378,14 +1418,12 @@ mod tests {
     async fn test_set_reachability_status() {
         let db_client = &mut create_test_database().await;
         let actor_id = "https://example.com/users/test";
-        let profile_data = ProfileCreateData {
-            username: "test".to_string(),
-            hostname: WebfingerHostname::Remote("example.com".to_string()),
-            public_keys: vec![DbActorKey::default()],
-            actor_json: Some(DbActor::for_test(actor_id)),
-            ..Default::default()
-        };
-        let profile = create_profile(db_client, profile_data).await.unwrap();
+        let profile = create_test_remote_profile(
+            db_client,
+            "test_1",
+            "example.com",
+            actor_id,
+        ).await;
         let statuses = vec![(actor_id.to_string(), true)];
         set_reachability_status(db_client, statuses).await.unwrap();
         let profile = get_profile_by_id(db_client, profile.id).await.unwrap();

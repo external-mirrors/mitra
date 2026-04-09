@@ -123,20 +123,22 @@ use mitra_validators::{
     users::validate_local_username,
 };
 
-use crate::http::{
-    get_request_base_url,
-    ratelimit_config,
-    JsonOrForm,
-    MultiQuery,
-};
-use crate::mastodon_api::{
-    auth::get_current_user,
-    errors::MastodonError,
-    lists::types::List,
-    media_server::ClientMediaServer,
-    pagination::{get_last_item, get_paginated_response},
-    search::helpers::search_profiles_only,
-    statuses::helpers::get_paginated_status_list,
+use crate::{
+    http::{
+        get_request_base_url,
+        JsonOrForm,
+        MultiQuery,
+    },
+    mastodon_api::{
+        auth::get_current_user,
+        errors::MastodonError,
+        lists::types::List,
+        media_server::ClientMediaServer,
+        pagination::{get_last_item, get_paginated_response},
+        search::helpers::search_profiles_only,
+        statuses::helpers::get_paginated_status_list,
+    },
+    ratelimit::RatelimitConfigs,
 };
 
 use super::helpers::{
@@ -221,7 +223,7 @@ pub async fn create_account(
         let session_data = verify_eip4361_signature(
             message,
             signature,
-            &instance.hostname(),
+            instance.uri(),
             &config.login_message,
         ).map_err(|err| MastodonError::ValidationError(err.to_string()))?;
         // Don't remember nonce to avoid extra signature requests
@@ -239,7 +241,7 @@ pub async fn create_account(
             .ok_or(MastodonError::NotSupported)?;
         let session_data = verify_monero_caip122_signature(
             monero_config,
-            &instance.hostname(),
+            instance.uri(),
             &config.login_message,
             message,
             signature,
@@ -645,7 +647,7 @@ async fn lookup_acct(
     query_params: web::Query<LookupAcctQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let local_hostname = config.instance().hostname();
+    let local_hostname = config.instance().webfinger_hostname();
     let address =  if query_params.acct.contains('@') {
         query_params.acct.clone()
     } else {
@@ -653,7 +655,7 @@ async fn lookup_acct(
     };
     let acct = WebfingerAddress::parse(&address)
         .map_err(|error| ValidationError(error.message()))?
-        .acct(&local_hostname);
+        .short_address(&local_hostname);
     let profile = get_profile_by_acct(db_client, &acct).await?;
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());
@@ -1189,16 +1191,16 @@ async fn load_activities(
     Ok(HttpResponse::NoContent().finish())
 }
 
-pub fn account_api_scope() -> Scope {
+pub fn account_api_scope(
+    ratelimit_configs: RatelimitConfigs,
+) -> Scope {
     // Two requests per 30 seconds; to be used with extractor
-    let search_limit = ratelimit_config(2, 30, true);
     let search_by_acct_limited = web::resource("/search")
         .get(search_by_acct)
-        .wrap(Governor::new(&search_limit));
-    let registration_limit = ratelimit_config(2, 300, false);
+        .wrap(Governor::new(&ratelimit_configs.search));
     let create_account_limited = web::resource("")
         .post(create_account)
-        .wrap(Governor::new(&registration_limit));
+        .wrap(Governor::new(&ratelimit_configs.registration));
     web::scope("/v1/accounts")
         // Routes without account ID
         .service(create_account_limited)

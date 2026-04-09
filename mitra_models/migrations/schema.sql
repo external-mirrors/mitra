@@ -31,7 +31,14 @@ CREATE TABLE actor_profile (
     portable_user_id UUID UNIQUE, -- FK is added later
     username VARCHAR(100) NOT NULL,
     hostname VARCHAR(100) REFERENCES instance (hostname) ON DELETE RESTRICT,
-    acct VARCHAR(200) UNIQUE,
+    webfinger_hostname VARCHAR(100),
+    acct VARCHAR(200) UNIQUE GENERATED ALWAYS AS (
+        CASE
+        WHEN webfinger_hostname IS NOT NULL THEN username || '@' || webfinger_hostname
+        WHEN (user_id IS NOT NULL OR portable_user_id IS NOT NULL OR automated_account_id IS NOT NULL) THEN username
+        ELSE NULL
+        END
+    ) STORED,
     display_name VARCHAR(200),
     bio TEXT,
     bio_source TEXT,

@@ -261,7 +261,10 @@ fn validate_profile_create_data(
     profile_data: &ProfileCreateData,
 ) -> Result<(), ValidationError> {
     validate_username(&profile_data.username)?;
-    if let WebfingerHostname::Remote(ref hostname) = profile_data.hostname {
+    if let Some(ref hostname) = profile_data.hostname {
+        validate_hostname(hostname)?;
+    };
+    if let WebfingerHostname::Remote(ref hostname) = profile_data.webfinger_hostname {
         validate_hostname(hostname)?;
     };
     if let Some(display_name) = &profile_data.display_name {
@@ -269,10 +272,6 @@ fn validate_profile_create_data(
     };
     let is_remote = if let Some(ref actor) = profile_data.actor_json {
         validate_actor_data(actor)?;
-        if !actor.is_portable() && profile_data.hostname.as_str().is_none() {
-            return Err(ValidationError(
-                "non-portable remote profile should have hostname"));
-        };
         true
     } else {
         false
@@ -311,21 +310,17 @@ fn validate_profile_update_data(
     profile_data: &ProfileUpdateData,
 ) -> Result<(), ValidationError> {
     validate_username(&profile_data.username)?;
-    if let WebfingerHostname::Remote(ref hostname) = profile_data.hostname {
+    if let Some(ref hostname) = profile_data.hostname {
         validate_hostname(hostname)?;
     };
-    if let WebfingerHostname::Unknown = profile_data.hostname {
-        return Err(ValidationError("unknown hostname"));
+    if let WebfingerHostname::Remote(ref hostname) = profile_data.webfinger_hostname {
+        validate_hostname(hostname)?;
     };
     if let Some(display_name) = &profile_data.display_name {
         validate_display_name(display_name)?;
     };
     let is_remote = if let Some(ref actor) = profile_data.actor_json {
         validate_actor_data(actor)?;
-        if !actor.is_portable() && profile_data.hostname.as_str().is_none() {
-            return Err(ValidationError(
-                "non-portable remote profile should have hostname"));
-        };
         true
     } else {
         false
@@ -362,7 +357,7 @@ pub fn clean_profile_update_data(
 
 #[cfg(test)]
 mod tests {
-    use mitra_models::profiles::types::DbActor;
+    use mitra_models::profiles::types::DbActorProfile;
     use super::*;
 
     #[test]
@@ -455,19 +450,23 @@ mod tests {
 
     #[test]
     fn test_clean_profile_create_data() {
-        let mut profile_data = ProfileCreateData {
-            username: "test".to_string(),
-            hostname: WebfingerHostname::Remote("social.example".to_string()),
-            display_name: Some("Test Test".to_string()),
-            actor_json: Some(DbActor {
-                id: "https://social.example/test".to_string(),
-                inbox: "https://social.example/test/inbox".to_string(),
-                outbox: "https://social.example/test/outbox".to_string(),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
+        let mut profile_data = ProfileCreateData::remote_for_test(
+            "test",
+            "social.example",
+            "https://social.example/test",
+        );
         let result = clean_profile_create_data(&mut profile_data);
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
+    fn test_clean_profile_update_data() {
+        let profile = DbActorProfile::remote_for_test(
+            "test",
+            "https://social.example/test",
+        );
+        let mut profile_data = ProfileUpdateData::from(&profile);
+        let result = clean_profile_update_data(&mut profile_data);
         assert_eq!(result.is_ok(), true);
     }
 }

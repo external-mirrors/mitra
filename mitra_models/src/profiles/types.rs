@@ -644,7 +644,8 @@ pub struct DbActorProfile {
     pub(crate) portable_user_id: Option<Uuid>,
     pub username: String,
     pub(crate) hostname: Option<String>,
-    pub acct: Option<String>, // unique acct string
+    pub(crate) webfinger_hostname: Option<String>,
+    pub(crate) acct: Option<String>, // unique acct string
     pub display_name: Option<String>,
     pub bio: Option<String>, // html
     pub bio_source: Option<String>, // plaintext or markdown
@@ -676,7 +677,7 @@ pub struct DbActorProfile {
 // Profile identifiers:
 // id (local profile UUID): never changes
 // actor_id of remote actor: must not change
-// acct (webfinger): may change if actor ID remains the same
+// webfinger address (and 'acct'): may change if actor ID remains the same
 // actor RSA key: can be updated at any time by the instance admin
 // identity proofs: TBD (likely will do "Trust on first use" (TOFU))
 
@@ -735,18 +736,22 @@ impl DbActorProfile {
                 return Err(DatabaseTypeError);
             };
         };
-        match self.hostname() {
+        match self.webfinger_hostname() {
             WebfingerHostname::Local => {
                 if self.acct.as_ref() != Some(&self.username) {
                     return Err(DatabaseTypeError);
                 };
             },
             WebfingerHostname::Remote(hostname) => {
-                // Acct can be empty if there's a conflict
-                if let Some(ref acct) = self.acct {
-                    if acct != &format!("{}@{}", self.username, hostname) {
-                        return Err(DatabaseTypeError);
-                    };
+                let acct = self.acct.as_ref().ok_or(DatabaseTypeError)?;
+                if acct != &format!("{}@{}", self.username, hostname) {
+                    return Err(DatabaseTypeError);
+                };
+            },
+            WebfingerHostname::Unknown if self.is_local() => {
+                // Creating local account
+                if self.acct.is_some() {
+                    return Err(DatabaseTypeError);
                 };
             },
             WebfingerHostname::Unknown => {
@@ -790,10 +795,13 @@ impl DbActorProfile {
         Ok(())
     }
 
-    pub fn hostname(&self) -> WebfingerHostname {
-        if let Some(ref hostname) = self.hostname {
+    pub fn webfinger_hostname(&self) -> WebfingerHostname {
+        if let Some(ref hostname) = self.webfinger_hostname {
+            // `webfinger_hostname` has higher priority than `has_account`
+            // because an actor with a portable account
+            // might have different primary gateway
             WebfingerHostname::Remote(hostname.clone())
-        } else if self.actor_json.is_none() || self.portable_user_id.is_some() {
+        } else if self.has_account() {
             WebfingerHostname::Local
         } else {
             WebfingerHostname::Unknown
@@ -806,6 +814,12 @@ impl DbActorProfile {
 
     pub fn has_portable_account(&self) -> bool {
         self.portable_user_id.is_some()
+    }
+
+    pub fn has_account(&self) -> bool {
+        self.has_user_account()
+            || self.automated_account_id.is_some()
+            || self.has_portable_account()
     }
 
     /// Is actor local (managed)?
@@ -892,6 +906,7 @@ impl Default for DbActorProfile {
             portable_user_id: None,
             username: "test".to_string(),
             hostname: None,
+            webfinger_hostname: None,
             acct: Some("test".to_string()),
             display_name: None,
             bio: None,
@@ -925,7 +940,8 @@ impl Default for DbActorProfile {
 pub struct ProfileCreateData {
     pub id: Option<Uuid>,
     pub username: String,
-    pub hostname: WebfingerHostname,
+    pub hostname: Option<String>,
+    pub webfinger_hostname: WebfingerHostname,
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub avatar: Option<MediaInfo>,
@@ -946,12 +962,25 @@ impl ProfileCreateData {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
         let origin = if let Some(actor_data) = self.actor_json.as_ref() {
             actor_data.check_consistency()?;
+            if !actor_data.is_portable() && self.hostname.is_none() {
+                // Non-portable remote profiles should always have server hostname.
+                // Portable profiles may have local accounts.
+                return Err(DatabaseTypeError);
+            };
+            if !actor_data.is_portable() && self.webfinger_hostname.as_str().is_none() {
+                // Non-portable remote profiles should always have webfinger hostname.
+                // Portable profiles may have local accounts.
+                return Err(DatabaseTypeError);
+            };
             Origin::Remote
         } else {
+            if self.hostname.is_some() {
+                return Err(DatabaseTypeError);
+            };
+            if self.webfinger_hostname.as_str().is_some() {
+                return Err(DatabaseTypeError);
+            };
             Origin::Local
-        };
-        if self.hostname.as_str().is_some() && matches!(origin, Origin::Local) {
-            return Err(DatabaseTypeError);
         };
         check_public_keys(&self.public_keys, origin)?;
         check_identity_proofs(&self.identity_proofs)?;
@@ -964,7 +993,8 @@ impl ProfileCreateData {
 
 pub struct ProfileUpdateData {
     pub username: String,
-    pub hostname: WebfingerHostname,
+    pub hostname: Option<String>,
+    pub webfinger_hostname: WebfingerHostname,
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub bio_source: Option<String>,
@@ -986,12 +1016,25 @@ impl ProfileUpdateData {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
         let origin = if let Some(actor_data) = self.actor_json.as_ref() {
             actor_data.check_consistency()?;
+            if !actor_data.is_portable() && self.hostname.is_none() {
+                // Non-portable remote profiles should always have server hostname.
+                // Portable profiles may have local accounts.
+                return Err(DatabaseTypeError);
+            };
+            if !actor_data.is_portable() && self.webfinger_hostname.as_str().is_none() {
+                // Non-portable remote profiles should always have webfinger hostname.
+                // Portable profiles may have local accounts.
+                return Err(DatabaseTypeError);
+            };
             Origin::Remote
         } else {
+            if self.hostname.is_some() {
+                return Err(DatabaseTypeError);
+            };
+            if self.webfinger_hostname.as_str().is_some() {
+                return Err(DatabaseTypeError);
+            };
             Origin::Local
-        };
-        if self.hostname.as_str().is_some() && matches!(origin, Origin::Local) {
-            return Err(DatabaseTypeError);
         };
         check_public_keys(&self.public_keys, origin)?;
         check_identity_proofs(&self.identity_proofs)?;
@@ -1023,10 +1066,11 @@ impl ProfileUpdateData {
 impl From<&DbActorProfile> for ProfileUpdateData {
     fn from(profile: &DbActorProfile) -> Self {
         let profile = profile.clone();
-        let hostname = profile.hostname();
+        let webfinger_hostname = profile.webfinger_hostname();
         Self {
             username: profile.username,
-            hostname: hostname,
+            hostname: profile.hostname,
+            webfinger_hostname: webfinger_hostname,
             display_name: profile.display_name,
             bio: profile.bio,
             bio_source: profile.bio_source,

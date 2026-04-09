@@ -1231,6 +1231,7 @@ async fn make_permanent(
     let media_server = MediaServer::new(&config);
     let note = build_note(
         instance.uri(),
+        &instance.webfinger_hostname(),
         &authority,
         &media_server,
         &post,

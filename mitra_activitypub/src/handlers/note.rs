@@ -311,7 +311,10 @@ impl AttributedObject {
         self.quote.as_ref()
             // Ignore Bookwyrm quotes
             // https://github.com/bookwyrm-social/bookwyrm/issues/3731
-            .filter(|_| !self.id.contains("/quotation/"))
+            .filter(|_| {
+                self.object_type == QUOTATION ||
+                !self.id.contains("/quotation/")
+            })
             .or(self.quote_url.as_ref())
     }
 }
@@ -357,7 +360,7 @@ fn get_object_url(
         Some(value) => {
             let urls = parse_into_href_array(value)
                 .map_err(|_| ValidationError("invalid object URL"))?;
-            // TODO: select URL with text/html media type
+            // TODO: select URL with media type that corresponds to object type
             urls.into_iter().next()
         },
         None => None,
@@ -437,6 +440,18 @@ async fn get_object_attachments(
     );
 
     let mut values = object.attachment.clone();
+    if object.object_type == IMAGE {
+        if let Some(url) = get_object_url(object)? {
+            let attachment = MediaAttachment {
+                attachment_type: object.object_type.clone(),
+                name: object.name.clone(),
+                summary: object.summary.clone(),
+                media_type: object.media_type.clone(),
+                url: url,
+            };
+            values.push(Attachment::Media(attachment));
+        };
+    };
     if object.object_type == VIDEO {
         // PeerTube video thumbnails
         let thumbnails = object.icon.iter().cloned().map(Attachment::Media);

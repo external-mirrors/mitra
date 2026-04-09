@@ -16,12 +16,10 @@ use apx_sdk::{
     authentication::verify_portable_object,
     deserialization::{deserialize_into_object_id_opt, object_to_id},
     fetch::{
-        fetch_json,
         fetch_object,
         FetchError,
         FetchObjectOptions,
     },
-    jrd::{JsonResourceDescriptor, JRD_MEDIA_TYPE},
     utils::{get_core_type, CoreType},
 };
 use chrono::{TimeDelta, Utc};
@@ -93,7 +91,7 @@ use crate::{
         UuidOrUsername,
     },
     ownership::{get_object_id, is_local_origin, verify_object_owner},
-    vocabulary::GROUP,
+    webfinger::perform_webfinger_query,
 };
 
 #[cfg(feature = "mini")]
@@ -477,31 +475,12 @@ pub fn is_actor_importer_error(error: &HandlerError) -> bool {
     )
 }
 
-pub(crate) async fn perform_webfinger_query(
-    agent: &FederationAgent,
-    webfinger_address: &WebfingerAddress,
-) -> Result<String, HandlerError> {
-    let webfinger_resource = webfinger_address.to_acct_uri();
-    let webfinger_uri = webfinger_address.endpoint_uri();
-    let jrd_value = fetch_json(
-        agent,
-        &webfinger_uri,
-        &[("resource", &webfinger_resource)],
-        Some(JRD_MEDIA_TYPE),
-    ).await?;
-    let jrd: JsonResourceDescriptor = serde_json::from_value(jrd_value)?;
-    // Prefer Group actor if webfinger results are ambiguous
-    let actor_id = jrd.find_actor_id(GROUP)
-        .ok_or(ValidationError("actor ID is not found in JRD"))?;
-    Ok(actor_id)
-}
-
 pub async fn import_profile_by_webfinger_address(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     webfinger_address: &WebfingerAddress,
 ) -> Result<DbActorProfile, HandlerError> {
-    if webfinger_address.hostname() == ap_client.instance.hostname() {
+    if webfinger_address.hostname() == ap_client.instance.webfinger_hostname() {
         return Err(HandlerError::LocalObject);
     };
     let agent = ap_client.agent();
@@ -517,14 +496,14 @@ pub async fn get_or_import_profile_by_webfinger_address(
     webfinger_address: &WebfingerAddress,
 ) -> Result<DbActorProfile, HandlerError> {
     let instance = &ap_client.instance;
-    let acct = webfinger_address.acct(&instance.hostname());
+    let acct = webfinger_address.short_address(&instance.webfinger_hostname());
     let maybe_profile = get_profile_by_acct(
         db_client_await!(db_pool),
         &acct,
     ).await;
     let profile = match maybe_profile {
         Ok(profile) => {
-            if webfinger_address.hostname() == instance.hostname() {
+            if profile.is_local() {
                 profile
             } else {
                 refresh_remote_profile(
@@ -536,7 +515,7 @@ pub async fn get_or_import_profile_by_webfinger_address(
             }
         },
         Err(db_error @ DatabaseError::NotFound(_)) => {
-            if webfinger_address.hostname() == instance.hostname() {
+            if webfinger_address.hostname() == instance.webfinger_hostname() {
                 return Err(db_error.into());
             };
             import_profile_by_webfinger_address(

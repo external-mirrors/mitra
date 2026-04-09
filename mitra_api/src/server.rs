@@ -26,19 +26,22 @@ use mitra_services::{
 };
 use mitra_utils::files::set_file_permissions;
 
-use crate::activitypub::views as activitypub;
-use crate::atom::views::atom_scope;
-use crate::http::{
-    create_default_headers_middleware,
-    json_error_handler,
-    log_response_error,
+use crate::{
+    activitypub::views as activitypub,
+    atom::views::atom_scope,
+    http::{
+        create_default_headers_middleware,
+        json_error_handler,
+        log_response_error,
+    },
+    mastodon_api::{mastodon_api_scope, oauth_api_scope},
+    metrics::views::metrics_api_scope,
+    nodeinfo::views as nodeinfo,
+    ratelimit::RatelimitConfigs,
+    state::AppState,
+    webfinger::views as webfinger,
+    web_client::views as web_client,
 };
-use crate::mastodon_api::{mastodon_api_scope, oauth_api_scope};
-use crate::metrics::views::metrics_api_scope;
-use crate::nodeinfo::views as nodeinfo;
-use crate::state::AppState;
-use crate::webfinger::views as webfinger;
-use crate::web_client::views as web_client;
 
 pub async fn run_server(
     config: Config,
@@ -52,8 +55,10 @@ pub async fn run_server(
     if config.media_proxy_enabled {
         log::info!("media proxy enabled");
     };
-
+    // Ratelimit configs should be created only once
+    let ratelimit_configs = RatelimitConfigs::default();
     let http_server = HttpServer::new(move || {
+        // This will run at the start of each worker
         let cors_config = match config.environment {
             Environment::Development => {
                 Cors::permissive()
@@ -127,8 +132,11 @@ pub async fn run_server(
             .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(db_pool.clone()))
             .app_data(web::Data::clone(&app_state))
-            .service(oauth_api_scope())
-            .service(mastodon_api_scope(payload_size_limit))
+            .service(oauth_api_scope(ratelimit_configs.clone()))
+            .service(mastodon_api_scope(
+                payload_size_limit,
+                ratelimit_configs.clone(),
+            ))
             .service(metrics_api_scope(config.metrics.is_some()))
             .service(webfinger::webfinger_view)
             .service(activitypub::actor_scope())
@@ -139,7 +147,10 @@ pub async fn run_server(
             .service(activitypub::tag_view)
             .service(activitypub::conversation_view)
             .service(activitypub::activity_view)
-            .service(activitypub::gateway_scope(config.federation.fep_ef61_gateway_enabled))
+            .service(activitypub::gateway_scope(
+                config.federation.fep_ef61_gateway_enabled,
+                ratelimit_configs.clone(),
+            ))
             .service(activitypub::media_gateway_scope(config.federation.fep_ef61_gateway_enabled))
             .service(atom_scope())
             .service(nodeinfo::get_nodeinfo_jrd)

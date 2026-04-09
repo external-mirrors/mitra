@@ -6,15 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [5.1.0] - 2026-04-08
+
 ### Added
 
 - Warn about unused parameters in configuration file.
 - Added `--user-agent` parameter to `fetch-object` command.
+- Add `quote` property to `Note` object when post contains a quote.
+- Convert `Image` objects into posts with an attached image.
+- Discover real webfinger address when importing an actor.
+- Added `webfinger_hostname` configuration parameter for split-domain setups.
 
 ### Changed
 
 - Don't check app directories until configuration is validated.
 - Changed MSRV to 1.77.0.
+- Rate-limit portable actor registrations.
+- Raise data integrity error if webfinger hostname is missing in remote profile data.
+- Made unsolicited message check more efficient.
+- Return `410 Gone` if inbox doesn't exist.
+
+### Fixed
+
+- Use global ratelimiters instead of local for each thread.
+- Prevent internal server error when IP address can't be extracted from a request.
+- Don't reject unsolicited messages where target is a portable account.
+- Fixed error during the processing of Gush `Quotation` objects.
 
 ## [5.0.0] - 2026-03-23
 

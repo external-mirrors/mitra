@@ -5,7 +5,7 @@ pub mod http;
 pub mod mastodon_api;
 mod metrics;
 mod nodeinfo;
-mod ratelimit;
+pub mod ratelimit;
 pub mod server;
 mod state;
 mod templates;

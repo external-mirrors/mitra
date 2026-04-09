@@ -47,7 +47,6 @@ use mitra_validators::errors::ValidationError;
 use crate::{
     http::{
         log_response_error,
-        ratelimit_config,
         ContentSecurityPolicy,
         JsonOrForm,
     },
@@ -55,6 +54,7 @@ use crate::{
         auth::get_current_user,
         errors::MastodonError,
     },
+    ratelimit::RatelimitConfigs,
 };
 
 use super::types::{
@@ -221,7 +221,7 @@ pub async fn token_view(
             let session_data = verify_eip4361_signature(
                 message,
                 signature,
-                &config.instance().hostname(),
+                config.instance().uri(),
                 &config.login_message,
             ).map_err(|err| MastodonError::ValidationError(err.to_string()))?;
             if !is_valid_caip122_nonce(
@@ -245,7 +245,7 @@ pub async fn token_view(
                 .ok_or(MastodonError::NotSupported)?;
             let session_data = verify_monero_caip122_signature(
                 monero_config,
-                &config.instance().hostname(),
+                config.instance().uri(),
                 &config.login_message,
                 message,
                 signature,
@@ -316,18 +316,19 @@ async fn revoke_token_view(
     Ok(HttpResponse::Ok().json(empty))
 }
 
-pub fn oauth_api_scope() -> ActixScope<impl ServiceFactory<
+pub fn oauth_api_scope(
+    ratelimit_configs: RatelimitConfigs,
+) -> ActixScope<impl ServiceFactory<
     ServiceRequest,
     Config = (),
     Response = ServiceResponse<EitherBody<BoxBody>>,
     Error = ActixError,
     InitError = (),
 >> {
-    let token_limit = ratelimit_config(5, 120, false);
     let token_view_limited = web::resource("/token").route(
         web::post()
             .to(token_view)
-            .wrap(Governor::new(&token_limit)));
+            .wrap(Governor::new(&ratelimit_configs.login)));
     web::scope("/oauth")
         .wrap(ErrorHandlers::new()
             .default_handler_client(|response| {

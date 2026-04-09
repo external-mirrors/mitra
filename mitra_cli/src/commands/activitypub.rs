@@ -4,8 +4,7 @@ use anyhow::{anyhow, Error};
 use apx_sdk::{
     addresses::WebfingerAddress,
     authentication::verify_portable_object,
-    fetch::{fetch_json, FetchObjectOptions},
-    jrd::JRD_MEDIA_TYPE,
+    fetch::FetchObjectOptions,
     utils::{get_core_type, CoreType},
 };
 use clap::Parser;
@@ -26,6 +25,7 @@ use mitra_activitypub::{
         CollectionOrder,
         FetcherContext,
     },
+    webfinger::fetch_webfinger_jrd,
 };
 use mitra_config::Config;
 use mitra_models::{
@@ -250,14 +250,7 @@ impl Webfinger {
     ) -> Result<(), Error> {
         let agent = build_federation_agent(&config.instance(), None);
         let webfinger_address = WebfingerAddress::from_handle(&self.handle)?;
-        let webfinger_uri = webfinger_address.endpoint_uri();
-        let webfinger_resource = webfinger_address.to_acct_uri();
-        let jrd = fetch_json(
-            &agent,
-            &webfinger_uri,
-            &[("resource", &webfinger_resource)],
-            Some(JRD_MEDIA_TYPE),
-        ).await?;
+        let jrd = fetch_webfinger_jrd(&agent, &webfinger_address).await?;
         println!("{}", jrd);
         Ok(())
     }

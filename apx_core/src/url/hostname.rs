@@ -2,6 +2,10 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 
 use idna::{domain_to_ascii_cow, AsciiDenyList, Errors as IdnaError};
 
+fn is_ipv4_hostname(hostname: &str) -> bool {
+    hostname.parse::<Ipv4Addr>().is_ok()
+}
+
 /// Returns `true` if hostname is an IPv6 literal (enclosed in square brackets)
 pub fn is_ipv6_hostname(hostname: &str) -> bool {
     hostname.strip_prefix('[')
@@ -27,12 +31,31 @@ pub fn is_i2p(hostname: &str) -> bool {
     hostname.ends_with(".i2p")
 }
 
+/// Returns `true` if the domain is a subdomain of the other domain
+pub fn is_subdomain_of(
+    hostname_1: &str,
+    hostname_2: &str,
+) -> bool {
+    if is_ipv4_hostname(hostname_1)
+        || is_ipv6_hostname(hostname_1)
+        || is_ipv4_hostname(hostname_2)
+        || is_ipv6_hostname(hostname_2)
+    {
+        false
+    } else {
+        // reg-name
+        let parts_1: Vec<_> = hostname_1.split('.').skip(1).collect();
+        let parts_2: Vec<_> = hostname_2.split('.').collect();
+        parts_1 == parts_2
+    }
+}
+
 /// Attempts to guess the URI scheme (http or https) for the given hostname
 pub fn guess_protocol(hostname: &str) -> &'static str {
     if hostname == "localhost" {
         return "http";
     };
-    if hostname.parse::<Ipv4Addr>().is_ok() {
+    if is_ipv4_hostname(hostname) {
         return "http";
     };
     if is_ipv6_hostname(hostname) {
@@ -83,6 +106,28 @@ mod tests {
         let hostname = "[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]";
         let encoded = encode_hostname(hostname).unwrap();
         assert_eq!(encoded, hostname);
+    }
+
+    #[test]
+    fn test_is_subdomain_of() {
+        let hostname_1 = "mastodon.example.social";
+        let hostname_2 = "example.social";
+        assert_eq!(is_subdomain_of(hostname_1, hostname_1), false);
+        assert_eq!(is_subdomain_of(hostname_1, hostname_2), true);
+    }
+
+    #[test]
+    fn test_is_subdomain_of_tld() {
+        let hostname_1 = "example.social";
+        let hostname_2 = "social";
+        assert_eq!(is_subdomain_of(hostname_1, hostname_2), true);
+    }
+
+    #[test]
+    fn test_is_subdomain_of_ipv4() {
+        let hostname_1 = "127.0.0.1";
+        let hostname_2 = "0.0.1";
+        assert_eq!(is_subdomain_of(hostname_1, hostname_2), false);
     }
 
     #[test]

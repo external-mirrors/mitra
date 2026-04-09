@@ -38,12 +38,14 @@ pub struct CreateNote {
 
 pub fn build_create_note(
     instance_uri: &HttpUri,
+    instance_webfinger_hostname: &str,
     media_server: &MediaServer,
     post: &PostDetailed,
 ) -> CreateNote {
     let authority = Authority::server(instance_uri);
     let object = build_note(
         instance_uri,
+        instance_webfinger_hostname,
         &authority,
         media_server,
         post,
@@ -78,6 +80,7 @@ pub async fn prepare_create_note(
     assert_eq!(author.id, post.author.id);
     let activity = build_create_note(
         instance.uri(),
+        &instance.webfinger_hostname(),
         media_server,
         post,
     );
@@ -100,6 +103,7 @@ mod tests {
     use super::*;
 
     const INSTANCE_URI: &str = "https://example.com";
+    const INSTANCE_HOSTNAME: &str = "example.com";
 
     #[test]
     fn test_build_create_note() {
@@ -114,6 +118,7 @@ mod tests {
         };
         let activity = build_create_note(
             &instance_uri,
+            INSTANCE_HOSTNAME,
             &media_server,
             &post,
         );

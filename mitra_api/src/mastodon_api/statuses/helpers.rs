@@ -65,12 +65,12 @@ async fn parse_microsyntaxes(
     // Mentions
     let mention_map = find_mentioned_profiles(
         db_client,
-        &instance.hostname(),
+        &instance.webfinger_hostname(),
         &content,
     ).await?;
     content = replace_mentions(
         &mention_map,
-        &instance.hostname(),
+        &instance.webfinger_hostname(),
         &authority,
         &content,
     );

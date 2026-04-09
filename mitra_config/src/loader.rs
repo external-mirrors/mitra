@@ -1,5 +1,7 @@
 use std::str::FromStr;
 
+use apx_core::url::hostname::is_subdomain_of;
+
 use super::{
     blockchain::{
         BlockchainConfig,
@@ -95,6 +97,11 @@ pub fn parse_config(
     if !is_correct_uri_scheme(&instance_uri) {
         let message = "instance_url may have incorrect URL scheme";
         warnings.push(message.to_owned());
+    };
+    if let Some(ref webfinger_hostname) = config.webfinger_hostname {
+        if !is_subdomain_of(instance_uri.hostname().as_str(), webfinger_hostname) {
+            panic!("invalid webfinger_hostname");
+        };
     };
     if config.authentication_methods.is_empty() {
         panic!("authentication_methods must not be empty");

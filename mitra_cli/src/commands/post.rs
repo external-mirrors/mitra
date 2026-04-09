@@ -284,6 +284,7 @@ impl ExportPosts {
         let activities = posts.iter().map(|post| {
             let activity = build_create_note(
                 instance.uri(),
+                &instance.webfinger_hostname(),
                 &media_server,
                 post,
             );

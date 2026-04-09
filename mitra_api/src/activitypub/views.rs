@@ -1,3 +1,4 @@
+use actix_governor::Governor;
 use actix_web::{
     body::{BoxBody, EitherBody},
     delete,
@@ -127,6 +128,7 @@ use mitra_validators::errors::ValidationError;
 use crate::{
     errors::HttpError,
     http::{get_request_full_uri, log_response_error},
+    ratelimit::RatelimitConfigs,
     web_client::urls::{
         get_post_page_url,
         get_profile_page_url,
@@ -209,10 +211,19 @@ async fn inbox(
     let activity_digest = ContentDigest::new(&request_body);
     drop(request_body);
 
-    let recipient = get_user_by_name(
+    let recipient = match get_user_by_name(
         db_client_await!(&db_pool),
         &username,
-    ).await?;
+    ).await {
+        Ok(recipient) => recipient,
+        Err(DatabaseError::NotFound(_)) => {
+            // Return 410 Gone if inbox doesn't exist
+            // Doesn't work with Mastodon:
+            // https://github.com/mastodon/mastodon/issues/22070
+            return Ok(HttpResponse::Gone().finish())
+        },
+        Err(other_error) => return Err(other_error.into()),
+    };
     let recipient_id = local_actor_id(
         config.instance().uri_str(),
         &recipient.profile.username,
@@ -288,6 +299,7 @@ async fn outbox(
         } else {
             let activity = build_create_note(
                 instance.uri(),
+                &instance.webfinger_hostname(),
                 &media_server,
                 post,
             );
@@ -429,6 +441,7 @@ async fn featured_collection(
     let objects = posts.iter().map(|post| {
         let note = build_note(
             instance.uri(),
+            &instance.webfinger_hostname(),
             &authority,
             &media_server,
             post,
@@ -565,6 +578,7 @@ pub async fn object_view(
     let media_server = MediaServer::new(&config);
     let object = build_note(
         instance.uri(),
+        &instance.webfinger_hostname(),
         &authority,
         &media_server,
         &post,
@@ -761,7 +775,6 @@ async fn apgateway_metadata_view(
     HttpResponse::Ok().json(metadata)
 }
 
-#[post("")]
 async fn apgateway_create_actor_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
@@ -866,12 +879,15 @@ async fn apgateway_inbox_push_view(
         request_uri,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
-    let recipient = {
-        let db_client = &**get_database_client(&db_pool).await?;
-        get_portable_user_by_inbox_id(
-            db_client,
-            &canonical_collection_id.to_string(),
-        ).await?
+    let recipient = match get_portable_user_by_inbox_id(
+        db_client_await!(&db_pool),
+        &canonical_collection_id.to_string(),
+    ).await {
+        Ok(recipient) => recipient,
+        Err(DatabaseError::NotFound(_)) => {
+            return Ok(HttpResponse::Gone().finish())
+        },
+        Err(other_error) => return Err(other_error.into()),
     };
     let recipient_id = recipient.profile.expect_remote_actor_id();
     receive_activity(
@@ -1065,6 +1081,7 @@ async fn apgateway_outbox_pull_view(
 
 pub fn gateway_scope(
     gateway_enabled: bool,
+    ratelimit_configs: RatelimitConfigs,
 ) -> Scope<impl ServiceFactory<
     ServiceRequest,
     Config = (),
@@ -1082,9 +1099,12 @@ pub fn gateway_scope(
     if !gateway_enabled {
         return scope;
     };
+    let create_actor_limited = web::resource("")
+        .post(apgateway_create_actor_view)
+        .wrap(Governor::new(&ratelimit_configs.registration));
     scope
         .service(apgateway_metadata_view)
-        .service(apgateway_create_actor_view)
+        .service(create_actor_limited)
         // Inbox and outbox services go before generic gateway service
         .service(apgateway_inbox_push_view)
         .service(apgateway_inbox_pull_view)

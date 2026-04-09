@@ -160,7 +160,9 @@ pub struct Note {
     pub cc: Vec<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub quote_url: Option<String>,
+    quote: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    quote_url: Option<String>,
 
     pub published: DateTime<Utc>,
 
@@ -170,6 +172,7 @@ pub struct Note {
 
 pub fn build_note(
     instance_uri: &HttpUri,
+    instance_webfinger_hostname: &str,
     authority: &Authority,
     media_server: &MediaServer,
     post: &PostDetailed,
@@ -244,7 +247,7 @@ pub fn build_note(
     let mut tags = vec![];
     for profile in &post.mentions {
         let tag_name = match profile_address(
-            instance_uri.hostname().as_str(),
+            instance_webfinger_hostname,
             profile,
         ) {
             Some(address) => address.handle(),
@@ -393,6 +396,7 @@ pub fn build_note(
         end_time: end_time,
         to: primary_audience,
         cc: secondary_audience,
+        quote: maybe_quote_url.clone(),
         quote_url: maybe_quote_url,
         published: post.created_at,
         updated: post.updated_at,
@@ -463,6 +467,7 @@ mod tests {
     use super::*;
 
     const INSTANCE_URI: &str = "https://server.example";
+    const INSTANCE_HOSTNAME: &str = "server.example";
 
     #[test]
     fn test_build_tag() {
@@ -494,6 +499,7 @@ mod tests {
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let note = build_note(
             &instance_uri,
+            INSTANCE_HOSTNAME,
             &authority,
             &media_server,
             &post,
@@ -572,6 +578,7 @@ mod tests {
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let question = build_note(
             &instance_uri,
+            INSTANCE_HOSTNAME,
             &authority,
             &media_server,
             &post,
@@ -630,6 +637,7 @@ mod tests {
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let note = build_note(
             &instance_uri,
+            INSTANCE_HOSTNAME,
             &authority,
             &media_server,
             &post,
@@ -660,6 +668,7 @@ mod tests {
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let note = build_note(
             &instance_uri,
+            INSTANCE_HOSTNAME,
             &authority,
             &media_server,
             &post,
@@ -691,6 +700,7 @@ mod tests {
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let note = build_note(
             &instance_uri,
+            INSTANCE_HOSTNAME,
             &authority,
             &media_server,
             &post,
@@ -717,6 +727,7 @@ mod tests {
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let note = build_note(
             &instance_uri,
+            INSTANCE_HOSTNAME,
             &authority,
             &media_server,
             &post,
@@ -770,6 +781,7 @@ mod tests {
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let note = build_note(
             &instance_uri,
+            INSTANCE_HOSTNAME,
             &authority,
             &media_server,
             &post,
@@ -841,6 +853,7 @@ mod tests {
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let note = build_note(
             &instance_uri,
+            INSTANCE_HOSTNAME,
             &authority,
             &media_server,
             &post,
@@ -918,6 +931,7 @@ mod tests {
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let note = build_note(
             &instance_uri,
+            INSTANCE_HOSTNAME,
             &authority,
             &media_server,
             &post,
