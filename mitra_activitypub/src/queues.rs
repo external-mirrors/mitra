@@ -335,7 +335,7 @@ impl OutgoingActivityJobData {
         Ok(())
     }
 
-    async fn into_job(
+    pub async fn into_job(
         self,
         db_client: &impl DatabaseClient,
         delay: u32,
