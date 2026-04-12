@@ -16,7 +16,7 @@ clap = { version = "~4.4.18", default-features = false, features = ["std", "deri
 # Used for logging
 log = "0.4.20"
 # Async runtime
-tokio = { version = "~1.38.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "~1.42.0", features = ["macros", "rt-multi-thread"] }
 
 mitra_adapters = { path = "../mitra_adapters" }
 mitra_api = { path = "../mitra_api" }
