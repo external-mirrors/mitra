@@ -30,7 +30,7 @@ thiserror = "1.0.37"
 tokio = { version = "~1.42.0" }
 # Used to work with UUIDs
 uuid = { version = "1.12.1" }
-# User for working with block/allow lists
+# Used for working with block/allow lists
 wildmatch = "2.1.1"
 
 apx_core = { path = "../apx_core", features = ["experiments"] }
