@@ -4,6 +4,7 @@ use apx_sdk::{
         canonical::{
             is_same_origin as apx_is_same_origin,
             is_same_uri,
+            CanonicalUri,
         },
         http_uri::HttpUri,
     },
@@ -19,6 +20,8 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Instance;
 use mitra_validators::errors::ValidationError;
 
+use crate::identifiers::canonicalize_id;
+
 pub fn get_object_id_opt(object: &JsonValue) -> Option<&str> {
     object["id"].as_str()
 }
@@ -26,6 +29,14 @@ pub fn get_object_id_opt(object: &JsonValue) -> Option<&str> {
 pub fn get_object_id(object: &JsonValue) -> Result<&str, ValidationError> {
     get_object_id_opt(object)
         .ok_or(ValidationError("'id' property is missing"))
+}
+
+pub fn get_canonical_object_id(
+    object: &JsonValue,
+) -> Result<CanonicalUri, ValidationError> {
+    let object_id = get_object_id(object)?;
+    let canonical_object_id = canonicalize_id(object_id)?;
+    Ok(canonical_object_id)
 }
 
 pub fn is_same_origin(id_1: &str, id_2: &str) -> Result<bool, ValidationError> {

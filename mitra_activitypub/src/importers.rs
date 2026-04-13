@@ -90,7 +90,12 @@ use crate::{
         parse_local_object_id,
         UuidOrUsername,
     },
-    ownership::{get_object_id, is_local_origin, verify_object_owner},
+    ownership::{
+        get_canonical_object_id,
+        get_object_id,
+        is_local_origin,
+        verify_object_owner,
+    },
     webfinger::perform_webfinger_query,
 };
 
@@ -848,9 +853,9 @@ pub enum CollectionOrder {
     Reverse,
 }
 
-pub enum CollectionItemResult {
-    Ok(String),
-    Failed(JsonValue),
+pub struct CollectionItemResult {
+    pub item: JsonValue,
+    pub is_ok: bool,
 }
 
 pub async fn import_collection_with_failed(
@@ -904,6 +909,7 @@ pub async fn import_collection_with_failed(
         let result = match item_type {
             CollectionItemType::Object => {
                 log::info!("importing object {item_id}");
+                // TODO: don't return ID
                 import_object(ap_client, db_pool, item).await
                     .map(|post| post.expect_remote_object_id().to_owned())
             },
@@ -918,13 +924,12 @@ pub async fn import_collection_with_failed(
             },
         };
         match result {
-            Ok(imported_item_id) => {
-                // Canonical ID is returned
-                imported.push(CollectionItemResult::Ok(imported_item_id));
+            Ok(_) => {
+                imported.push(CollectionItemResult { item: item_clone, is_ok: true });
             },
             Err(error) => {
                 log::warn!("failed to process item ({error}): {item_id}");
-                imported.push(CollectionItemResult::Failed(item_clone));
+                imported.push(CollectionItemResult { item: item_clone, is_ok: true });
             },
         };
     };
@@ -950,11 +955,12 @@ pub async fn import_collection(
         limit,
     ).await?;
     let imported = results.into_iter()
-        .filter_map(|result| match result {
-            CollectionItemResult::Ok(id) => Some(id),
-            CollectionItemResult::Failed(_) => None,
+        .filter(|result| result.is_ok)
+        .map(|result| {
+            get_canonical_object_id(&result.item)
+                .map(|id| id.to_string())
         })
-        .collect();
+        .collect::<Result<Vec<_>, ValidationError>>()?;
     Ok(imported)
 }
 
