@@ -218,11 +218,14 @@ pub async fn handle_activity(
     };
     if let Some(descriptor) = maybe_descriptor {
         let db_client = &**get_database_client(db_pool).await?;
+        #[cfg(not(feature = "mini"))]
         let is_new_activity = save_activity(
             db_client,
             &canonical_activity_id,
             &activity_clone,
         ).await?;
+        #[cfg(feature = "mini")]
+        let is_new_activity = false;
         // Remote recipients
         let recipients = get_activity_recipients(
             db_client,
