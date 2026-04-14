@@ -66,7 +66,6 @@ fn build_delete_note(
     );
     let authority = Authority::server(instance_uri);
     let Note { to, cc, .. } = build_note(
-        instance_uri,
         instance_webfinger_hostname,
         &authority,
         media_server,

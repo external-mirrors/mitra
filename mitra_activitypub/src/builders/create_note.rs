@@ -43,7 +43,6 @@ pub fn build_create_note(
 ) -> CreateNote {
     let authority = Authority::server(instance_uri);
     let object = build_note(
-        instance_uri,
         instance_webfinger_hostname,
         &authority,
         media_server,

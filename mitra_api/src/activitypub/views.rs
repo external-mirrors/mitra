@@ -439,7 +439,6 @@ async fn featured_collection(
     let media_server = MediaServer::new(&config);
     let objects = posts.iter().map(|post| {
         let note = build_note(
-            instance.uri(),
             &instance.webfinger_hostname(),
             &authority,
             &media_server,
@@ -576,7 +575,6 @@ pub async fn object_view(
     let authority = Authority::from(&instance);
     let media_server = MediaServer::new(&config);
     let object = build_note(
-        instance.uri(),
         &instance.webfinger_hostname(),
         &authority,
         &media_server,
@@ -694,7 +692,7 @@ pub async fn conversation_view(
     let instance = config.instance();
     let authority = Authority::from(&instance);
     let collection_id =
-        local_conversation_collection(instance.uri_str(), *conversation_id);
+        local_conversation_collection(&authority, *conversation_id);
     let first_page_id = format!("{}?page=true", collection_id);
     if query_params.page.is_none() {
         let collection = OrderedCollection::new(
