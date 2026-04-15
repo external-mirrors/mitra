@@ -1,4 +1,3 @@
-use apx_core::url::http_uri::HttpUri;
 use serde::Serialize;
 
 use mitra_config::Instance;
@@ -13,7 +12,11 @@ use mitra_services::media::MediaServer;
 use crate::{
     authority::Authority,
     contexts::{build_default_context, Context},
-    identifiers::{local_activity_id, local_actor_id, local_object_id},
+    identifiers::{
+        local_activity_id_unified,
+        local_actor_id_unified,
+        local_object_id_unified,
+    },
     queues::OutgoingActivityJobData,
     vocabulary::{DELETE, NOTE, TOMBSTONE},
 };
@@ -27,6 +30,8 @@ struct Tombstone {
 
     #[serde(rename = "type")]
     object_type: String,
+
+    attributed_to: String,
 
     former_type: String,
 }
@@ -48,26 +53,26 @@ struct DeleteNote {
 }
 
 fn build_delete_note(
-    instance_uri: &HttpUri,
+    authority: &Authority,
     instance_webfinger_hostname: &str,
     media_server: &MediaServer,
     post: &PostDetailed,
 ) -> DeleteNote {
     assert!(post.is_local());
-    let object_id = local_object_id(instance_uri.as_str(), post.id);
-    let activity_id = local_activity_id(
-        instance_uri.as_str(),
+    let object_id = local_object_id_unified(authority, post.id);
+    let activity_id = local_activity_id_unified(
+        authority,
         DELETE,
         post.id,
     );
-    let actor_id = local_actor_id(
-        instance_uri.as_str(),
+    let actor_id = local_actor_id_unified(
+        authority,
+        post.author.id,
         &post.author.username,
     );
-    let authority = Authority::server(instance_uri);
     let Note { to, cc, .. } = build_note(
         instance_webfinger_hostname,
-        &authority,
+        authority,
         media_server,
         post,
         false,
@@ -76,10 +81,11 @@ fn build_delete_note(
         context: build_default_context(),
         activity_type: DELETE.to_string(),
         id: activity_id,
-        actor: actor_id,
+        actor: actor_id.clone(),
         object: Tombstone {
             id: object_id,
             object_type: TOMBSTONE.to_string(),
+            attributed_to: actor_id,
             former_type: NOTE.to_string(),
         },
         to: to,
@@ -95,10 +101,11 @@ pub async fn prepare_delete_note(
     post: &PostDetailed,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(author.id, post.author.id);
+    let authority = Authority::from(instance);
     let mut post = post.clone();
     add_related_posts(db_client, vec![&mut post]).await?;
     let activity = build_delete_note(
-        instance.uri(),
+        &authority,
         &instance.webfinger_hostname(),
         media_server,
         &post,
@@ -114,7 +121,10 @@ pub async fn prepare_delete_note(
 
 #[cfg(test)]
 mod tests {
-    use apx_sdk::constants::AP_PUBLIC;
+    use apx_sdk::{
+        constants::AP_PUBLIC,
+        core::url::http_uri::HttpUri,
+    };
     use mitra_models::{
         posts::types::RelatedPosts,
         profiles::types::DbActorProfile,
@@ -127,6 +137,7 @@ mod tests {
     #[test]
     fn test_build_delete_note() {
         let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let authority = Authority::server(&instance_uri);
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let author = DbActorProfile::local_for_test("author");
         let post = PostDetailed {
@@ -135,7 +146,7 @@ mod tests {
             ..Default::default()
         };
         let activity = build_delete_note(
-            &instance_uri,
+            &authority,
             INSTANCE_HOSTNAME,
             &media_server,
             &post,
@@ -150,6 +161,7 @@ mod tests {
             format!("{}/objects/{}", INSTANCE_URI, post.id),
         );
         assert_eq!(activity.object.object_type, "Tombstone");
+        assert_eq!(activity.object.attributed_to, activity.actor);
         assert_eq!(activity.to, vec![AP_PUBLIC]);
         assert_eq!(
             activity.cc,

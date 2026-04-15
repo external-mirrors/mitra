@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Add `attributedTo` property to `Tombstone` object.
+
 ## [5.2.0] - 2026-04-24
 
 ### Added
