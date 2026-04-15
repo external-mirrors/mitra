@@ -29,10 +29,8 @@ use crate::{
     contexts::{build_default_context, Context},
     deliverer::Recipient,
     identifiers::{
-        compatible_id,
         compatible_post_object_id,
         compatible_profile_actor_id,
-        local_actor_id,
         local_actor_id_unified,
         local_conversation_collection,
         local_object_id_unified,
@@ -327,35 +325,6 @@ pub fn build_note(
                 if let Some(ref audience) = conversation.audience {
                     if !primary_audience.contains(audience) {
                         primary_audience.push(audience.clone());
-                    };
-                };
-            };
-            // TODO: remove
-            if post.visibility == Visibility::Conversation &&
-                in_reply_to.visibility == Visibility::Followers
-            {
-                // Add followers of a parent post author to audience
-                let maybe_in_reply_to_followers = match in_reply_to.author.actor_json {
-                    Some(ref actor_data) => {
-                        actor_data.followers.as_ref().map(|followers| {
-                            compatible_id(actor_data, followers)
-                                .expect("actor ID should be valid")
-                        })
-                    },
-                    None => {
-                        // Can't use "authority" parameter here
-                        // because parent post author may have a different one
-                        let actor_id = local_actor_id(
-                            instance_uri.as_str(),
-                            &in_reply_to.author.username,
-                        );
-                        let followers = LocalActorCollection::Followers.of(&actor_id);
-                        Some(followers)
-                    },
-                };
-                if let Some(in_reply_to_followers) = maybe_in_reply_to_followers {
-                    if !primary_audience.contains(&in_reply_to_followers) {
-                        primary_audience.push(in_reply_to_followers);
                     };
                 };
             };

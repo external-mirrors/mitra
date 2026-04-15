@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Allow split-domain setups where two different subdomains are used.
 - Write warning to log when imported featured post is not found in the database.
+- Stop adding followers collection to the audience of legacy 'Conversation' replies.
 
 ## [5.1.0] - 2026-04-08
 
