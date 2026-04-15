@@ -57,7 +57,7 @@ pub(super) fn local_like_activity_id(
 ) -> String {
     if reaction_has_deprecated_ap_id {
         let instance_uri = authority.expect_server_uri();
-        local_object_id(instance_uri, reaction_id)
+        local_object_id(instance_uri.as_str(), reaction_id)
     } else {
         local_activity_id_unified(authority, LIKE, reaction_id)
     }
@@ -93,7 +93,7 @@ fn build_like(
         &actor_profile.username,
     );
     let object_id = compatible_post_object_id(authority, post);
-    let instance_uri = authority.expect_server_uri();
+    let instance_uri = authority.expect_server_uri().as_str();
     let maybe_tag = maybe_custom_emoji
         .map(|db_emoji| build_emoji(instance_uri, media_server, db_emoji));
     let post_author_id =

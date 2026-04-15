@@ -51,7 +51,7 @@ pub(super) fn local_announce_activity_id(
 ) -> String {
     if repost_has_deprecated_ap_id {
         let instance_uri = authority.expect_server_uri();
-        local_object_id(instance_uri, repost_id)
+        local_object_id(instance_uri.as_str(), repost_id)
     } else {
         local_activity_id_unified(authority, ANNOUNCE, repost_id)
     }
