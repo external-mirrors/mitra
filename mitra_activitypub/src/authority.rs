@@ -41,6 +41,8 @@ impl fmt::Display for AuthorityRoot {
 
 // Local naming authority
 pub struct Authority {
+    // Authority for IDs
+    // TODO: add webfinger_hostname?
     root: AuthorityRoot,
     // FEP-ef61 ID generation options
     http_base_uri: Option<HttpUri>, // TODO: multiple gateways
@@ -126,16 +128,16 @@ impl Authority {
     }
 
     // TODO: remove
-    pub fn server_uri(&self) -> Option<&str> {
+    /// Returns web server base URI
+    pub fn server_uri(&self) -> Option<&HttpUri> {
         match self.root {
-            AuthorityRoot::Server(ref server_uri) => Some(server_uri.as_str()),
-            AuthorityRoot::Key(_) => self.http_base_uri.as_ref()
-                .map(|uri| uri.as_str()),
+            AuthorityRoot::Server(ref server_uri) => Some(server_uri),
+            AuthorityRoot::Key(_) => self.http_base_uri.as_ref(),
         }
     }
 
     // TODO: remove
-    pub fn expect_server_uri(&self) -> &str {
+    pub fn expect_server_uri(&self) -> &HttpUri {
         self.server_uri().expect("authority should be anchored")
     }
 
@@ -178,7 +180,7 @@ mod tests {
         let authority = Authority::server(&server_uri);
         assert!(!authority.is_fep_ef61());
         assert_eq!(authority.to_string(), "https://server.example");
-        assert_eq!(authority.server_uri().unwrap(), SERVER_URI);
+        assert_eq!(authority.server_uri().unwrap().as_str(), SERVER_URI);
         assert_eq!(authority.as_did_key().is_none(), true);
     }
 
@@ -199,7 +201,7 @@ mod tests {
         let authority = Authority::key_with_gateway(&secret_key, &server_uri);
         assert!(authority.is_fep_ef61());
         assert_eq!(authority.to_string(), "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
-        assert_eq!(authority.server_uri().unwrap(), SERVER_URI);
+        assert_eq!(authority.server_uri().unwrap().as_str(), SERVER_URI);
         assert_eq!(authority.as_did_key().is_some(), true);
     }
 

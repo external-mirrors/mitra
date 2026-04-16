@@ -31,22 +31,18 @@ pub fn is_i2p(hostname: &str) -> bool {
     hostname.ends_with(".i2p")
 }
 
-/// Returns `true` if the domain is a subdomain of the other domain
-pub fn is_subdomain_of(
+/// Returns `true` if two hostnames have a same apex domain
+pub fn is_same_apex_domain(
     hostname_1: &str,
     hostname_2: &str,
 ) -> bool {
-    if is_ipv4_hostname(hostname_1)
-        || is_ipv6_hostname(hostname_1)
-        || is_ipv4_hostname(hostname_2)
-        || is_ipv6_hostname(hostname_2)
-    {
-        false
+    if is_ipv4_hostname(hostname_1) || is_ipv6_hostname(hostname_1) {
+        hostname_1 == hostname_2
     } else {
         // reg-name
-        let parts_1: Vec<_> = hostname_1.split('.').skip(1).collect();
-        let parts_2: Vec<_> = hostname_2.split('.').collect();
-        parts_1 == parts_2
+        let apex_1: Vec<_> = hostname_1.split('.').rev().take(2).collect();
+        let apex_2: Vec<_> = hostname_2.split('.').rev().take(2).collect();
+        apex_1 == apex_2
     }
 }
 
@@ -109,25 +105,27 @@ mod tests {
     }
 
     #[test]
-    fn test_is_subdomain_of() {
+    fn test_is_same_apex_domain() {
         let hostname_1 = "mastodon.example.social";
-        let hostname_2 = "example.social";
-        assert_eq!(is_subdomain_of(hostname_1, hostname_1), false);
-        assert_eq!(is_subdomain_of(hostname_1, hostname_2), true);
+        let hostname_2 = "pleroma.example.social";
+        let hostname_3 = "example.social";
+        assert_eq!(is_same_apex_domain(hostname_1, hostname_1), true);
+        assert_eq!(is_same_apex_domain(hostname_1, hostname_2), true);
+        assert_eq!(is_same_apex_domain(hostname_1, hostname_3), true);
     }
 
     #[test]
-    fn test_is_subdomain_of_tld() {
+    fn test_is_same_apex_domain_tld() {
         let hostname_1 = "example.social";
         let hostname_2 = "social";
-        assert_eq!(is_subdomain_of(hostname_1, hostname_2), true);
+        assert_eq!(is_same_apex_domain(hostname_1, hostname_2), false);
     }
 
     #[test]
-    fn test_is_subdomain_of_ipv4() {
+    fn test_is_same_apex_domain_ipv4() {
         let hostname_1 = "127.0.0.1";
         let hostname_2 = "0.0.1";
-        assert_eq!(is_subdomain_of(hostname_1, hostname_2), false);
+        assert_eq!(is_same_apex_domain(hostname_1, hostname_2), false);
     }
 
     #[test]

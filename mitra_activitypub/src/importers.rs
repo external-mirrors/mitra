@@ -1023,7 +1023,9 @@ pub async fn import_featured(
             Ok(post) => {
                 set_pinned_flag(db_client, post.id, true).await?;
             },
-            Err(DatabaseError::NotFound(_)) => (),
+            Err(DatabaseError::NotFound(_)) => {
+                log::warn!("imported post not found in the database");
+            },
             Err(other_error) => return Err(other_error.into()),
         };
     };

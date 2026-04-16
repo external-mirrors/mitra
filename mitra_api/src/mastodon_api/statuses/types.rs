@@ -165,7 +165,7 @@ impl Status {
         media_server: &ClientMediaServer,
         post: DbPostDetailed,
     ) -> Self {
-        let instance_uri = authority.expect_server_uri();
+        let instance_uri = authority.expect_server_uri().as_str();
         let object_id = post_object_id(authority, &post);
         let object_url = if let Some(url) = post.url {
             url

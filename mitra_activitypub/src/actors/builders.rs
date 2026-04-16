@@ -1,6 +1,5 @@
 use apx_core::{
     crypto::rsa::RsaSerializationError,
-    url::http_uri::HttpUri,
 };
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
@@ -16,7 +15,7 @@ use mitra_models::{
 use mitra_services::media::MediaServer;
 
 use crate::{
-    authority::Authority,
+    authority::{Authority, AuthorityRoot},
     builders::emoji::{build_emoji, Emoji},
     contexts::{
         AP_CONTEXT,
@@ -194,12 +193,11 @@ pub struct Actor {
 }
 
 pub fn build_local_actor(
-    instance_uri: &HttpUri,
     authority: &Authority,
     media_server: &MediaServer,
     user: &User,
 ) -> Result<Actor, DatabaseError> {
-    assert_eq!(authority.server_uri(), Some(instance_uri.as_str()), "authority should be anchored");
+    let server_uri = authority.expect_server_uri();
     let username = &user.profile.username;
     let actor_id = local_actor_id_unified(authority, user.id, username);
     let actor_type = if user.profile.is_automated {
@@ -278,16 +276,23 @@ pub fn build_local_actor(
     };
     let mut emojis = vec![];
     for db_emoji in user.profile.emojis.inner() {
-        let emoji = build_emoji(instance_uri.as_str(), media_server, db_emoji);
+        // TODO: FEP-EF61: portable or anonymous emojis?
+        let emoji = build_emoji(server_uri.as_str(), media_server, db_emoji);
         emojis.push(emoji);
     };
     let aliases = user.profile.aliases.clone().into_actor_ids();
     // HTML representation
-    // TODO: portable actors should point to a primary server
-    let profile_url = local_actor_id(instance_uri.as_str(), username);
+    let maybe_profile_url = match authority.root() {
+        AuthorityRoot::Server(uri) => {
+            let profile_url = local_actor_id(uri.as_str(), username);
+            Some(profile_url)
+        },
+        // TODO: FEP-EF61: client should use server's URL template
+        AuthorityRoot::Key(_) => None,
+    };
 
     let gateways = authority.is_fep_ef61()
-        .then_some(vec![instance_uri.to_string()])
+        .then_some(vec![server_uri.to_string()])
         .unwrap_or_default();
     let actor = Actor {
         _context: build_actor_context(),
@@ -314,7 +319,7 @@ pub fn build_local_actor(
         manually_approves_followers: user.profile.manually_approves_followers,
         // Some applications don't work properly if this flag is not set
         discoverable: true,
-        url: Some(profile_url),
+        url: maybe_profile_url,
         published: Some(user.profile.created_at),
         updated: Some(user.profile.updated_at),
         gateways: gateways,
@@ -367,6 +372,7 @@ pub fn build_instance_actor(
 
 #[cfg(test)]
 mod tests {
+    use apx_sdk::core::url::http_uri::HttpUri;
     use serde_json::json;
     use uuid::uuid;
     use mitra_models::profiles::types::DbActorProfile;
@@ -387,7 +393,6 @@ mod tests {
         let authority = Authority::server(&instance_uri);
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let actor = build_local_actor(
-            &instance_uri,
             &authority,
             &media_server,
             &user,
@@ -486,7 +491,6 @@ mod tests {
         );
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let actor = build_local_actor(
-            &instance_uri,
             &authority,
             &media_server,
             &user,
@@ -561,7 +565,6 @@ mod tests {
             "summary": "testbio",
             "manuallyApprovesFollowers": false,
             "discoverable": true,
-            "url": "https://server.example/users/testuser",
             "published": "2023-02-24T23:36:38Z",
             "updated": "2023-02-24T23:36:38Z",
             "gateways": [
