@@ -6,6 +6,7 @@ use apx_sdk::fetch::FetchError;
 use chrono::{TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
+use uuid::Uuid;
 
 use mitra_config::Config;
 use mitra_models::{
@@ -339,27 +340,25 @@ impl OutgoingActivityJobData {
         self,
         db_client: &impl DatabaseClient,
         delay: u32,
-    ) -> Result<(), DatabaseError> {
-        if self.recipients.is_empty() {
-            return Ok(());
-        };
+    ) -> Result<Uuid, DatabaseError> {
         let job_data = serde_json::to_value(self)
             .expect("activity should be serializable");
         let scheduled_for = Utc::now() + TimeDelta::seconds(delay.into());
-        enqueue_job(
+        let job_id = enqueue_job(
             db_client,
             JobType::OutgoingActivity,
             &job_data,
             scheduled_for,
         ).await?;
-        Ok(())
+        Ok(job_id)
     }
 
     pub async fn enqueue(
         self,
         db_client: &impl DatabaseClient,
     ) -> Result<(), DatabaseError> {
-        self.into_job(db_client, 0).await
+        self.into_job(db_client, 0).await?;
+        Ok(())
     }
 
     pub async fn save_and_enqueue(
@@ -398,6 +397,12 @@ pub async fn process_queued_outgoing_activities(
             serde_json::from_value(job.job_data)
                 .map_err(|_| DatabaseTypeError)?;
         let mut recipients = job_data.recipients;
+        if recipients.is_empty() {
+            log::warn!("delivery has no remote recipients");
+            let db_client = &**get_database_client(db_pool).await?;
+            delete_job_from_queue(db_client, job.id).await?;
+            continue;
+        };
         if !instance.federation.enabled {
             log::info!(
                 "(private mode) not delivering activity to {} inboxes: {}",
@@ -499,8 +504,8 @@ pub async fn process_queued_outgoing_activities(
             // Re-queue if some deliveries are not successful
             job_data.recipients = recipients;
             let retry_after = outgoing_queue_backoff(job_data.failure_count);
-            job_data.into_job(db_client, retry_after).await?;
-            log::info!("delivery job re-queued");
+            let job_id = job_data.into_job(db_client, retry_after).await?;
+            log::info!("delivery job re-queued (ID: {job_id})");
         } else {
             // Update reachability statuses if all deliveries are successful
             // or if retry limit is reached
