@@ -41,7 +41,7 @@ stop_mitra() {
 
 case "$1" in
     start)
-        log_daemon_msg "Starting $DESC " "$NAME"
+        log_daemon_msg "Starting $DESC" "$NAME"
         start_mitra
         case "$?" in
             0|1) log_end_msg 0 ;;
@@ -52,7 +52,7 @@ case "$1" in
     stop)
         log_daemon_msg "Stopping $DESC" "$NAME"
         stop_mitra
-        case "$1" in
+        case "$?" in
             0|1) log_end_msg 0 ;;
             2)   log_end_msg 1 ;;
         esac
@@ -81,7 +81,7 @@ case "$1" in
         esac
         ;;
     *)
-        echo "Usage:: $0 {start|stop|status|restart}" >&2
+        echo "Usage: $0 {start|stop|status|restart}" >&2
         exit 3
         ;;
 esac
