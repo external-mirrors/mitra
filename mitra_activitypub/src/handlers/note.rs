@@ -855,7 +855,7 @@ pub(super) fn get_audience(
 
 fn get_object_visibility(
     author: &DbActorProfile,
-    context_id: Option<&str>,
+    context_id: Option<&CanonicalUri>,
     audience: &[String],
     maybe_in_reply_to: Option<&PostDetailed>,
 ) -> (Visibility, PostContext) {
@@ -913,7 +913,7 @@ fn get_object_visibility(
             Visibility::Direct
         };
         let context = PostContext::Top {
-            object_id: context_id.map(|id| id.to_owned()),
+            object_id: context_id.map(|id| id.to_string()),
             audience: conversation_audience,
         };
         (visibility, context)
@@ -1062,9 +1062,13 @@ pub async fn create_remote_post(
     ).await?;
 
     let audience = get_audience(&object)?;
+    let maybe_canonical_context_id = object.context
+        .as_ref()
+        .map(|id| canonicalize_id(id))
+        .transpose()?;
     let (visibility, context) = get_object_visibility(
         &author,
-        object.context.as_deref(),
+        maybe_canonical_context_id.as_ref(),
         &audience,
         maybe_in_reply_to.as_ref(),
     );
@@ -1392,10 +1396,11 @@ mod tests {
         let author =
             DbActorProfile::remote_for_test("test", "https://social.example");
         let context_id = "https://social.example/context";
+        let canonical_context_id = CanonicalUri::parse(context_id).unwrap();
         let audience = vec![AP_PUBLIC.to_string()];
         let (visibility, context) = get_object_visibility(
             &author,
-            Some(context_id),
+            Some(&canonical_context_id),
             &audience,
             None,
         );

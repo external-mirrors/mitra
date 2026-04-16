@@ -13,6 +13,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Stop adding followers collection to the audience of legacy 'Conversation' replies.
 - Write job ID to log when re-queueing deliveries.
 
+### Fixed
+
+- Don't reject objects where `context` is an 'ap' URI.
+
 ## [5.1.0] - 2026-04-08
 
 ### Added
