@@ -50,7 +50,6 @@ fn build_update_person(
 ) -> Result<UpdatePerson, DatabaseError> {
     let authority = Authority::server(instance_uri);
     let actor = build_local_actor(
-        instance_uri,
         &authority,
         media_server,
         user,

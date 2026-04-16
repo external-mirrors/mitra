@@ -178,7 +178,6 @@ async fn actor_view(
     let authority = Authority::server(instance.uri());
     let media_server = MediaServer::new(&config);
     let actor = build_local_actor(
-        instance.uri(),
         &authority,
         &media_server,
         &user,

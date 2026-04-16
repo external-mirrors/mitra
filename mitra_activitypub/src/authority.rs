@@ -41,6 +41,8 @@ impl fmt::Display for AuthorityRoot {
 
 // Local naming authority
 pub struct Authority {
+    // Authority for IDs
+    // TODO: add webfinger_hostname?
     root: AuthorityRoot,
     // FEP-ef61 ID generation options
     http_base_uri: Option<HttpUri>, // TODO: multiple gateways
