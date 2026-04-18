@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write warning to log when imported featured post is not found in the database.
 - Stop adding followers collection to the audience of legacy 'Conversation' replies.
 - Write job ID to log when re-queueing deliveries.
+- Use UUIDv7 instead of ULID for primary keys.
 
 ### Fixed
 
