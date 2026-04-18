@@ -139,9 +139,10 @@ To run Mitra as a systemd service, check out the [systemd unit file example](./c
 
 These images and packages are maintained by the community.
 
-#### Docker image
+#### Docker images
 
-https://hub.docker.com/r/bleakfuture0/mitra
+- https://hub.docker.com/r/bleakfuture0/mitra
+- https://hub.docker.com/r/fjox/mitra
 
 #### Alpine Linux
 
