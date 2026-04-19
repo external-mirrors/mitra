@@ -24,20 +24,18 @@ impl KeyExtractor for RealIpKeyExtractor {
     ) -> Result<Self::Key, Self::KeyExtractionError> {
         // TODO: make reverse proxy address configurable
         let reverse_proxy_ip = IpAddr::V4(Ipv4Addr::LOCALHOST);
+        // Peer address is not known when unix socket is used
         let maybe_peer_ip = request.peer_addr().map(|socket| socket.ip());
         let maybe_real_ip = request.connection_info()
             .realip_remote_addr()
             .and_then(|real_ip| IpAddr::from_str(real_ip).ok());
-        let key = match maybe_peer_ip {
-            Some(peer_ip) if peer_ip == reverse_proxy_ip => {
-                // "real IP" can be trusted only if coming from reverse proxy
-                maybe_real_ip.unwrap_or(peer_ip)
-            },
-            Some(peer_ip) => peer_ip,
-            None => {
-                // Unix socket?
-                maybe_real_ip.unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST))
-            },
+        // Use proxy IP if peer address is not known
+        let peer_ip = maybe_peer_ip.unwrap_or(reverse_proxy_ip);
+        let key = if peer_ip == reverse_proxy_ip {
+            // "real IP" can be trusted only if coming from reverse proxy
+            maybe_real_ip.unwrap_or(peer_ip)
+        } else {
+            peer_ip
         };
         Ok(key)
     }
