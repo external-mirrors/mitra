@@ -1,5 +1,9 @@
 # Reverse proxy guide
 
+## General recommendations
+
+Reverse proxy should always set `X-Forwarded-Proto` and `X-Forwarded-For` headers.
+
 ## Caddy
 
 [Caddy](https://caddyserver.com/) is a simple to use reverse proxy system that works well.

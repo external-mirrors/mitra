@@ -30,7 +30,12 @@ inport=80
 port=8383
 keys=mitra.dat
 ```
-An HTTP server (e.g. nginx) is not necessary in this setup.
+
+An HTTP server (e.g. nginx) is not necessary in this setup. Set `http_behind_reverse_proxy` to `false` in your configuration file if you don't use a reverse proxy:
+
+``yaml
+http_behind_reverse_proxy: false
+```
 
 ## Clearnet + I2P
 

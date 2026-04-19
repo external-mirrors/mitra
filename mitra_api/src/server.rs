@@ -56,7 +56,7 @@ pub async fn run_server(
         log::info!("media proxy enabled");
     };
     // Ratelimit configs should be created only once
-    let ratelimit_configs = RatelimitConfigs::default();
+    let ratelimit_configs = RatelimitConfigs::new(config.http_behind_reverse_proxy);
     let http_server = HttpServer::new(move || {
         // This will run at the start of each worker
         let cors_config = match config.environment {
