@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Stop adding followers collection to the audience of legacy 'Conversation' replies.
 - Write job ID to log when re-queueing deliveries.
 - Use UUIDv7 instead of ULID for primary keys.
+- Added default values for `http_host` and `http_port` configuration parameters.
 
 ### Fixed
 
