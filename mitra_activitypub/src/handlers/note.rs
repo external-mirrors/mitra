@@ -265,6 +265,7 @@ pub struct AttributedObject {
     // Polls
     one_of: Option<JsonValue>,
     any_of: Option<JsonValue>,
+    voters_count: Option<i32>,
     end_time: Option<DateTime<Utc>>,
     closed: Option<DateTime<Utc>>,
 
@@ -968,6 +969,7 @@ fn parse_poll_results(
         multiple_choices: is_multichoice,
         ends_at: ends_at,
         results: results,
+        voters_count: object.voters_count,
     };
     validate_poll_data(&poll_data)?;
     Ok(poll_data)

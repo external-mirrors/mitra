@@ -4198,7 +4198,7 @@ components:
           description: How many votes have been received.
           type: integer
         voters_count:
-          description: How many unique accounts have voted on a multiple-choice poll.
+          description: How many users have voted on a poll. In a single-choice poll this number is equal to the number of votes.
           type: integer
         options:
           description: Possible answers for the poll.

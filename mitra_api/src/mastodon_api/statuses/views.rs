@@ -265,6 +265,7 @@ async fn create_status(
             results: poll_options.into_iter()
                 .map(|name| PollResult::new(&name))
                 .collect(),
+            voters_count: Some(0),
         };
         Some(poll_data)
     } else {

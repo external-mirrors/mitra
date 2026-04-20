@@ -26,9 +26,10 @@ pub async fn create_poll(
             id,
             multiple_choices,
             ends_at,
-            results
+            results,
+            voters_count
         )
-        VALUES ($1, $2, $3, $4)
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING poll
         ",
         &[
@@ -36,6 +37,7 @@ pub async fn create_poll(
             &poll_data.multiple_choices,
             &poll_data.ends_at,
             &PollResults::new(poll_data.results),
+            &poll_data.voters_count,
         ],
     ).await?;
     let poll = row.try_get("poll")?;
@@ -72,6 +74,7 @@ pub async fn update_poll(
             .results
             .iter_mut()
             .for_each(|result| result.vote_count = 0);
+        poll_data.voters_count = None;
         transaction.execute(
             "
             DELETE FROM poll_vote
@@ -86,7 +89,8 @@ pub async fn update_poll(
         SET
             multiple_choices = $2,
             ends_at = $3,
-            results = $4
+            results = $4,
+            voters_count = $5
         WHERE id = $1
         RETURNING poll
         ",
@@ -95,6 +99,7 @@ pub async fn update_poll(
             &poll_data.multiple_choices,
             &poll_data.ends_at,
             &PollResults::new(poll_data.results),
+            &poll_data.voters_count,
         ],
     ).await?;
     let poll: Poll = row.try_get("poll")?;
@@ -245,7 +250,13 @@ pub async fn vote_one(
     let row = transaction.query_one(
         "
         UPDATE poll
-        SET results = $2
+        SET
+            results = $2,
+            voters_count = (
+                SELECT count(DISTINCT voter_id)
+                FROM poll_vote
+                WHERE poll_id = poll.id
+            )
         WHERE poll.id = $1
         RETURNING poll
         ",
@@ -288,11 +299,16 @@ pub async fn vote(
     let row = transaction.query_one(
         "
         UPDATE poll
-        SET results = $2
+        SET
+            results = $2,
+            voters_count = voters_count + 1
         WHERE poll.id = $1
         RETURNING poll
         ",
-        &[&poll_id, &PollResults::new(results)],
+        &[
+            &poll_id,
+            &PollResults::new(results),
+        ],
     ).await?;
     let poll = row.try_get("poll")?;
     transaction.commit().await?;
@@ -376,6 +392,7 @@ mod tests {
             multiple_choices: false,
             ends_at: Some(poll_ends_at),
             results: poll_results.clone(),
+            voters_count: Some(0),
         };
         let poll = create_poll(
             db_client,
@@ -387,6 +404,7 @@ mod tests {
         assert_eq!(poll.multiple_choices, false);
         assert_eq!(poll.ends_at.unwrap(), poll_ends_at);
         assert_eq!(poll.results.inner(), poll_results);
+        assert_eq!(poll.voters_count, Some(0));
     }
 
     #[tokio::test]
@@ -410,6 +428,7 @@ mod tests {
             multiple_choices: poll.multiple_choices,
             ends_at: poll.ends_at,
             results: results_updated.clone(),
+            voters_count: None,
         };
         let poll = update_poll(
             db_client,
@@ -418,6 +437,7 @@ mod tests {
         ).await.unwrap();
         assert_eq!(poll.id, post.id);
         assert_eq!(poll.results.inner(), results_updated);
+        assert_eq!(poll.voters_count, None);
 
         // Add new option
         let mut results_updated = poll.results.into_inner();
@@ -429,6 +449,7 @@ mod tests {
             multiple_choices: poll.multiple_choices,
             ends_at: poll.ends_at,
             results: results_updated.clone(),
+            voters_count: None,
         };
         let poll = update_poll(
             db_client,
@@ -520,6 +541,7 @@ mod tests {
         let results = poll_updated.results.into_inner();
         assert_eq!(results[0].vote_count, 1);
         assert_eq!(results[1].vote_count, 0);
+        assert_eq!(poll_updated.voters_count, Some(1));
 
         let error = vote_one(
             db_client,
@@ -561,6 +583,7 @@ mod tests {
         let results = poll_updated.results.into_inner();
         assert_eq!(results[0].vote_count, 1);
         assert_eq!(results[1].vote_count, 0);
+        assert_eq!(poll_updated.voters_count, Some(1));
 
         let poll_updated = vote_one(
             db_client,
@@ -572,6 +595,7 @@ mod tests {
         let results = poll_updated.results.into_inner();
         assert_eq!(results[0].vote_count, 1);
         assert_eq!(results[1].vote_count, 1);
+        assert_eq!(poll_updated.voters_count, Some(1));
 
         let error = vote_one(
             db_client,
@@ -610,6 +634,7 @@ mod tests {
         assert_eq!(votes[0].voter_id, voter.id);
         assert_eq!(votes[0].choice, option_2);
         assert_eq!(votes.len(), 1);
+        assert_eq!(poll.voters_count, Some(1));
 
         let error = vote(
             db_client,

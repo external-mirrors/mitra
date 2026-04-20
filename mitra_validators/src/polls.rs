@@ -39,6 +39,11 @@ pub fn validate_poll_data(poll_data: &PollData) -> Result<(), ValidationError> {
             return Err(ValidationError("poll options must be unique"));
         };
     };
+    if let Some(voters_count) = poll_data.voters_count {
+        if voters_count < 0 {
+            return Err(ValidationError("number of voters must be positive"));
+        };
+    };
     Ok(())
 }
 
@@ -59,6 +64,7 @@ mod tests {
             multiple_choices: false,
             ends_at: Default::default(),
             results: vec![PollResult::new("a"), PollResult::new("a")],
+            voters_count: None,
         };
         let result = validate_poll_data(&poll_data);
         assert_eq!(
