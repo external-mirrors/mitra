@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Use UUIDv7 instead of ULID for primary keys.
 - Added default values for `http_host` and `http_port` configuration parameters.
 - Delete actor profile if inbox endpoint returns `410 Gone`.
+- Add `orderedItems` property to collection page even if item list is empty.
 
 ### Fixed
 
