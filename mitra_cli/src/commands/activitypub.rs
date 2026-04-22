@@ -219,12 +219,13 @@ impl FetchObject {
         let mut context = FetcherContext::from(gateways);
         let object_id = context.prepare_object_id(&self.object_id)?;
         let options = FetchObjectOptions {
-            skip_verification: self.skip_verification,
-            ..Default::default()
+            skip_content_type_verification: self.skip_verification,
         };
         let object = ap_client.fetch_object_raw(
             &object_id,
             options,
+            self.skip_verification, // skip_authentication
+            vec![],
         ).await?;
         println!("{}", object);
         Ok(())

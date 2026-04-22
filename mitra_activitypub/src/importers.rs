@@ -13,7 +13,10 @@ use apx_core::{
 use apx_sdk::{
     addresses::WebfingerAddress,
     agent::FederationAgent,
-    authentication::verify_portable_object,
+    authentication::{
+        verify_fetched_object,
+        verify_portable_object,
+    },
     deserialization::{deserialize_into_object_id_opt, object_to_id},
     fetch::{
         fetch_object,
@@ -180,13 +183,19 @@ impl ApClient {
         &self,
         object_id: &str,
         options: FetchObjectOptions,
+        skip_authentication: bool,
+        fep_ef61_trusted_origins: Vec<String>,
     ) -> Result<JsonValue, FetchError> {
         let agent = self.agent();
-        let object_json = fetch_object(
+        let object = fetch_object(
             &agent,
             object_id,
             options,
         ).await?;
+        if !skip_authentication {
+            verify_fetched_object(&object, fep_ef61_trusted_origins)?;
+        };
+        let object_json = object.extract_fragment()?;
         Ok(object_json)
     }
 
@@ -209,6 +218,8 @@ impl ApClient {
         let object_json = self.fetch_object_raw(
             object_id,
             options,
+            false, // authentication is required
+            vec![],
         ).await?;
         let object_id = get_object_id(&object_json)?;
         if is_local_origin(&self.instance, object_id) {

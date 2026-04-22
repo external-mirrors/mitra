@@ -32,6 +32,7 @@
 //! let agent = FederationAgent::default();
 //! let options = FetchObjectOptions::default();
 //! let object = fetch_object(&agent, object_id, options).await?;
+//! object.verify_origin()?;
 //! # Ok(())
 //! # }
 //! ```
