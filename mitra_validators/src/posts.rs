@@ -24,7 +24,7 @@ pub const EMOJI_LIMIT: usize = 50;
 
 const TITLE_LENGTH_MAX: usize = 300;
 const CONTENT_MAX_SIZE: usize = 100000;
-const CONTENT_ALLOWED_TAGS: [&str; 12] = [
+const CONTENT_ALLOWED_TAGS: [&str; 15] = [
     "a",
     "br",
     "pre",
@@ -37,6 +37,10 @@ const CONTENT_ALLOWED_TAGS: [&str; 12] = [
     "blockquote",
     "p",
     "span",
+    // These tags have no markdown equivalents
+    "ruby",
+    "rt",
+    "rp",
 ];
 const URL_LENGTH_MAX: usize = 2000;
 
@@ -267,6 +271,7 @@ mod tests {
             r#"<p><span class="h-card"><a href="https://social.example/user" class="u-url mention">@user</a></span> test "#,
             r#"<a class="hashtag" href="https://social.example/collections/tags/tag1" rel="tag">#tag1</a> "#,
             r#"<a href="https://external.example" class="test-class">link</a> "#,
+            r#"<ruby> 明日 <rp>(</rp><rt>Ashita</rt><rp>)</rp> </ruby><br>"#,
             r#"<strong class="hashtag">nottag</strong><br> "#,
             r#"<img src="https://image.example/image.png"> "#,
             r#"<script>dangerous</script></p>"#,
@@ -276,6 +281,7 @@ mod tests {
             r#"<p><span class="h-card"><a href="https://social.example/user" class="u-url mention" rel="noopener">@user</a></span> test "#,
             r#"<a class="hashtag" href="https://social.example/collections/tags/tag1" rel="tag noopener">#tag1</a> "#,
             r#"<a href="https://external.example" class="" rel="noopener">link</a> "#,
+            r#"<ruby> 明日 <rp>(</rp><rt>Ashita</rt><rp>)</rp> </ruby><br>"#,
             r#"<strong>nottag</strong><br>  "#,
             r#"</p>"#,
         );
