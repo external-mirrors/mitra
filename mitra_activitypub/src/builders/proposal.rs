@@ -11,7 +11,6 @@ use crate::{
     contexts::{
         build_default_context,
         Context,
-        UNITS_OF_MEASURE_CONTEXT,
         W3ID_VALUEFLOWS_CONTEXT,
     },
     identifiers::{
@@ -39,7 +38,6 @@ pub fn build_valueflows_context() -> Context {
     let vf_map = [
         // https://www.valueflo.ws/specification/all_vf.html
         ("vf", W3ID_VALUEFLOWS_CONTEXT),
-        ("om2", UNITS_OF_MEASURE_CONTEXT),
         ("Proposal", "vf:Proposal"),
         ("Intent", "vf:Intent"),
         ("purpose", "vf:purpose"),
@@ -55,8 +53,8 @@ pub fn build_valueflows_context() -> Context {
         ("resourceConformsTo", "vf:resourceConformsTo"),
         ("resourceQuantity", "vf:resourceQuantity"),
         ("minimumQuantity", "vf:minimumQuantity"),
-        ("hasUnit", "om2:hasUnit"),
-        ("hasNumericalValue", "om2:hasNumericalValue"),
+        ("hasUnit", "vf:hasUnit"),
+        ("hasNumericalValue", "vf:hasNumericalValue"),
     ];
     context.3.extend(vf_map);
     context
@@ -204,7 +202,6 @@ mod tests {
                     "toot": "http://joinmastodon.org/ns#",
                     "Emoji": "toot:Emoji",
                     "vf": "https://w3id.org/valueflows/ont/vf#",
-                    "om2": "http://www.ontology-of-units-of-measure.org/resource/om-2/",
                     "Proposal": "vf:Proposal",
                     "Intent": "vf:Intent",
                     "purpose": "vf:purpose",
@@ -220,8 +217,8 @@ mod tests {
                     "resourceConformsTo": "vf:resourceConformsTo",
                     "resourceQuantity": "vf:resourceQuantity",
                     "minimumQuantity": "vf:minimumQuantity",
-                    "hasUnit": "om2:hasUnit",
-                    "hasNumericalValue": "om2:hasNumericalValue",
+                    "hasUnit": "vf:hasUnit",
+                    "hasNumericalValue": "vf:hasNumericalValue",
                 },
             ],
             "type": "Proposal",
