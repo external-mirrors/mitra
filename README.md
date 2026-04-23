@@ -222,6 +222,7 @@ See [guide](./docs/ipfs.md).
 - [Backup and restore](./docs/backup_and_restore.md)
 - [Cache management](./docs/cache_management.md)
 - [Filter](./docs/filter.md)
+- [Split-domain setup](./docs/split_domain.md)
 - [Relays](./docs/relays.md)
 - [Custom themes](./docs/custom_themes.md)
 - [Debugging](./docs/debugging.md)
