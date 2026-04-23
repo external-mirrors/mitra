@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Delete actor profile if inbox endpoint returns `410 Gone`.
 - Add `orderedItems` property to collection page even if item list is empty.
 - Removed OM2 context.
+- Don't reject posts where `context` is a data URI or a tag URI.
 
 ### Fixed
 
