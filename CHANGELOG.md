@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Don't reject objects where `context` is an 'ap' URI.
+- Authenticate fetched object before extracting fragment.
 
 ## [5.1.0] - 2026-04-08
 
