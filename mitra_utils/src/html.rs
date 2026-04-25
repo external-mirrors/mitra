@@ -11,7 +11,7 @@ use ammonia::{
 };
 use html2text::{
     from_read_with_decorator,
-    render::text_renderer::TrivialDecorator,
+    render::TrivialDecorator,
 };
 use html5ever::serialize::{serialize, SerializeOpts};
 
@@ -63,7 +63,6 @@ fn iter_nodes<F>(root: &Handle, func: F) -> ()
 mod dom {
     use ammonia::rcdom::{Handle, Node, NodeData};
     use html5ever::{
-        namespace_url,
         ns,
         tendril::format_tendril,
         Attribute,
@@ -223,6 +222,8 @@ pub fn clean_html_all(html: &str) -> String {
 fn html_to_text(html: &str) -> String {
     let decorator = TrivialDecorator::new();
     from_read_with_decorator(html.as_bytes(), usize::MAX, decorator)
+        // Return empty string on errors
+        .unwrap_or_default()
 }
 
 pub fn extract_title(html: &str, length: usize) -> String {
