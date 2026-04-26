@@ -15,7 +15,8 @@ publish.workspace = true
 actix-web = { version = "=4.10.2", default-features = false, features = ["compat", "macros", "unicode"] }
   actix-cors = "0.7.1"
   actix-files = "0.6.10"
-  actix-governor = { git = "https://github.com/silverpill/actix-governor", rev = "4b8f9995d5bf172ac6373214b78480061ed4abf0" }
+  # actix-governor 0.8 + fixes
+  actix-governor = { git = "https://github.com/silverpill/actix-governor", rev = "68183543e26464dda0cc6994864e2bec2131b584" }
   actix-multipart = { version = "0.7.2", default-features = false, features = ["derive"] }
   actix-web-httpauth = "0.8.2"
 # Used for working with dates

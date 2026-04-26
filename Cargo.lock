@@ -59,8 +59,8 @@ dependencies = [
 
 [[package]]
 name = "actix-governor"
-version = "0.7.0"
-source = "git+https://github.com/silverpill/actix-governor?rev=4b8f9995d5bf172ac6373214b78480061ed4abf0#4b8f9995d5bf172ac6373214b78480061ed4abf0"
+version = "0.8.0"
+source = "git+https://github.com/silverpill/actix-governor?rev=68183543e26464dda0cc6994864e2bec2131b584#68183543e26464dda0cc6994864e2bec2131b584"
 dependencies = [
  "actix-http",
  "actix-web",
@@ -1357,8 +1357,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43a49c392881ce6d5c3b8cb70f98717b7c07aabbdff06687b9030dbfbe2725f8"
 dependencies = [
  "cfg-if",
+ "js-sys",
  "libc",
  "wasi 0.13.3+wasi-0.2.2",
+ "wasm-bindgen",
  "windows-targets",
 ]
 
@@ -1370,23 +1372,25 @@ checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
 
 [[package]]
 name = "governor"
-version = "0.7.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0746aa765db78b521451ef74221663b57ba595bf83f75d0ce23cc09447c8139f"
+checksum = "be93b4ec2e4710b04d9264c0c7350cdd62a8c20e5e4ac732552ebb8f0debe8eb"
 dependencies = [
  "cfg-if",
  "dashmap",
  "futures-sink",
  "futures-timer",
  "futures-util",
+ "getrandom 0.3.1",
  "no-std-compat",
  "nonzero_ext",
  "parking_lot",
  "portable-atomic",
  "quanta",
- "rand 0.8.5",
+ "rand 0.9.3",
  "smallvec",
  "spinning_top",
+ "web-time",
 ]
 
 [[package]]
@@ -4224,6 +4228,16 @@ name = "web-sys"
 version = "0.3.77"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "33b6dd2ef9186f1f2072e409e99cd22a975331a6b3591b12c764e0e55c60d5d2"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "web-time"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
