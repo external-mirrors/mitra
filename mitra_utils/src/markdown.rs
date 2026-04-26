@@ -267,6 +267,7 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
                 };
                 replace_node_value(node, NodeValue::Paragraph);
             },
+            #[allow(clippy::collapsible_match)]
             NodeValue::Link(link) => {
                 if
                     is_microsyntax(node)?

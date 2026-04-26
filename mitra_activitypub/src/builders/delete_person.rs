@@ -55,7 +55,7 @@ async fn get_delete_person_recipients(
     let followers = get_followers(db_client, user_id).await?;
     let following = get_following(db_client, user_id).await?;
     let mut recipients = vec![];
-    for profile in followers.into_iter().chain(following.into_iter()) {
+    for profile in followers.into_iter().chain(following) {
         if let Some(remote_actor) = profile.actor_json {
             recipients.extend(Recipient::for_inbox(&remote_actor));
         };
