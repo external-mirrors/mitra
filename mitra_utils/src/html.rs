@@ -192,7 +192,7 @@ pub fn clean_html_strict(
     for (tag, classes) in allowed_classes {
         allowed_classes_map.insert(
             tag,
-            HashSet::from_iter(classes.into_iter()),
+            HashSet::from_iter(classes),
         );
     };
     let document = Builder::default()

@@ -177,7 +177,9 @@ impl Sender {
 /// Represents delivery to a single inbox
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Recipient {
+    // Canonical actor ID
     pub id: String,
+    // HTTP URI of inbox/outbox endpoint
     pub inbox: String,
 
     #[serde(default)]

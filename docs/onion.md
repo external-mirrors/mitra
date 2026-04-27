@@ -29,7 +29,13 @@ Restart the Tor service. Inside the `HiddenServiceDir` directory find the `hostn
 
 Start Mitra.
 
-An HTTP server (e.g. nginx) is not necessary in this setup. For more information about running onion services, visit https://community.torproject.org/onion-services/setup/
+An HTTP server (e.g. nginx) is not necessary in this setup. Set `http_behind_reverse_proxy` to `false` in your configuration file if you don't use a reverse proxy:
+
+``yaml
+http_behind_reverse_proxy: false
+```
+
+For more information about running onion services, visit https://community.torproject.org/onion-services/setup/
 
 You can also generate a [vanity address](./onion-vanity-address.md) for your onion service.
 

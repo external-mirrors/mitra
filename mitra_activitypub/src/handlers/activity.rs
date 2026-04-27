@@ -128,7 +128,7 @@ pub async fn handle_activity(
         let activity_type = activity["type"].as_str()
             .ok_or(ValidationError("'type' property is missing"))?;
         match activity_type {
-            CREATE | DELETE => {
+            CREATE | UPDATE => {
                 // Object will be fetched in the handler
                 activity.clone()
             },

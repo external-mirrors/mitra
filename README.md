@@ -139,9 +139,10 @@ To run Mitra as a systemd service, check out the [systemd unit file example](./c
 
 These images and packages are maintained by the community.
 
-#### Docker image
+#### Docker images
 
-https://hub.docker.com/r/bleakfuture0/mitra
+- https://hub.docker.com/r/bleakfuture0/mitra
+- https://hub.docker.com/r/fjox/mitra
 
 #### Alpine Linux
 
@@ -221,6 +222,7 @@ See [guide](./docs/ipfs.md).
 - [Backup and restore](./docs/backup_and_restore.md)
 - [Cache management](./docs/cache_management.md)
 - [Filter](./docs/filter.md)
+- [Split-domain setup](./docs/split_domain.md)
 - [Relays](./docs/relays.md)
 - [Custom themes](./docs/custom_themes.md)
 - [Debugging](./docs/debugging.md)

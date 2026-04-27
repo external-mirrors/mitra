@@ -1064,6 +1064,9 @@ pub async fn create_remote_post(
     let audience = get_audience(&object)?;
     let maybe_canonical_context_id = object.context
         .as_ref()
+        // Honk uses data URIs in `context`
+        // Old Mastodon versions use tag: URIs
+        .filter(|id| !id.starts_with("data:") && !id.starts_with("tag:"))
         .map(|id| canonicalize_id(id))
         .transpose()?;
     let (visibility, context) = get_object_visibility(

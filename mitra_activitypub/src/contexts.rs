@@ -11,7 +11,6 @@ pub const W3ID_VALUEFLOWS_CONTEXT: &str = "https://w3id.org/valueflows/ont/vf#";
 pub const SCHEMA_ORG_CONTEXT: &str = "http://schema.org/";
 pub const MASTODON_CONTEXT: &str = "http://joinmastodon.org/ns#";
 pub const MITRA_CONTEXT: &str = "http://jsonld.mitra.social#";
-pub const UNITS_OF_MEASURE_CONTEXT: &str = "http://www.ontology-of-units-of-measure.org/resource/om-2/";
 
 pub type Context = (
     &'static str,

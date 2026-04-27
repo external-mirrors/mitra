@@ -18,6 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Renamed `WebfingerAddress::acct` to `short_address`.
 - Renamed `find_actor_id` method on `JsonResourceDescriptor` to `actor_id_for_type`.
 
+### Fixed
+
+- Authenticate fetched object before extracting fragment.
+
 ## [0.22.0] - 2026-03-27
 
 ### Added

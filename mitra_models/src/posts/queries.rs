@@ -69,7 +69,7 @@ async fn create_post_attachments(
     let mut attachments: Vec<MediaAttachment> = attachments_rows.iter()
         .map(|row| row.try_get("media_attachment"))
         .collect::<Result<_, _>>()?;
-    attachments.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+    attachments.sort_by_key(|attachment| attachment.created_at);
     Ok(attachments)
 }
 

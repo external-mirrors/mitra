@@ -6,9 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Add `attributedTo` property to `Tombstone` object.
+
+## [5.2.0] - 2026-04-24
+
 ### Added
 
 - Support portable `Delete(Note)` activities.
+- Added `http_behind_reverse_proxy` configuration option.
+- Allow `<ruby>`, `<rt>` and `<rp>` tags in HTML post content.
 
 ### Changed
 
@@ -16,10 +24,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write warning to log when imported featured post is not found in the database.
 - Stop adding followers collection to the audience of legacy 'Conversation' replies.
 - Write job ID to log when re-queueing deliveries.
+- Use UUIDv7 instead of ULID for primary keys.
+- Added default values for `http_host` and `http_port` configuration parameters.
+- Delete actor profile if inbox endpoint returns `410 Gone`.
+- Add `orderedItems` property to collection page even if item list is empty.
+- Removed OM2 context.
+- Don't reject posts where `context` is a data URI or a tag URI.
 
 ### Fixed
 
 - Don't reject objects where `context` is an 'ap' URI.
+- Authenticate fetched object before extracting fragment.
+
+### Security
+
+- Fixed authentication of forwarded `Delete` activities.
 
 ## [5.1.0] - 2026-04-08
 

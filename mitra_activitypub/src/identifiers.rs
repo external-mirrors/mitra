@@ -107,21 +107,25 @@ pub fn local_agreement_id(instance_uri: &str, invoice_id: Uuid) -> String {
     format!("{}/objects/agreements/{}", instance_uri, invoice_id)
 }
 
+// This URI redirects to the web client (it is not an actual collection)
 pub fn local_tag_collection(instance_uri: &str, tag_name: &str) -> String {
     format!("{}/collections/tags/{}", instance_uri, url_encode(tag_name))
 }
 
-pub fn local_conversation_collection(instance_uri: &str, conversation_id: Uuid) -> String {
-    format!("{}/collections/conversations/{}", instance_uri, conversation_id)
+pub fn local_conversation_collection(
+    authority: &Authority,
+    conversation_id: Uuid,
+) -> String {
+    format!("{}/collections/conversations/{}", authority, conversation_id)
 }
 
 pub fn local_conversation_history_collection(
-    instance_uri: &str,
+    authority: &Authority,
     conversation_id: Uuid,
 ) -> String {
     format!(
         "{}/history",
-        local_conversation_collection(instance_uri, conversation_id),
+        local_conversation_collection(authority, conversation_id),
     )
 }
 

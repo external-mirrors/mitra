@@ -19,6 +19,7 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::{
+    authority::Authority,
     contexts::{build_default_context, Context},
     identifiers::{
         local_activity_id,
@@ -63,10 +64,11 @@ fn build_add_context_activity(
     conversation_audience: &str,
     activity: JsonValue,
 ) -> AddContextActivity {
+    let authority = Authority::server_unchecked(instance_uri);
     let actor_id = local_actor_id(instance_uri, sender_username);
     let activity_id = local_activity_id(instance_uri, ADD, generate_ulid());
     let target_id = local_conversation_history_collection(
-        instance_uri,
+        &authority,
         conversation_id,
     );
     AddContextActivity {

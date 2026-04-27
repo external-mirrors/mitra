@@ -31,7 +31,12 @@ use super::registration::RegistrationConfig;
 use super::retention::RetentionConfig;
 use super::software::SoftwareMetadata;
 
+const DEFAULT_HTTP_HOST: &str = "127.0.0.1";
+const DEFAULT_HTTP_PORT: u32 = 8383;
+
 fn default_log_level() -> LogLevel { LogLevel::Info }
+
+const fn default_http_behind_reverse_proxy() -> bool { true }
 
 const fn default_web_client_rewrite_index() -> bool { true }
 const fn default_media_proxy_enabled() -> bool { true }
@@ -68,14 +73,18 @@ pub struct Config {
     #[serde(default = "default_media_proxy_enabled")]
     pub media_proxy_enabled: bool,
 
-    pub http_host: Option<String>,
-    pub http_port: Option<u32>,
+    http_host: Option<String>,
+    pub(super) http_port: Option<u32>,
     // Overrides http_host and http_port
-    pub http_socket: Option<String>,
+    http_socket: Option<String>,
     // Unix socket permissions (example: 0o640)
     pub http_socket_perms: Option<u32>,
 
     pub http_cors_allowlist: Option<Vec<String>>,
+
+    // If set to `true`, the rate limiter will check `X-Forwared-For` header
+    #[serde(default = "default_http_behind_reverse_proxy")]
+    pub http_behind_reverse_proxy: bool,
 
     // Domain name or <IP address>:<port>
     // URI scheme is optional
@@ -156,16 +165,19 @@ impl Config {
     }
 
     pub fn http_socket(&self) -> String {
-        match (&self.http_socket, &self.http_host, self.http_port) {
-            (Some(http_socket), _, _) => http_socket.clone(),
-            (None, Some(http_host), Some(http_port)) => {
+        match &self.http_socket {
+            Some(http_socket) => http_socket.clone(),
+            None => {
+                let http_host =
+                    self.http_host.as_deref().unwrap_or(DEFAULT_HTTP_HOST);
+                let http_port =
+                    self.http_port.unwrap_or(DEFAULT_HTTP_PORT);
                 if http_host.parse::<Ipv6Addr>().is_ok() {
                     format!("[{http_host}]:{http_port}")
                 } else {
                     format!("{http_host}:{http_port}")
                 }
             },
-            _ => panic!("either http_socket or http_host and http_port must be specified"),
         }
     }
 

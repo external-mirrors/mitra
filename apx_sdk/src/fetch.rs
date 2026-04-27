@@ -181,22 +181,44 @@ pub struct FetchObjectOptions {
     pub fep_ef61_trusted_origins: Vec<String>,
 }
 
+struct FetchedObject {
+    value: JsonValue,
+    location: Url,
+}
+
+impl FetchedObject {
+    fn extract_fragment(&self) -> Result<JsonValue, FetchError> {
+        let object_id = self.value["id"].as_str()
+            .ok_or(FetchError::NoObjectId(self.location.to_string()))?;
+        if let Some(fragment_id) = self.location.fragment() {
+            // Resolve fragment
+            // https://www.w3.org/TR/cid/#fragment-resolution
+            let fully_qualified_fragment_id = format!("{object_id}#{fragment_id}");
+            let fragment = extract_fragment(&self.value, &fully_qualified_fragment_id)
+                .ok_or(FetchError::NotFound(self.location.to_string()))?;
+            Ok(fragment)
+        } else {
+            Ok(self.value.clone())
+        }
+    }
+}
+
 /// Sends GET request to fetch ActivityPub object. Supports fragment resolution.
 pub async fn fetch_object(
     agent: &FederationAgent,
-    object_id: &str,
+    object_url: &str,
     options: FetchObjectOptions,
 ) -> Result<JsonValue, FetchError> {
     // Don't follow redirects automatically,
     // because request needs to be signed again after every redirect
     let client = create_fetcher_client(
         agent,
-        object_id,
+        object_url,
         RedirectAction::None,
     )?;
 
     let mut redirect_count = 0;
-    let mut target_url = object_id.to_owned();
+    let mut target_url = object_url.to_owned();
     let response = loop {
         let mut request_builder =
             build_http_request(agent, &client, Method::GET, &target_url)?
@@ -239,66 +261,59 @@ pub async fn fetch_object(
         .and_then(extract_media_type)
         .unwrap_or_default();
 
-    let object_bytes = limited_response(response, agent.response_size_limit)
-        .await
-        .ok_or(FetchError::ResponseTooLarge)?;
-    let object_json: JsonValue = serde_json::from_slice(&object_bytes)
-        .map_err(|_| FetchError::JsonParseError(object_location.to_string()))?;
-    let object_id = object_json["id"].as_str()
-        .ok_or(FetchError::NoObjectId(object_location.to_string()))?
-        .to_string();
-    let object_json = if let Some(fragment_id) = object_location.fragment() {
-        // Resolve fragment
-        // https://www.w3.org/TR/cid/#fragment-resolution
-        let fully_qualified_fragment_id = format!("{object_id}#{fragment_id}");
-        extract_fragment(&object_json, &fully_qualified_fragment_id)
-            .ok_or(FetchError::NotFound(object_location.to_string()))?
-    } else {
-        object_json
-    };
-
-    if options.skip_verification {
-        return Ok(object_json);
-    };
-
-    // Perform authentication
-    match verify_portable_object(&object_json) {
-        Ok(_) => (),
-        Err(AuthenticationError::InvalidObjectID(_)) => {
-            return Err(FetchError::UrlError);
-        },
-        Err(AuthenticationError::NotPortable) => {
-            // Verify authority if object is not portable
-            let is_trusted = is_same_origin(object_location.as_str(), &object_id)
-                .unwrap_or(false);
-            if !is_trusted {
-                return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
-            };
-        },
-        Err(AuthenticationError::NoProof) => {
-            let is_trusted = options.fep_ef61_trusted_origins
-                .iter()
-                .any(|origin| {
-                    is_same_http_origin(object_location.as_str(), origin)
-                        .unwrap_or(false)
-                });
-            if !is_trusted {
-                return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
-            };
-        },
-        Err(other_error) => return Err(FetchError::InvalidProof(other_error)),
-    };
-
     // Verify object is not a malicious upload
     const ALLOWED_TYPES: [&str; 3] = [
         AP_MEDIA_TYPE,
         AS_MEDIA_TYPE,
         "application/ld+json",
     ];
-    if !ALLOWED_TYPES.contains(&content_type.as_str()) {
+    if !options.skip_verification && !ALLOWED_TYPES.contains(&content_type.as_str()) {
         return Err(FetchError::UnexpectedContentType(content_type));
     };
 
+    let object_bytes = limited_response(response, agent.response_size_limit)
+        .await
+        .ok_or(FetchError::ResponseTooLarge)?;
+    let object_json: JsonValue = serde_json::from_slice(&object_bytes)
+        .map_err(|_| FetchError::JsonParseError(object_location.to_string()))?;
+    let object = FetchedObject { value: object_json, location: object_location };
+
+    if options.skip_verification {
+        let object_json = object.extract_fragment()?;
+        return Ok(object_json);
+    };
+
+    // Perform authentication
+    match verify_portable_object(&object.value) {
+        Ok(_) => (),
+        Err(AuthenticationError::InvalidObjectID(_)) => {
+            return Err(FetchError::UrlError);
+        },
+        Err(AuthenticationError::NotPortable) => {
+            // Verify authority if object is not portable
+            let object_id = object.value["id"].as_str()
+                .ok_or(FetchError::NoObjectId(object.location.to_string()))?;
+            let is_trusted = is_same_origin(object.location.as_str(), object_id)
+                .unwrap_or(false);
+            if !is_trusted {
+                return Err(FetchError::UnexpectedObjectId(object.location.to_string()));
+            };
+        },
+        Err(AuthenticationError::NoProof) => {
+            let is_trusted = options.fep_ef61_trusted_origins
+                .iter()
+                .any(|origin| {
+                    is_same_http_origin(object.location.as_str(), origin)
+                        .unwrap_or(false)
+                });
+            if !is_trusted {
+                return Err(FetchError::UnexpectedObjectId(object.location.to_string()));
+            };
+        },
+        Err(other_error) => return Err(FetchError::InvalidProof(other_error)),
+    };
+
+    let object_json = object.extract_fragment()?;
     Ok(object_json)
 }
 

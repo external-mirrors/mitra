@@ -26,7 +26,6 @@ isolang = { version = "2.4.0", default-features = false }
 mime_guess = "2.0.5"
 # Used to generate random numbers
 rand = "0.8.4"
-rand_chacha = "0.3"
 # Used for working with regular expressions
 regex = "1.10.6"
 # Used for hashing passwords
@@ -37,12 +36,10 @@ serde = { version = "1.0.210", features = ["derive"] }
 sysinfo = { version = "0.32.1", default-features = false, features = ["disk"] }
 # Used for creating error types
 thiserror = "1.0.37"
-# Used to generate lexicographically sortable IDs
-ulid = { version = "~1.0.0", features = ["uuid"] }
 # Used to work with Unicode
 unicode-segmentation = "1.10.1"
 # Used to work with UUIDs
-uuid = "~1.12.1"
+uuid = { version = "~1.12.1", features = ["v7"] }
 
 apx_core = { path = "../apx_core", features = ["caip"] }
 
