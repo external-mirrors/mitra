@@ -37,7 +37,7 @@ struct Tombstone {
 }
 
 #[derive(Serialize)]
-struct DeleteNote {
+pub struct DeleteNote {
     #[serde(rename = "@context")]
     context: Context,
 
@@ -52,7 +52,7 @@ struct DeleteNote {
     cc: Vec<String>,
 }
 
-fn build_delete_note(
+pub fn build_delete_note(
     authority: &Authority,
     instance_webfinger_hostname: &str,
     media_server: &MediaServer,
