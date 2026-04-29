@@ -1,5 +1,8 @@
 use serde::Deserialize;
 
+#[cfg(feature = "mini")]
+use std::path::PathBuf;
+
 const fn default_federation_enabled() -> bool { true }
 const fn default_ssrf_protection_enabled() -> bool { true }
 const fn default_incoming_queue_worker_enabled() -> bool { true }
@@ -59,6 +62,9 @@ pub struct FederationConfig {
 
     #[serde(default = "default_fep_171b_public_enabled")]
     pub fep_171b_public_enabled: bool,
+
+    #[cfg(feature = "mini")]
+    pub p2p_shared_outbox: Option<PathBuf>,
 }
 
 impl Default for FederationConfig {
@@ -80,6 +86,8 @@ impl Default for FederationConfig {
             fep_1b12_full_enabled: default_fep_1b12_full_enabled(),
             fep_ef61_gateway_enabled: default_fep_ef61_gateway_enabled(),
             fep_171b_public_enabled: default_fep_171b_public_enabled(),
+            #[cfg(feature = "mini")]
+            p2p_shared_outbox: None,
         }
     }
 }
