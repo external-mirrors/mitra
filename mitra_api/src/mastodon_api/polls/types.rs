@@ -72,7 +72,9 @@ impl Poll {
             expired: db_poll.ended(),
             multiple: db_poll.multiple_choices,
             votes_count: votes_count,
-            voters_count: db_poll.multiple_choices.then_some(0),
+            // Mastodon documentation is incorrect.
+            // The value is `null` when voters count is not known.
+            voters_count: None,
             options: options,
             emojis: emojis.into_iter()
                 .map(|emoji| CustomEmoji::from_db(media_server, emoji))
