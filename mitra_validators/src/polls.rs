@@ -4,7 +4,8 @@ use mitra_utils::html::clean_html_all;
 use super::errors::ValidationError;
 
 const POLL_OPTION_COUNT_MIN: usize = 2;
-// Mastodon can display at least 20
+// Mastodon accepts up to 500 poll options
+// https://github.com/mastodon/mastodon/blob/v4.5.9/FEDERATION.md#size-limits
 pub const POLL_OPTION_COUNT_MAX: usize = 20;
 pub const POLL_OPTION_NAME_LENGTH_MAX: usize = 1000;
 

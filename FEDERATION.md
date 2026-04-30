@@ -273,6 +273,12 @@ The `Remove` activity is used to notify subscribers about expired subscriptions.
 }
 ```
 
+## Limits
+
+| Limited property                                              | Size limit | Consequence of exceeding the limit |
+| ------------------------------------------------------------- | ---------- | ---------------------------------- |
+| Poll options (number of `anyOf`/`oneOf` in a `Question`)      | 20         | Poll will be removed from the post |
+
 ## Mitra Web client
 
 ### Cryptocurrency addresses in profile
