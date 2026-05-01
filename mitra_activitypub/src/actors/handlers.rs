@@ -7,7 +7,6 @@ use apx_core::{
     },
 };
 use apx_sdk::{
-    addresses::WebfingerAddress,
     agent::FederationAgent,
     deserialization::{
         deserialize_into_object_id_opt,
@@ -86,7 +85,6 @@ use crate::{
         VERIFIABLE_IDENTITY_STATEMENT,
     },
     webfinger::{
-        perform_webfinger_query,
         peform_reverse_webfinger_query,
     },
 };
@@ -100,6 +98,12 @@ use super::{
         LinkAttachment,
     },
     builders::ActorImage,
+};
+
+#[cfg(not(feature = "mini"))]
+use {
+    apx_sdk::addresses::WebfingerAddress,
+    crate::webfinger::perform_webfinger_query,
 };
 
 pub struct Actor {
@@ -298,6 +302,7 @@ async fn get_webfinger_hostname(
             };
             (Some(server_hostname), WebfingerHostname::Remote(webfinger_hostname))
         },
+        #[cfg(not(feature = "mini"))]
         CanonicalUri::Ap(_) => {
             if let Some(gateway) = actor.gateways.first() {
                 // Primary gateway
@@ -328,6 +333,28 @@ async fn get_webfinger_hostname(
                 } else {
                     return Err(ValidationError("unexpected actor ID in JRD").into());
                 }
+            } else {
+                return Err(ValidationError("at least one gateway must be specified").into());
+            }
+        },
+        #[cfg(feature = "mini")]
+        CanonicalUri::Ap(_) => {
+            if let Some(gateway) = actor.gateways.first() {
+                // Primary gateway
+                let gateway_hostname = get_hostname(gateway)
+                    .map_err(|_| ValidationError("invalid gateway URL"))?;
+                if gateway_hostname == instance_uri.hostname().as_str() {
+                    // Portable actor with local account (unmanaged)
+                    if has_portable_account {
+                        return Ok((None, WebfingerHostname::Local));
+                    } else {
+                        // WARNING: only allowed when profile is being created
+                        return Ok((None, WebfingerHostname::Unknown));
+                    };
+                };
+                // Actor is hosted by this gateway
+                // WARNING: not verified
+                (Some(gateway_hostname.clone()), WebfingerHostname::Remote(gateway_hostname))
             } else {
                 return Err(ValidationError("at least one gateway must be specified").into());
             }
