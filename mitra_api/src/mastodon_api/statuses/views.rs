@@ -47,7 +47,7 @@ use mitra_models::{
         DatabaseConnectionPool,
         DatabaseError,
     },
-    polls::types::PollData,
+    polls::types::{PollData, PollResult},
     posts::helpers::{
         add_related_posts,
         add_user_actions,
@@ -230,7 +230,7 @@ async fn create_status(
 
     // Prepare poll data
     let maybe_poll_data = if let Some(poll_params) = status_data.poll_params()? {
-        let (results, poll_emojis) = parse_poll_options(
+        let (poll_options, poll_emojis) = parse_poll_options(
             db_client,
             &poll_params.options,
         ).await?;
@@ -243,7 +243,9 @@ async fn create_status(
         let poll_data = PollData {
             multiple_choices: poll_params.multiple.unwrap_or(false),
             ends_at: Some(ends_at),
-            results: results,
+            results: poll_options.into_iter()
+                .map(|name| PollResult::new(&name))
+                .collect(),
         };
         Some(poll_data)
     } else {
