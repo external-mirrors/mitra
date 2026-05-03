@@ -460,13 +460,7 @@ fn parse_public_keys(
     keys.sort_by_key(|item| item.id.clone());
     keys.dedup_by_key(|item| item.id.clone());
     if keys.is_empty() {
-        let canonical_actor_id = CanonicalUri::parse(&actor.id)
-            .map_err(|_| ValidationError("invalid actor ID"))?;
-        if matches!(canonical_actor_id, CanonicalUri::Ap(_)) {
-            log::warn!("public keys are not found in portable actor object");
-        } else {
-            return Err(ValidationError("public keys not found"));
-        };
+        log::warn!("public keys are not found in the actor document");
     };
     Ok(keys)
 }

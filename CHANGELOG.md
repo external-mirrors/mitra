@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Add `attributedTo` property to `Tombstone` object.
 - Include key ID in "key not found" error message.
+- Don't reject remote actors without public keys.
 
 ## [5.2.0] - 2026-04-24
 
