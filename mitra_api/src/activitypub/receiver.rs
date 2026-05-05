@@ -108,10 +108,7 @@ pub async fn receive_activity(
                 // or if signer is not found in local database
                 return Ok(());
             };
-            match error {
-                AuthenticationError::NoHttpSignature => (),
-                _ => return Err(error.into()),
-            };
+            error.ignore_if_missing_or_unsupported()?;
             None
         },
     };
@@ -143,9 +140,8 @@ pub async fn receive_activity(
             // Activity signature has higher priority
             maybe_signer = Some(activity_signer);
         },
-        Err(AuthenticationError::NoJsonSignature) => (), // ignore
-        Err(other_error) => {
-            return Err(other_error.into());
+        Err(error) => {
+            error.ignore_if_missing_or_unsupported()?;
         },
     };
 

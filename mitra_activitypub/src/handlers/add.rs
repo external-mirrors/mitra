@@ -29,7 +29,7 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    authentication::{verify_signed_object, AuthenticationError},
+    authentication::verify_signed_object,
     authority::Authority,
     identifiers::canonicalize_id,
     importers::{get_user_by_actor_id, ApClient},
@@ -97,7 +97,8 @@ async fn handle_fep_171b_add(
         false, // fetch signer
     ).await {
         Ok(_) => (),
-        Err(AuthenticationError::NoJsonSignature) => {
+        Err(error) => {
+            error.ignore_if_missing_or_unsupported()?;
             // Verify activity by fetching it from origin
             match ap_client.fetch_object(activity_id).await {
                 Ok(activity_fetched) => {
@@ -111,7 +112,6 @@ async fn handle_fep_171b_add(
                 },
             };
         },
-        Err(other_error) => return Err(other_error.into()),
     };
     // Authorization
     if !is_same_origin(&conversation_owner, &target)? {
