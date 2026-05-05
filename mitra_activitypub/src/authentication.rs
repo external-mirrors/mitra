@@ -34,6 +34,7 @@ use apx_core::{
             VerificationMethod,
         },
     },
+    url::canonical::CanonicalUri,
 };
 use apx_sdk::{
     authentication::{
@@ -84,7 +85,7 @@ pub enum AuthenticationError {
     NoJsonSignature,
 
     #[error("invalid JSON signature type")]
-    InvalidJsonSignatureType,
+    UnsupportedSignatureAlgorithm,
 
     #[error("unsupported verification method")]
     UnsupportedVerificationMethod,
@@ -101,8 +102,12 @@ pub enum AuthenticationError {
     #[error("{0}")]
     ImportError(String),
 
-    #[error("{0}")]
-    ActorError(&'static str),
+    #[error("key not found in cache: {0}")]
+    KeyNotFound(CanonicalUri),
+
+    // Not used with HTTP signatures because APx doesn't return sig algorithm
+    #[error("unexpected key type")]
+    UnexpectedKeyType,
 
     #[error("invalid RSA public key")]
     InvalidRsaPublicKey(#[from] RsaSerializationError),
@@ -196,7 +201,7 @@ fn get_signer_key(
             .expect("should be signed by remote actor")
             .public_key.as_ref()
             .filter(|public_key| public_key.id == key_id)
-            .ok_or(AuthenticationError::ActorError("key not found"))?;
+            .ok_or(AuthenticationError::KeyNotFound(canonical_key_id))?;
         let public_key =
             deserialize_rsa_public_key(&public_key.public_key_pem)?;
         PublicKey::Rsa(public_key)
@@ -210,7 +215,7 @@ fn get_signer_ed25519_key(
 ) -> Result<Ed25519PublicKey, AuthenticationError> {
     let public_key = get_signer_key(profile, key_id)?;
     let PublicKey::Ed25519(ed25519_public_key) = public_key else {
-        return Err(AuthenticationError::ActorError("unexpected key type"));
+        return Err(AuthenticationError::UnexpectedKeyType);
     };
     Ok(ed25519_public_key)
 }
@@ -330,7 +335,7 @@ pub async fn verify_signed_object(
                         &signature_data.signature,
                     )?;
                 },
-                _ => return Err(AuthenticationError::InvalidJsonSignatureType),
+                _ => return Err(AuthenticationError::UnsupportedSignatureAlgorithm),
             };
             signer
         },

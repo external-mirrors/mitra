@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Add `attributedTo` property to `Tombstone` object.
+- Include key ID in "key not found" error message.
 
 ## [5.2.0] - 2026-04-24
 

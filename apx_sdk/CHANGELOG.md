@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Implemented `Hash` for `WebfingerAddress`.
 - Added `actor_id` method to `JsonResourceDescriptor` type.
 - Added `is_subdomain_of` function to `hostname` module.
+- Implemented `Debug` for `CanonicalUri` type.
 
 ### Changed
 
