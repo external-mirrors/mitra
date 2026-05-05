@@ -439,8 +439,9 @@ fn parse_public_keys(
         } else if !is_same_origin(&public_key.id, &public_key.owner)? {
             // Not supported (the key must be fetched from its origin)
             log::warn!("key and key owner have different origins");
-        } else {
-            let db_key = public_key.to_db_key()?;
+        } else if let Ok(db_key) = public_key.to_db_key()
+            .inspect_err(|error| log::warn!("{error}"))
+        {
             keys.push(db_key);
         };
     };
@@ -454,8 +455,11 @@ fn parse_public_keys(
             log::warn!("key and key owner have different origins");
             continue;
         };
-        let db_key = multikey.to_db_key()?;
-        keys.push(db_key);
+        if let Ok(db_key) = multikey.to_db_key()
+            .inspect_err(|error| log::warn!("{error}"))
+        {
+            keys.push(db_key);
+        };
     };
     keys.sort_by_key(|item| item.id.clone());
     keys.dedup_by_key(|item| item.id.clone());
@@ -873,14 +877,22 @@ mod tests {
         let ed25519_secret_key = generate_ed25519_key();
         let actor_public_key =
             PublicKeyPem::build(actor_id, &rsa_secret_key).unwrap();
-        let actor_auth_key_1 =
+        let actor_multikey_1 =
             Multikey::build_rsa(actor_id, &rsa_secret_key).unwrap();
-        let actor_auth_key_2 =
+        let actor_multikey_2 =
             Multikey::build_ed25519(actor_id, &ed25519_secret_key);
+        let actor_multikey_3 = Multikey::build_ed25519(
+            "https://test.example/users/2",
+            &ed25519_secret_key,
+        );
         let actor = ValidatedActor {
             id: actor_id.to_string(),
             public_key: Some(actor_public_key),
-            assertion_method: vec![actor_auth_key_1, actor_auth_key_2],
+            assertion_method: vec![
+                actor_multikey_1,
+                actor_multikey_2,
+                actor_multikey_3,
+            ],
             ..Default::default()
         };
         let public_keys = parse_public_keys(&actor).unwrap();
