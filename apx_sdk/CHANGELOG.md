@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-05-05
+
 ### Added
 
 - Added documentation to `apx_sdk::addresses` module.
