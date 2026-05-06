@@ -244,6 +244,9 @@ pub async fn verify_signed_request(
     if signature_data.is_rfc9421 {
         log::info!("RFC-9421 signature found");
     };
+    if signature_data.authority != ap_client.instance.uri().authority() {
+        log::warn!("unexpected target authority: {}", signature_data.authority);
+    };
     // Try to guess the key owner ID from the key ID.
     let signer_id = match signature_data.key_id {
         // NOTE: portable key IDs in compatible form are parsed as HTTP URIs

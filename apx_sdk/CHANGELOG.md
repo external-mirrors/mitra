@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `authority` field to `HttpSignatureData` struct.
+
 ### Changed
 
 - Extract authority from request URI when processing `@authority` RFC-9421 component.
