@@ -264,7 +264,7 @@ pub fn parse_http_signature_cavage(
 }
 
 /// Parses RFC-9421 HTTP message signature  
-/// <https://datatracker.ietf.org/doc/html/rfc9421>
+/// <https://www.rfc-editor.org/rfc/rfc9421>
 pub fn parse_http_signature_rfc9421(
     request_method: &Method,
     request_uri: &Uri,
@@ -335,6 +335,9 @@ pub fn parse_http_signature_rfc9421(
     };
 
     check_required_components(&components, required_components)?;
+    let target_authority = request_uri.authority()
+        .ok_or(VerificationError::ParseError("incomplete request URI"))?
+        .to_string();
     let maybe_digest = get_content_digest(&components, request_headers)?;
 
     // Recreate signature base
@@ -362,16 +365,13 @@ pub fn parse_http_signature_rfc9421(
                 request_uri.path().to_owned()
             },
             "@query" => {
-                // https://datatracker.ietf.org/doc/html/rfc9421#name-query
+                // https://www.rfc-editor.org/rfc/rfc9421#name-query
                 let query = request_uri.query().unwrap_or_default();
                 format!("?{query}")
             },
             "@authority" => {
-                request_headers.get("host")
-                    .ok_or(VerificationError::header_missing("Host"))?
-                    .to_str()
-                    .map_err(|_| VerificationError::header_value("Host"))?
-                    .to_owned()
+                // https://www.rfc-editor.org/rfc/rfc9421#name-authority
+                target_authority.clone()
             },
             id if id.starts_with('@') => {
                 return Err(VerificationError::UnsupportedComponent(id.to_owned()));
@@ -528,14 +528,10 @@ mod tests {
 
     #[test]
     fn test_parse_http_signature_rfc9421() {
-        // https://datatracker.ietf.org/doc/html/rfc9421#name-signing-a-request-using-ed2
+        // https://www.rfc-editor.org/rfc/rfc9421#name-signing-a-request-using-ed2
         let request_method = Method::POST;
-        let request_uri = "/foo?param=Value&Pet=dog".parse::<Uri>().unwrap();
+        let request_uri = "https://example.com/foo?param=Value&Pet=dog".parse::<Uri>().unwrap();
         let mut request_headers = HeaderMap::new();
-        request_headers.insert(
-            HeaderName::from_static("host"),
-            HeaderValue::from_static("example.com"),
-        );
         request_headers.insert(
             HeaderName::from_static("date"),
             HeaderValue::from_static("Tue, 20 Apr 2021 02:07:55 GMT"),

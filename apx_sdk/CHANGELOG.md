@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Extract authority from request URI when processing `@authority` RFC-9421 component.
+
 ## [0.23.0] - 2026-05-05
 
 ### Added
