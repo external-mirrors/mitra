@@ -118,7 +118,7 @@ impl From<&DbActor> for FetcherContext {
 }
 
 impl FetcherContext {
-    fn prepare_object_id(&mut self, object_id: &str) -> Result<String, FetchError> {
+    pub fn prepare_object_id(&mut self, object_id: &str) -> Result<String, FetchError> {
         let (canonical_object_id, maybe_gateway) = parse_url(object_id)
             .map_err(|_| FetchError::UrlError)?;
         if let Some(gateway) = maybe_gateway {
@@ -135,22 +135,6 @@ impl FetcherContext {
             .ok_or(FetchError::NoGateway)?;
         Ok(http_uri)
     }
-}
-
-// Only used in fetch-object command
-pub async fn fetch_any_object_with_context(
-    agent: &FederationAgent,
-    context: &mut FetcherContext,
-    object_id: &str,
-    options: FetchObjectOptions,
-) -> Result<JsonValue, FetchError> {
-    let http_url = context.prepare_object_id(object_id)?;
-    let object_json = fetch_object(
-        agent,
-        &http_url,
-        options,
-    ).await?;
-    Ok(object_json)
 }
 
 #[derive(Clone)]
@@ -192,22 +176,18 @@ impl ApClient {
         )
     }
 
-    async fn _fetch_object<T: DeserializeOwned>(
+    pub async fn fetch_object_raw(
         &self,
         object_id: &str,
-    ) -> Result<T, HandlerError> {
+        options: FetchObjectOptions,
+    ) -> Result<JsonValue, FetchError> {
         let agent = self.agent();
         let object_json = fetch_object(
             &agent,
             object_id,
-            FetchObjectOptions::default(),
+            options,
         ).await?;
-        let object_id = get_object_id(&object_json)?;
-        if is_local_origin(&self.instance, object_id) {
-            return Err(HandlerError::LocalObject);
-        };
-        let object: T = serde_json::from_value(object_json)?;
-        Ok(object)
+        Ok(object_json)
     }
 
     // Peforms filtering before fetching
@@ -225,7 +205,17 @@ impl ApClient {
             let error_message = format!("request blocked: {}", object_id);
             return Err(HandlerError::Filtered(error_message));
         };
-        self._fetch_object(object_id).await
+        let options = FetchObjectOptions::default();
+        let object_json = self.fetch_object_raw(
+            object_id,
+            options,
+        ).await?;
+        let object_id = get_object_id(&object_json)?;
+        if is_local_origin(&self.instance, object_id) {
+            return Err(HandlerError::LocalObject);
+        };
+        let object: T = serde_json::from_value(object_json)?;
+        Ok(object)
     }
 }
 

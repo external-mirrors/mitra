@@ -14,7 +14,6 @@ use mitra_activitypub::{
     agent::build_federation_agent,
     authentication::verify_signed_object,
     importers::{
-        fetch_any_object_with_context,
         import_activity,
         import_collection,
         import_object,
@@ -205,30 +204,26 @@ impl FetchObject {
         } else {
             None
         };
-        let mut instance = config.instance();
+        let mut ap_client = ApClient::new_with_pool(config, db_pool).await?;
+        ap_client.as_user = maybe_user;
         match self.user_agent.as_deref() {
             Some("") =>
-                instance.user_agent = None,
+                ap_client.instance.user_agent = None,
             Some(user_agent) =>
-                instance.user_agent = Some(user_agent.to_owned()),
+                ap_client.instance.user_agent = Some(user_agent.to_owned()),
             None => (), // default
         };
-        let agent = build_federation_agent(
-            &instance,
-            maybe_user.as_ref(),
-        );
         let gateways = self.gateway
             .map(|gateway| vec![gateway])
             .unwrap_or_default();
         let mut context = FetcherContext::from(gateways);
+        let object_id = context.prepare_object_id(&self.object_id)?;
         let options = FetchObjectOptions {
             skip_verification: self.skip_verification,
             ..Default::default()
         };
-        let object = fetch_any_object_with_context(
-            &agent,
-            &mut context,
-            &self.object_id,
+        let object = ap_client.fetch_object_raw(
+            &object_id,
             options,
         ).await?;
         println!("{}", object);
