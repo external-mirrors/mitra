@@ -270,7 +270,7 @@ pub async fn get_user_by_actor_id(
 }
 
 // Actor must be authenticated
-pub async fn import_profile(
+pub async fn import_actor(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     actor: JsonValue,
@@ -426,7 +426,7 @@ impl ActorIdResolver {
             },
             Err(DatabaseError::NotFound(_)) => {
                 let actor: JsonValue = ap_client.fetch_object(actor_id).await?;
-                import_profile(ap_client, db_pool, actor).await?
+                import_actor(ap_client, db_pool, actor).await?
             },
             Err(other_error) => return Err(other_error.into()),
         };
@@ -445,7 +445,7 @@ pub fn is_actor_importer_error(error: &HandlerError) -> bool {
     )
 }
 
-pub async fn import_profile_by_webfinger_address(
+pub async fn import_actor_by_webfinger_address(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     webfinger_address: &WebfingerAddress,
@@ -456,11 +456,11 @@ pub async fn import_profile_by_webfinger_address(
     let agent = ap_client.agent();
     let actor_id = perform_webfinger_query(&agent, webfinger_address).await?;
     let actor: JsonValue = ap_client.fetch_object(&actor_id).await?;
-    import_profile(ap_client, db_pool, actor).await
+    import_actor(ap_client, db_pool, actor).await
 }
 
 // Works with local profiles
-pub async fn get_or_import_profile_by_webfinger_address(
+pub async fn get_or_import_actor_by_webfinger_address(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     webfinger_address: &WebfingerAddress,
@@ -488,7 +488,7 @@ pub async fn get_or_import_profile_by_webfinger_address(
             if webfinger_address.hostname() == instance.webfinger_hostname() {
                 return Err(db_error.into());
             };
-            import_profile_by_webfinger_address(
+            import_actor_by_webfinger_address(
                 ap_client,
                 db_pool,
                 webfinger_address,
@@ -855,7 +855,7 @@ pub async fn import_collection(
             },
             CollectionItemType::Actor => {
                 log::info!("importing actor {item_id}");
-                import_profile(ap_client, db_pool, item).await
+                import_actor(ap_client, db_pool, item).await
                     .map(|profile| profile.expect_remote_actor_id().to_owned())
             },
             CollectionItemType::Activity => {

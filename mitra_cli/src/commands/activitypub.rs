@@ -15,9 +15,9 @@ use mitra_activitypub::{
     authentication::verify_signed_object,
     importers::{
         import_activity,
+        import_actor,
         import_collection,
         import_object,
-        import_profile,
         import_replies,
         ApClient,
         CollectionItemType,
@@ -108,7 +108,7 @@ impl ImportObject {
                 println!("post saved");
             },
             CoreType::Actor => {
-                import_profile(&ap_client, db_pool, object).await?;
+                import_actor(&ap_client, db_pool, object).await?;
                 println!("profile saved");
             },
             CoreType::Activity => {
@@ -275,7 +275,7 @@ impl LoadPortableObject {
                 println!("object imported");
             },
             CoreType::Actor => {
-                import_profile(&ap_client, db_pool, object_json).await?;
+                import_actor(&ap_client, db_pool, object_json).await?;
                 println!("actor imported");
             },
             CoreType::Activity => {

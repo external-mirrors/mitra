@@ -21,9 +21,9 @@ use mitra_activitypub::{
     importers::{
         get_post_by_object_id,
         get_profile_by_actor_id,
+        import_actor,
+        import_actor_by_webfinger_address,
         import_object,
-        import_profile,
-        import_profile_by_webfinger_address,
         ApClient,
     },
 };
@@ -178,7 +178,7 @@ async fn search_profiles_or_import(
         if let Some(hostname) = maybe_hostname {
             let webfinger_address =
                 WebfingerAddress::new_unchecked(&username, &hostname);
-            match import_profile_by_webfinger_address(
+            match import_actor_by_webfinger_address(
                 ap_client,
                 db_pool,
                 &webfinger_address,
@@ -253,7 +253,7 @@ async fn fetch_and_import_object(
             SearchResult::Post(post)
         },
         CoreType::Actor => {
-            let profile = import_profile(ap_client, db_pool, object).await?;
+            let profile = import_actor(ap_client, db_pool, object).await?;
             SearchResult::Profile(profile)
         },
         _ => SearchResult::None,

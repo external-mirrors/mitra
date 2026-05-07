@@ -86,7 +86,7 @@ use crate::{
         canonicalize_id,
     },
     importers::{
-        get_or_import_profile_by_webfinger_address,
+        get_or_import_actor_by_webfinger_address,
         get_post_by_object_id,
         get_profile_by_actor_id,
         is_actor_importer_error,
@@ -683,7 +683,7 @@ async fn get_object_tags(
                 },
             };
             if let Ok(webfinger_address) = WebfingerAddress::from_handle(&tag_name) {
-                let profile = match get_or_import_profile_by_webfinger_address(
+                let profile = match get_or_import_actor_by_webfinger_address(
                     ap_client,
                     db_pool,
                     &webfinger_address,
