@@ -187,6 +187,18 @@ struct FetchedObject {
 }
 
 impl FetchedObject {
+    /// Verifies the origin of this object
+    fn verify_origin(&self) -> Result<(), FetchError> {
+        let object_id = self.value["id"].as_str()
+            .ok_or(FetchError::NoObjectId(self.location.to_string()))?;
+        let is_trusted = is_same_origin(self.location.as_str(), object_id)
+            .unwrap_or(false);
+        if !is_trusted {
+            return Err(FetchError::UnexpectedObjectId(self.location.to_string()));
+        };
+        Ok(())
+    }
+
     fn extract_fragment(&self) -> Result<JsonValue, FetchError> {
         let object_id = self.value["id"].as_str()
             .ok_or(FetchError::NoObjectId(self.location.to_string()))?;
@@ -290,14 +302,8 @@ pub async fn fetch_object(
             return Err(FetchError::UrlError);
         },
         Err(AuthenticationError::NotPortable) => {
-            // Verify authority if object is not portable
-            let object_id = object.value["id"].as_str()
-                .ok_or(FetchError::NoObjectId(object.location.to_string()))?;
-            let is_trusted = is_same_origin(object.location.as_str(), object_id)
-                .unwrap_or(false);
-            if !is_trusted {
-                return Err(FetchError::UnexpectedObjectId(object.location.to_string()));
-            };
+            // Verify origin if object is not portable
+            object.verify_origin()?;
         },
         Err(AuthenticationError::NoProof) => {
             let is_trusted = options.fep_ef61_trusted_origins
