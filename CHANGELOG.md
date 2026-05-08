@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `send-activity` command.
 - Added `create-activity` command with an option to generate LitePub relay activities.
+- Added option to generate `Bite` activities to `create-activity` command.
 
 ### Changed
 

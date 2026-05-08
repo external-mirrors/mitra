@@ -4,6 +4,7 @@
 pub const ACCEPT: &str = "Accept";
 pub const ADD: &str = "Add";
 pub const ANNOUNCE: &str = "Announce";
+pub const BITE: &str = "Bite";
 pub const BLOCK: &str = "Block";
 pub const CREATE: &str = "Create";
 pub const DELETE: &str = "Delete";

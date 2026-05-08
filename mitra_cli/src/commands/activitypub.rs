@@ -16,7 +16,10 @@ use mitra_activitypub::{
     agent::build_federation_agent,
     authentication::verify_signed_object,
     authority::Authority,
-    builders::announce::build_relay_announce,
+    builders::{
+        announce::build_relay_announce,
+        bite::build_bite,
+    },
     deliverer::{Recipient, Sender},
     identifiers::canonicalize_id,
     importers::{
@@ -299,6 +302,13 @@ impl LoadPortableObject {
 
 #[derive(Subcommand)]
 enum Activity {
+    /// mia:Bite activity
+    Bite {
+        /// Local username
+        sender: String,
+        /// Actor ID
+        recipient: String,
+    },
     /// LitePub relay Announce activity
     RelayAnnounce {
         /// Internal post ID
@@ -325,6 +335,17 @@ impl CreateActivity {
         let instance = config.instance();
         let authority = Authority::from(&instance);
         let activity = match self.activity {
+            Activity::Bite { sender, recipient } => {
+                let account = get_user_by_name(db_client, &sender).await?;
+                let target_profile =
+                    get_remote_profile_by_actor_id(db_client, &recipient).await?;
+                let bite = build_bite(
+                    &authority,
+                    &account.profile,
+                    target_profile.expect_actor_data(),
+                );
+                serde_json::to_value(bite)?
+            },
             Activity::RelayAnnounce { post_id, recipient } => {
                 let post = get_post_by_id(db_client, post_id).await?;
                 let relay_actor = get_remote_profile_by_actor_id(db_client, &recipient).await?;
