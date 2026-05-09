@@ -69,7 +69,7 @@ pub(super) async fn peform_reverse_webfinger_query(
         if discovered_actor_id != actor_id.to_string() {
             return Err(ValidationError("unexpected actor ID in JRD").into());
         };
-        log::info!("discovered new webfinger address: {}", discovered_address);
+        log::info!("preferred webfinger address: {}", discovered_address);
     };
     Ok(discovered_address.hostname().to_owned())
 }

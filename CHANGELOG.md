@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't reject remote actors with unsupported key types.
 - Extract authority from request URI when processing `@authority` RFC-9421 component.
 
+### Fixed
+
+- Fixed confusing log message on WebFinger address discovery.
+
 ### Security
 
 - Write warning to log when target authority of a signed request doesn't match instance hostname.
