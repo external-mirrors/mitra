@@ -72,13 +72,13 @@ const AUTHENTICATION_FETCHER_TIMEOUT: u64 = 10;
 
 #[derive(Debug, Error)]
 pub enum AuthenticationError {
-    #[error(transparent)]
+    #[error("invalid HTTP signature: {0}")]
     HttpSignatureError(#[from] HttpSignatureError),
 
     #[error("no HTTP signature")]
     NoHttpSignature,
 
-    #[error(transparent)]
+    #[error("invalid JSON signature: {0}")]
     JsonSignatureError(#[from] JsonSignatureError),
 
     #[error("no JSON signature")]

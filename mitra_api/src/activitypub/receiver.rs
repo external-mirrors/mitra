@@ -51,7 +51,7 @@ pub enum EndpointError {
     #[error(transparent)]
     DatabaseError(#[from] DatabaseError),
 
-    #[error("{0}")]
+    #[error("authentication error: {0}")]
     AuthError(#[source] AuthenticationError),
 }
 
@@ -147,7 +147,6 @@ pub async fn receive_activity(
                 // or if signer is not found in local database
                 return Ok(());
             };
-            log::warn!("invalid HTTP signature: {}", error);
             return Err(error.into());
         },
     };
@@ -179,7 +178,6 @@ pub async fn receive_activity(
         },
         Err(AuthenticationError::NoJsonSignature) => (), // ignore
         Err(other_error) => {
-            log::warn!("invalid JSON signature: {}", other_error);
             return Err(other_error.into());
         },
     };

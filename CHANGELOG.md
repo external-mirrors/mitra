@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't reject remote actors without public keys.
 - Don't reject remote actors with unsupported key types.
 - Extract authority from request URI when processing `@authority` RFC-9421 component.
+- Improved reporting of authentication errors.
 
 ### Fixed
 
