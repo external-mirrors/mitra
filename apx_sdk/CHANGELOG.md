@@ -10,12 +10,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `authority` field to `HttpSignatureData` struct.
 - Added `verify_fetched_object` function.
+- Added `resource_uri` method to `WebfingerAddress`.
 
 ### Changed
 
 - Extract authority from request URI when processing `@authority` RFC-9421 component.
 - Do not perform authentication in `fetch_object` function.
 - Do not extract fragment in `fetch_object` function.
+
+### Removed
+
+- Removed `query` parameter from `fetch_json` function.
 
 ## [0.23.0] - 2026-05-05
 

@@ -4,7 +4,10 @@ use std::{fmt, str::FromStr};
 use regex::Regex;
 use thiserror::Error;
 
-use apx_core::url::hostname::guess_protocol;
+use apx_core::url::{
+    common::url_encode,
+    hostname::guess_protocol,
+};
 
 // https://swicg.github.io/activitypub-webfinger/#names
 // username: RFC-3986 unreserved plus % for percent encoding; case-sensitive
@@ -103,12 +106,23 @@ impl WebfingerAddress {
     }
 
     /// Returns WebFinger endpoint URI  
-    /// <https://datatracker.ietf.org/doc/html/rfc7033#section-4>
+    /// <https://www.rfc-editor.org/rfc/rfc7033.html#section-4>
     pub fn endpoint_uri(&self) -> String {
         format!(
             "{}://{}/.well-known/webfinger",
             guess_protocol(self.hostname()),
             self.hostname(),
+        )
+    }
+
+    /// Returns WebFinger resource URI  
+    /// <https://www.rfc-editor.org/rfc/rfc7033.html#section-4>
+    pub fn resource_uri(&self) -> String {
+        let resource = url_encode(&self.to_acct_uri());
+        format!(
+            "{}?resource={}",
+            self.endpoint_uri(),
+            resource,
         )
     }
 }
@@ -129,6 +143,7 @@ impl fmt::Display for WebfingerAddress {
 
 #[cfg(test)]
 mod tests {
+    use reqwest::Client;
     use super::*;
 
     #[test]
@@ -277,10 +292,13 @@ mod tests {
     fn test_address_endpoint_uri() {
         let value = "user_1@social.example";
         let address = WebfingerAddress::parse(value).unwrap();
-        let endpoint_uri = address.endpoint_uri();
         assert_eq!(
-            endpoint_uri,
+            address.endpoint_uri(),
             "https://social.example/.well-known/webfinger",
+        );
+        assert_eq!(
+            address.resource_uri(),
+            "https://social.example/.well-known/webfinger?resource=acct%3Auser_1%40social.example",
         );
     }
 
@@ -288,10 +306,21 @@ mod tests {
     fn test_address_endpoint_uri_yggdrasil() {
         let value = "admin@[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]";
         let address = WebfingerAddress::parse(value).unwrap();
-        let endpoint_uri = address.endpoint_uri();
         assert_eq!(
-            endpoint_uri,
+            address.endpoint_uri(),
             "http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/.well-known/webfinger",
         );
+        assert_eq!(
+            address.resource_uri(),
+            "http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/.well-known/webfinger?resource=acct%3Aadmin%40%5B319%3A3cf0%3Add1d%3A47b9%3A20c%3A29ff%3Afe2c%3A39be%5D",
+        );
+        let resource_uri_reqwest = Client::new()
+            .get(address.endpoint_uri())
+            .query(&[("resource", address.to_acct_uri())])
+            .build()
+            .unwrap()
+            .url()
+            .to_string();
+        assert_eq!(address.resource_uri(), resource_uri_reqwest);
     }
 }

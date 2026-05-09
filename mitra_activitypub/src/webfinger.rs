@@ -18,12 +18,10 @@ pub async fn fetch_webfinger_jrd(
     agent: &FederationAgent,
     webfinger_address: &WebfingerAddress,
 ) -> Result<JsonValue, HandlerError> {
-    let webfinger_resource = webfinger_address.to_acct_uri();
-    let webfinger_uri = webfinger_address.endpoint_uri();
+    let webfinger_uri = webfinger_address.resource_uri();
     let jrd_value = fetch_json(
         agent,
         &webfinger_uri,
-        &[("resource", &webfinger_resource)],
         Some(JRD_MEDIA_TYPE),
     ).await?;
     Ok(jrd_value)

@@ -386,7 +386,6 @@ pub async fn stream_media(
 pub async fn fetch_json(
     agent: &FederationAgent,
     url: &str,
-    query: &[(&str, &str)],
     accept: Option<&str>,
 ) -> Result<JsonValue, FetchError> {
     const APPLICATION_JSON: &str = "application/json";
@@ -399,7 +398,6 @@ pub async fn fetch_json(
     let request_builder =
         build_http_request(agent, &client, Method::GET, url)?;
     let response = request_builder
-        .query(query)
         .header(header::ACCEPT, accept.unwrap_or(APPLICATION_JSON))
         .send()
         .await?
