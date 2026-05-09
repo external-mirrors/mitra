@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `create-activity` command with an option to generate LitePub relay activities.
 - Added option to generate `Bite` activities to `create-activity` command.
 - Added `all_reactions` parameter to `/api/v1/favourites` endpoint.
+- Added `like_emoji` parameter to dynamic configuration.
 
 ### Changed
 

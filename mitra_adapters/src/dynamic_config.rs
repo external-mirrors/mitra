@@ -7,6 +7,7 @@ use mitra_models::{
         FEDERATED_TIMELINE_RESTRICTED,
         FILTER_BLOCKLIST_PUBLIC,
         FILTER_KEYWORDS,
+        LIKE_EMOJI,
     },
     properties::queries::{
         get_internal_properties_json,
@@ -15,10 +16,16 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 // Dynamic configuration parameters
-pub const EDITABLE_PROPERTIES: [&str; 3] = [
+pub const EDITABLE_PROPERTIES: [&str; 4] = [
     FEDERATED_TIMELINE_RESTRICTED,
     FILTER_BLOCKLIST_PUBLIC,
     FILTER_KEYWORDS,
+    LIKE_EMOJI,
+];
+
+const LIKE_EMOJI_VARIANTS: [&str; 2] = [
+    "thumbs_up",
+    "heart",
 ];
 
 pub fn validate_editable_parameter(
@@ -37,6 +44,13 @@ pub fn validate_editable_parameter(
             let _: Vec<String> = serde_json::from_value(value)
                 .map_err(|_| ValidationError("invalid value type"))?;
         },
+        LIKE_EMOJI => {
+            let value_str: String = serde_json::from_value(value)
+                .map_err(|_| ValidationError("invalid value type"))?;
+            if !LIKE_EMOJI_VARIANTS.contains(&value_str.as_str()) {
+                return Err(ValidationError("invalid emoji name"));
+            };
+        },
         _ => return Err(ValidationError("invalid parameter name")),
     };
     Ok(())
@@ -48,15 +62,16 @@ pub struct DynamicConfig {
     pub federated_timeline_restricted: bool,
     pub filter_blocklist_public: bool,
     pub filter_keywords: Vec<String>,
+    pub like_emoji: String,
 }
 
-#[allow(clippy::derivable_impls)]
 impl Default for DynamicConfig {
     fn default() -> Self {
         Self {
             federated_timeline_restricted: false,
             filter_blocklist_public: false,
             filter_keywords: vec![],
+            like_emoji: LIKE_EMOJI_VARIANTS[0].to_string(),
         }
     }
 }

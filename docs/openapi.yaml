@@ -3758,6 +3758,12 @@ components:
           description: Whether new accounts are in read only mode.
           type: boolean
           example: false
+        like_emoji:
+          description: Which emoji is used to represent the "like" reaction
+          type: string
+          enum:
+            - thumbs_up
+            - heart
         blockchains:
           description: Information about blockchain integrations.
           type: array
