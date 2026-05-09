@@ -22,7 +22,7 @@ use crate::{
 #[derive(Serialize)]
 struct RemovePerson {
     #[serde(rename = "@context")]
-    context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
     activity_type: String,
@@ -45,7 +45,7 @@ fn build_remove_person(
     let activity_id = local_activity_id(instance_uri, REMOVE, generate_ulid());
     let collection_id = collection.of(&actor_id);
     RemovePerson {
-        context: build_default_context(),
+        _context: build_default_context(),
         id: activity_id,
         activity_type: REMOVE.to_string(),
         actor: actor_id,

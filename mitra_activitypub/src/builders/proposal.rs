@@ -56,7 +56,7 @@ pub fn build_valueflows_context() -> Context {
         ("hasUnit", "vf:hasUnit"),
         ("hasNumericalValue", "vf:hasNumericalValue"),
     ];
-    context.3.extend(vf_map);
+    context.map.extend(vf_map);
     context
 }
 

@@ -23,7 +23,7 @@ use crate::{
 #[derive(Serialize)]
 struct AcceptFollow {
     #[serde(rename = "@context")]
-    context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
     activity_type: String,
@@ -45,7 +45,7 @@ fn build_accept_follow(
     let activity_id = local_activity_id(instance_uri, ACCEPT, generate_ulid());
     let actor_id = local_actor_id(instance_uri, &actor_profile.username);
     AcceptFollow {
-        context: build_default_context(),
+        _context: build_default_context(),
         activity_type: ACCEPT.to_string(),
         id: activity_id,
         actor: actor_id,

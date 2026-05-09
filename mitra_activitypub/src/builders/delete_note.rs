@@ -39,7 +39,7 @@ struct Tombstone {
 #[derive(Serialize)]
 struct DeleteNote {
     #[serde(rename = "@context")]
-    context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
     activity_type: String,
@@ -78,7 +78,7 @@ fn build_delete_note(
         false,
     );
     DeleteNote {
-        context: build_default_context(),
+        _context: build_default_context(),
         activity_type: DELETE.to_string(),
         id: activity_id,
         actor: actor_id.clone(),

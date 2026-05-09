@@ -30,7 +30,7 @@ use crate::{
 #[derive(Serialize)]
 pub struct Announce {
     #[serde(rename = "@context")]
-    context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
     activity_type: String,
@@ -101,7 +101,7 @@ pub fn build_announce(
         &recipient_id,
     );
     Announce {
-        context: build_default_context(),
+        _context: build_default_context(),
         activity_type: ANNOUNCE.to_string(),
         actor: actor_id,
         id: activity_id,

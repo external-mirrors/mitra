@@ -18,6 +18,7 @@ use crate::{
     authority::{Authority, AuthorityRoot},
     builders::emoji::{build_emoji, Emoji},
     contexts::{
+        Context,
         AP_CONTEXT,
         MASTODON_CONTEXT,
         MITRA_CONTEXT,
@@ -41,21 +42,15 @@ use super::attachments::{
     attach_payment_option,
 };
 
-type Context = (
-    &'static str,
-    &'static str,
-    &'static str,
-    &'static str,
-    IndexMap<&'static str, &'static str>,
-);
-
 fn build_actor_context() -> Context {
-    (
-        AP_CONTEXT,
-        W3C_CID_CONTEXT,
-        W3ID_SECURITY_CONTEXT,
-        W3ID_DATA_INTEGRITY_CONTEXT,
-        IndexMap::from([
+    Context {
+        vec: vec![
+            AP_CONTEXT,
+            W3C_CID_CONTEXT,
+            W3ID_SECURITY_CONTEXT,
+            W3ID_DATA_INTEGRITY_CONTEXT,
+        ],
+        map: IndexMap::from([
             ("manuallyApprovesFollowers", "as:manuallyApprovesFollowers"),
             ("schema", SCHEMA_ORG_CONTEXT),
             ("PropertyValue", "schema:PropertyValue"),
@@ -78,7 +73,7 @@ fn build_actor_context() -> Context {
             // "Invalid JSON-LD syntax; tried to redefine a protected term."
             //("verificationMethod", "sec:verificationMethod"),
         ]),
-    )
+    }
 }
 
 #[derive(Deserialize, Serialize)]
