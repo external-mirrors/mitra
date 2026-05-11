@@ -25,7 +25,7 @@ pub const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";
 pub struct CanonicalUriError(pub &'static str);
 
 /// Canonical URI
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum CanonicalUri {
     Http(HttpUri),
     Ap(ApUri),

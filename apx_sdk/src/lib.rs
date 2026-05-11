@@ -14,7 +14,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! apx_sdk = "0.22.0"
+//! apx_sdk = "0.23.0"
 //! ```
 //!
 //! ## Examples
@@ -32,6 +32,7 @@
 //! let agent = FederationAgent::default();
 //! let options = FetchObjectOptions::default();
 //! let object = fetch_object(&agent, object_id, options).await?;
+//! object.verify_origin()?;
 //! # Ok(())
 //! # }
 //! ```

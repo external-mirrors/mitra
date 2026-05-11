@@ -32,7 +32,7 @@ use super::emoji::{build_emoji, Emoji};
 #[derive(Serialize)]
 pub struct Like {
     #[serde(rename = "@context")]
-    context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
     activity_type: String,
@@ -101,7 +101,7 @@ pub fn build_like(
     let (primary_audience, secondary_audience) =
         get_like_audience(&post_author_id, post.visibility);
     Like {
-        context: build_default_context(),
+        _context: build_default_context(),
         activity_type: activity_type.to_string(),
         id: activity_id,
         actor: actor_id,

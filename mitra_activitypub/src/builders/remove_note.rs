@@ -25,7 +25,7 @@ use super::add_note::get_add_note_recipients;
 #[derive(Serialize)]
 struct RemoveNote {
     #[serde(rename = "@context")]
-    context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
     activity_type: String,
@@ -50,7 +50,7 @@ fn build_remove_note(
     let target_id = LocalActorCollection::Featured.of(&actor_id);
     let followers = LocalActorCollection::Followers.of(&actor_id);
     RemoveNote {
-        context: build_default_context(),
+        _context: build_default_context(),
         activity_type: REMOVE.to_string(),
         actor: actor_id,
         id: activity_id,

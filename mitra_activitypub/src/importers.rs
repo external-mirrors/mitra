@@ -13,7 +13,10 @@ use apx_core::{
 use apx_sdk::{
     addresses::WebfingerAddress,
     agent::FederationAgent,
-    authentication::verify_portable_object,
+    authentication::{
+        verify_fetched_object,
+        verify_portable_object,
+    },
     deserialization::{deserialize_into_object_id_opt, object_to_id},
     fetch::{
         fetch_object,
@@ -126,7 +129,7 @@ impl From<&DbActor> for FetcherContext {
 }
 
 impl FetcherContext {
-    fn prepare_object_id(&mut self, object_id: &str) -> Result<String, FetchError> {
+    pub fn prepare_object_id(&mut self, object_id: &str) -> Result<String, FetchError> {
         let (canonical_object_id, maybe_gateway) = parse_url(object_id)
             .map_err(|_| FetchError::UrlError)?;
         if let Some(gateway) = maybe_gateway {
@@ -143,22 +146,6 @@ impl FetcherContext {
             .ok_or(FetchError::NoGateway)?;
         Ok(http_uri)
     }
-}
-
-// Only used in fetch-object command
-pub async fn fetch_any_object_with_context(
-    agent: &FederationAgent,
-    context: &mut FetcherContext,
-    object_id: &str,
-    options: FetchObjectOptions,
-) -> Result<JsonValue, FetchError> {
-    let http_url = context.prepare_object_id(object_id)?;
-    let object_json = fetch_object(
-        agent,
-        &http_url,
-        options,
-    ).await?;
-    Ok(object_json)
 }
 
 #[derive(Clone)]
@@ -200,30 +187,24 @@ impl ApClient {
         )
     }
 
-    async fn _fetch_object<T: DeserializeOwned>(
+    pub async fn fetch_object_raw(
         &self,
         object_id: &str,
-    ) -> Result<T, HandlerError> {
+        options: FetchObjectOptions,
+        skip_authentication: bool,
+        fep_ef61_trusted_origins: Vec<String>,
+    ) -> Result<JsonValue, FetchError> {
         let agent = self.agent();
-        #[cfg(feature = "mini")]
-        let options = FetchObjectOptions {
-            fep_ef61_trusted_origins: vec![self.instance.uri().to_string()],
-            ..Default::default()
-        };
-        #[cfg(not(feature = "mini"))]
-        let options = FetchObjectOptions::default();
-
-        let object_json = fetch_object(
+        let object = fetch_object(
             &agent,
             object_id,
             options,
         ).await?;
-        let object_id = get_object_id(&object_json)?;
-        if is_local_origin(&self.instance, object_id) {
-            return Err(HandlerError::LocalObject);
+        if !skip_authentication {
+            verify_fetched_object(&object, fep_ef61_trusted_origins)?;
         };
-        let object: T = serde_json::from_value(object_json)?;
-        Ok(object)
+        let object_json = object.extract_fragment()?;
+        Ok(object_json)
     }
 
     // Peforms filtering before fetching
@@ -241,7 +222,22 @@ impl ApClient {
             let error_message = format!("request blocked: {}", object_id);
             return Err(HandlerError::Filtered(error_message));
         };
-        self._fetch_object(object_id).await
+        let options = FetchObjectOptions::default();
+        let object_json = self.fetch_object_raw(
+            object_id,
+            options,
+            false, // authentication is required
+            #[cfg(feature = "mini")]
+            vec![self.instance.uri().to_string()],
+            #[cfg(not(feature = "mini"))]
+            vec![],
+        ).await?;
+        let object_id = get_object_id(&object_json)?;
+        if is_local_origin(&self.instance, object_id) {
+            return Err(HandlerError::LocalObject);
+        };
+        let object: T = serde_json::from_value(object_json)?;
+        Ok(object)
     }
 }
 
@@ -285,7 +281,7 @@ pub async fn get_user_by_actor_id(
 }
 
 // Actor must be authenticated
-pub async fn import_profile(
+pub async fn import_actor(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     actor: JsonValue,
@@ -461,7 +457,7 @@ impl ActorIdResolver {
             },
             Err(DatabaseError::NotFound(_)) => {
                 let actor: JsonValue = ap_client.fetch_object(actor_id).await?;
-                import_profile(ap_client, db_pool, actor).await?
+                import_actor(ap_client, db_pool, actor).await?
             },
             Err(other_error) => return Err(other_error.into()),
         };
@@ -480,7 +476,7 @@ pub fn is_actor_importer_error(error: &HandlerError) -> bool {
     )
 }
 
-pub async fn import_profile_by_webfinger_address(
+pub async fn import_actor_by_webfinger_address(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     webfinger_address: &WebfingerAddress,
@@ -491,11 +487,11 @@ pub async fn import_profile_by_webfinger_address(
     let agent = ap_client.agent();
     let actor_id = perform_webfinger_query(&agent, webfinger_address).await?;
     let actor: JsonValue = ap_client.fetch_object(&actor_id).await?;
-    import_profile(ap_client, db_pool, actor).await
+    import_actor(ap_client, db_pool, actor).await
 }
 
 // Works with local profiles
-pub async fn get_or_import_profile_by_webfinger_address(
+pub async fn get_or_import_actor_by_webfinger_address(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     webfinger_address: &WebfingerAddress,
@@ -523,7 +519,7 @@ pub async fn get_or_import_profile_by_webfinger_address(
             if webfinger_address.hostname() == instance.webfinger_hostname() {
                 return Err(db_error.into());
             };
-            import_profile_by_webfinger_address(
+            import_actor_by_webfinger_address(
                 ap_client,
                 db_pool,
                 webfinger_address,
@@ -915,7 +911,7 @@ pub async fn import_collection_with_failed(
             },
             CollectionItemType::Actor => {
                 log::info!("importing actor {item_id}");
-                import_profile(ap_client, db_pool, item).await
+                import_actor(ap_client, db_pool, item).await
                     .map(|profile| profile.expect_remote_actor_id().to_owned())
             },
             CollectionItemType::Activity => {

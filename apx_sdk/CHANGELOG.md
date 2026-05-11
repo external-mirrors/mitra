@@ -8,15 +8,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Added `authority` field to `HttpSignatureData` struct.
+- Added `verify_fetched_object` function.
+- Added `resource_uri` method to `WebfingerAddress`.
+
+### Changed
+
+- Extract authority from request URI when processing `@authority` RFC-9421 component.
+- Do not perform authentication in `fetch_object` function.
+- Do not extract fragment in `fetch_object` function.
+
+### Removed
+
+- Removed `query` parameter from `fetch_json` function.
+
+## [0.23.0] - 2026-05-05
+
+### Added
+
 - Added documentation to `apx_sdk::addresses` module.
 - Implemented `Hash` for `WebfingerAddress`.
 - Added `actor_id` method to `JsonResourceDescriptor` type.
 - Added `is_subdomain_of` function to `hostname` module.
+- Implemented `Debug` for `CanonicalUri` type.
 
 ### Changed
 
 - Renamed `WebfingerAddress::acct` to `short_address`.
 - Renamed `find_actor_id` method on `JsonResourceDescriptor` to `actor_id_for_type`.
+- Add `alg` parameter to RFC-9421 signatures.
 
 ### Fixed
 

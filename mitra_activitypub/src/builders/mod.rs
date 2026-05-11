@@ -5,6 +5,7 @@ pub mod add_note;
 pub mod add_person;
 mod agreement;
 pub mod announce;
+pub mod bite;
 pub mod collection;
 pub mod create_note;
 pub mod create_question_vote;

@@ -30,7 +30,7 @@ use crate::{
 #[derive(Serialize)]
 struct UpdatePerson {
     #[serde(rename = "@context")]
-    context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
     activity_type: String,
@@ -62,7 +62,7 @@ fn build_update_person(
         generate_ulid(),
     );
     let activity = UpdatePerson {
-        context: build_default_context(),
+        _context: build_default_context(),
         activity_type: UPDATE.to_string(),
         id: activity_id,
         actor: actor.id.clone(),

@@ -25,7 +25,10 @@ use apx_core::{
         http_url_whatwg::get_hostname,
     },
 };
-use apx_sdk::deliver::{send_object, DelivererError};
+use apx_sdk::{
+    agent::FederationAgent,
+    deliver::{send_object, DelivererError},
+};
 use futures::{
     stream::FuturesUnordered,
     StreamExt,
@@ -172,6 +175,14 @@ impl Sender {
         };
         Some(sender)
     }
+
+    pub fn into_agent(self, instance: &Instance) -> FederationAgent {
+        build_federation_agent_with_key(
+            instance,
+            self.rsa_secret_key,
+            self.rsa_key_id,
+        )
+    }
 }
 
 /// Represents delivery to a single inbox
@@ -273,8 +284,6 @@ pub(super) async fn deliver_activity_worker(
     recipients: &mut [Recipient],
 ) -> Result<(), DelivererError> {
     assert!(instance.federation.enabled);
-    let rsa_secret_key = sender.rsa_secret_key;
-    let rsa_key_id = sender.rsa_key_id;
 
     let mut deliveries = vec![];
     let mut sent = vec![];
@@ -287,11 +296,7 @@ pub(super) async fn deliver_activity_worker(
         deliveries.push((index, hostname, recipient.inbox.clone()));
     };
 
-    let agent = build_federation_agent_with_key(
-        &instance,
-        rsa_secret_key,
-        rsa_key_id,
-    );
+    let agent = sender.into_agent(&instance);
     let mut delivery_pool = FuturesUnordered::new();
     let mut delivery_pool_state: HashMap<usize, &String> = HashMap::new();
 

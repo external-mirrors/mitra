@@ -30,7 +30,7 @@ use super::like::{
 #[derive(Serialize)]
 pub struct UndoLike {
     #[serde(rename = "@context")]
-    context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
     activity_type: String,
@@ -62,7 +62,7 @@ pub fn build_undo_like(
     let (primary_audience, secondary_audience) =
         get_like_audience(&post_author_id, post.visibility);
     UndoLike {
-        context: build_default_context(),
+        _context: build_default_context(),
         activity_type: UNDO.to_string(),
         id: activity_id,
         actor: actor_id,

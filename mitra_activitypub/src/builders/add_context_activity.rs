@@ -44,7 +44,7 @@ struct Target {
 #[derive(Serialize)]
 struct AddContextActivity {
     #[serde(rename = "@context")]
-    context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
     activity_type: String,
@@ -72,7 +72,7 @@ fn build_add_context_activity(
         conversation_id,
     );
     AddContextActivity {
-        context: build_default_context(),
+        _context: build_default_context(),
         activity_type: ADD.to_string(),
         actor: actor_id.clone(),
         id: activity_id,

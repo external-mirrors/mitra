@@ -6,9 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `send-activity` command.
+- Added `create-activity` command with an option to generate LitePub relay activities.
+- Added option to generate `Bite` activities to `create-activity` command.
+
 ### Changed
 
 - Add `attributedTo` property to `Tombstone` object.
+- Include key ID in "key not found" error message.
+- Don't reject remote actors without public keys.
+- Don't reject remote actors with unsupported key types.
+- Extract authority from request URI when processing `@authority` RFC-9421 component.
+- Improved reporting of authentication errors.
+
+### Fixed
+
+- Fixed confusing log message on WebFinger address discovery.
+
+### Security
+
+- Write warning to log when target authority of a signed request doesn't match instance hostname.
 
 ## [5.2.0] - 2026-04-24
 
