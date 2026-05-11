@@ -22,6 +22,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Removed `query` parameter from `fetch_json` function.
 
+### Security
+
+- Harden SSRF protection by treating link-local and unspecified addresses as unsafe.
+
 ## [0.23.0] - 2026-05-05
 
 ### Added

@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Security
 
 - Write warning to log when target authority of a signed request doesn't match instance hostname.
+- Harden SSRF protection by treating link-local and unspecified addresses as unsafe.
 
 ## [5.2.0] - 2026-04-24
 
