@@ -98,12 +98,12 @@ pub struct ReactionDeleted {
     pub visibility: Visibility,
 }
 
-pub struct LikedPost {
+pub struct ReactionPost {
     pub reaction_id: Uuid,
     pub post: PostDetailed,
 }
 
-impl TryFrom<&Row> for LikedPost {
+impl TryFrom<&Row> for ReactionPost {
     type Error = DatabaseError;
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {

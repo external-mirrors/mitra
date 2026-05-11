@@ -77,7 +77,7 @@ use mitra_models::{
     reactions::queries::{
         create_reaction,
         delete_reaction,
-        get_reactions,
+        get_post_reactions_detailed,
     },
     reactions::types::{ReactionData, ReactionDetailed},
     users::types::Permission,
@@ -821,7 +821,7 @@ async fn get_favourited_by(
         *status_id,
     ).await?;
     let reactions: Vec<_> = if let Some(current_user) = maybe_current_user {
-        get_reactions(
+        get_post_reactions_detailed(
             db_client,
             post.id,
             Some(current_user.id),

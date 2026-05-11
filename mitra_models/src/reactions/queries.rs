@@ -20,11 +20,11 @@ use crate::{
 };
 
 use super::types::{
-    LikedPost,
     Reaction,
     ReactionData,
     ReactionDeleted,
     ReactionDetailed,
+    ReactionPost,
 };
 
 pub async fn create_reaction(
@@ -129,7 +129,7 @@ pub async fn delete_reaction(
     Ok(reaction_deleted)
 }
 
-pub async fn get_reactions(
+pub async fn get_post_reactions_detailed(
     db_client: &impl DatabaseClient,
     post_id: Uuid,
     current_user_id: Option<Uuid>,
@@ -198,12 +198,16 @@ pub(crate) async fn find_reacted_by_user(
     Ok(reactions)
 }
 
-pub async fn get_liked_posts(
+pub async fn get_reactions(
     db_client: &impl DatabaseClient,
     author_id: Uuid,
+    only_likes: bool,
     max_reaction_id: Option<Uuid>,
     limit: u16,
-) -> Result<Vec<LikedPost>, DatabaseError> {
+) -> Result<Vec<ReactionPost>, DatabaseError> {
+    let where_content =
+        if only_likes { "AND post_reaction.content IS NULL" }
+        else { "" };
     let statement = format!(
         "
         SELECT
@@ -216,7 +220,7 @@ pub async fn get_liked_posts(
         JOIN post_reaction ON post_reaction.post_id = post.id
         WHERE
             post_reaction.author_id = $author_id
-            AND post_reaction.content IS NULL
+            {where_content}
             AND (
                 $max_reaction_id::uuid IS NULL
                 OR post_reaction.id < $max_reaction_id
@@ -225,6 +229,7 @@ pub async fn get_liked_posts(
         LIMIT $limit
         ",
         post_subqueries=post_subqueries(),
+        where_content=where_content,
     );
     let limit = i64::from(limit);
     let query = query!(
@@ -235,7 +240,7 @@ pub async fn get_liked_posts(
     )?;
     let rows = db_client.query(query.sql(), query.parameters()).await?;
     let liked_posts = rows.iter()
-        .map(LikedPost::try_from)
+        .map(ReactionPost::try_from)
         .collect::<Result<_, _>>()?;
     Ok(liked_posts)
 }
@@ -352,7 +357,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_get_reactions() {
+    async fn test_get_post_reactions_detailed() {
         let db_client = &mut create_test_database().await;
         let user_1 = create_test_user(db_client, "test1").await;
         let user_2 = create_test_user(db_client, "test2").await;
@@ -380,7 +385,7 @@ mod tests {
             activity_id: None,
         };
         let reaction_2 = create_reaction(db_client, reaction_data_2).await.unwrap();
-        let reactions = get_reactions(
+        let reactions = get_post_reactions_detailed(
             db_client,
             post.id,
             None, // guest
@@ -393,7 +398,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_get_liked_posts() {
+    async fn test_get_reactions() {
         let db_client = &mut create_test_database().await;
         let user_1 = create_test_user(db_client, "test1").await;
         let user_2 = create_test_user(db_client, "test2").await;
@@ -411,13 +416,14 @@ mod tests {
             activity_id: None,
         };
         let reaction = create_reaction(db_client, reaction_data).await.unwrap();
-        let liked_posts = get_liked_posts(
+        let reactions = get_reactions(
             db_client,
             user_1.id,
+            true, // only likes
             None,
             20,
         ).await.unwrap();
-        assert_eq!(liked_posts.len(), 1);
-        assert_eq!(liked_posts[0].reaction_id, reaction.id);
+        assert_eq!(reactions.len(), 1);
+        assert_eq!(reactions[0].reaction_id, reaction.id);
     }
 }

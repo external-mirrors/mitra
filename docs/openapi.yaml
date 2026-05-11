@@ -998,6 +998,13 @@ paths:
       security:
         - tokenAuth: []
       parameters:
+        - name: all_reactions
+          in: query
+          description: Include emoji reactions
+          required: false
+          schema:
+            type: boolean
+            default: false
         - name: max_id
           in: query
           description: Return results with reaction ID older than this value.
