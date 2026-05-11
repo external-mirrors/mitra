@@ -89,7 +89,11 @@ fn is_safe_addr(ip_addr: IpAddr) -> bool {
     };
     match ip_addr {
         IpAddr::V4(addr_v4) => !is_unsafe_ipv4(addr_v4),
-        IpAddr::V6(addr_v6) => !is_unsafe_ipv6(addr_v6),
+        IpAddr::V6(addr_v6) => {
+            let is_unsafe_mapped = addr_v6.to_ipv4_mapped()
+                .is_some_and(is_unsafe_ipv4);
+            !is_unsafe_ipv6(addr_v6) && !is_unsafe_mapped
+        },
     }
 }
 
@@ -362,6 +366,13 @@ mod tests {
         let url = "http://172.17.0.1:8080/admin/";
         assert_eq!(is_safe_url(url), false);
         let url = "http://169.254.169.254/latest/meta-data/";
+        assert_eq!(is_safe_url(url), false);
+    }
+
+    #[test]
+    fn test_is_safe_url_ipv4_to_ipv6() {
+        // 127.0.0.1 converted into IPv6 address
+        let url = "http://[::ffff:7f00:1]:5941/test";
         assert_eq!(is_safe_url(url), false);
     }
 }
