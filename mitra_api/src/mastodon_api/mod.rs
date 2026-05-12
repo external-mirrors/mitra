@@ -30,7 +30,7 @@ pub mod apps;
 mod bookmarks;
 mod conversations;
 mod custom_emojis;
-mod directory;
+pub mod directory;
 mod favourites;
 mod filters;
 pub mod follow_requests;
