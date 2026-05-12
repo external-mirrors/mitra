@@ -3764,6 +3764,12 @@ components:
           enum:
             - thumbs_up
             - heart
+        favorite_emojis:
+          description: Which emojis to show by default in the emoji picker.
+          type: array
+          items:
+            type: string
+            example: "❤️"
         blockchains:
           description: Information about blockchain integrations.
           type: array

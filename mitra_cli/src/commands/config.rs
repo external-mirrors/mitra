@@ -11,6 +11,7 @@ use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
     properties::{
         constants::{
+            FAVORITE_EMOJIS,
             FEDERATED_TIMELINE_RESTRICTED,
             FILTER_BLOCKLIST_PUBLIC,
             FILTER_KEYWORDS,
@@ -24,6 +25,9 @@ use mitra_models::{
 
 #[derive(Clone, ValueEnum)]
 enum ParameterName {
+    /// Which emojis to show by default in the emoji picker (an array of strings)
+    #[clap(name = FAVORITE_EMOJIS)]
+    FavoriteEmojis,
     /// Make federated timeline visible only to moderators (true or false, default: false)
     #[clap(name = FEDERATED_TIMELINE_RESTRICTED)]
     FederatedTimelineRestricted,
@@ -41,6 +45,7 @@ enum ParameterName {
 impl ParameterName {
     fn as_str(&self) -> &'static str {
         let name_str = match self {
+            Self::FavoriteEmojis => FAVORITE_EMOJIS,
             Self::FederatedTimelineRestricted => FEDERATED_TIMELINE_RESTRICTED,
             Self::FilterBlocklistPublic => FILTER_BLOCKLIST_PUBLIC,
             Self::FilterKeywords => FILTER_KEYWORDS,
