@@ -19,11 +19,11 @@ use mitra_utils::unicode::is_single_character;
 
 // Dynamic configuration parameters
 pub const EDITABLE_PROPERTIES: [&str; 5] = [
+    FAVORITE_EMOJIS,
     FEDERATED_TIMELINE_RESTRICTED,
     FILTER_BLOCKLIST_PUBLIC,
     FILTER_KEYWORDS,
     LIKE_EMOJI,
-    FAVORITE_EMOJIS,
 ];
 
 const LIKE_EMOJI_VARIANTS: [&str; 2] = [
@@ -80,7 +80,8 @@ pub struct DynamicConfig {
 impl Default for DynamicConfig {
     fn default() -> Self {
         Self {
-            favorite_emojis: DEFAULT_FAVORITE_EMOJIS.iter()
+            favorite_emojis: DEFAULT_FAVORITE_EMOJIS
+                .iter()
                 .map(|emoji| emoji.to_string())
                 .collect(),
             federated_timeline_restricted: false,
