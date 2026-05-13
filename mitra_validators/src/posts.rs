@@ -23,7 +23,7 @@ pub const LINK_LIMIT: usize = 10;
 pub const EMOJI_LIMIT: usize = 50;
 
 const TITLE_LENGTH_MAX: usize = 300;
-const CONTENT_MAX_SIZE: usize = 100000;
+const CONTENT_MAX_SIZE: usize = 150_000;
 const CONTENT_ALLOWED_TAGS: [&str; 15] = [
     "a",
     "br",

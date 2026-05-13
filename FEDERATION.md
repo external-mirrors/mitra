@@ -259,6 +259,7 @@ The `Remove` activity is used to notify subscribers about expired subscriptions.
 
 | Limited property                                              | Size limit | Consequence of exceeding the limit |
 | ------------------------------------------------------------- | ---------- | ---------------------------------- |
+| Post content                                                  | 150 kB     | Post will be dropped               |
 | Poll options (number of `anyOf`/`oneOf` in a `Question`)      | 20         | Poll will be removed from the post |
 
 ## Mitra Web client
