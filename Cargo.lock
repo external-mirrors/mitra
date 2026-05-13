@@ -1943,7 +1943,7 @@ dependencies = [
 
 [[package]]
 name = "mitra"
-version = "5.2.1-dev"
+version = "5.3.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -1958,7 +1958,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_activitypub"
-version = "5.2.1-dev"
+version = "5.3.0"
 dependencies = [
  "apx_core",
  "apx_sdk",
@@ -1985,7 +1985,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_adapters"
-version = "5.2.1-dev"
+version = "5.3.0"
 dependencies = [
  "apx_core",
  "apx_sdk",
@@ -2008,7 +2008,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_api"
-version = "5.2.1-dev"
+version = "5.3.0"
 dependencies = [
  "actix-cors",
  "actix-files",
@@ -2047,7 +2047,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_cli"
-version = "5.2.1-dev"
+version = "5.3.0"
 dependencies = [
  "anyhow",
  "apx_core",
@@ -2070,7 +2070,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_config"
-version = "5.2.1-dev"
+version = "5.3.0"
 dependencies = [
  "apx_core",
  "dotenvy",
@@ -2086,7 +2086,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_models"
-version = "5.2.1-dev"
+version = "5.3.0"
 dependencies = [
  "apx_core",
  "chrono",
@@ -2114,7 +2114,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_services"
-version = "5.2.1-dev"
+version = "5.3.0"
 dependencies = [
  "anyhow",
  "apx_core",
@@ -2138,7 +2138,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_utils"
-version = "5.2.1-dev"
+version = "5.3.0"
 dependencies = [
  "ammonia",
  "apx_core",
@@ -2161,7 +2161,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_validators"
-version = "5.2.1-dev"
+version = "5.3.0"
 dependencies = [
  "apx_core",
  "mitra_models",
@@ -2174,7 +2174,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_workers"
-version = "5.2.1-dev"
+version = "5.3.0"
 dependencies = [
  "anyhow",
  "apx_sdk",
