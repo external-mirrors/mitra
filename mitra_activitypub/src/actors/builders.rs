@@ -1,6 +1,5 @@
 use apx_core::{
     crypto::rsa::RsaSerializationError,
-    url::http_uri::HttpUri,
 };
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
@@ -16,9 +15,10 @@ use mitra_models::{
 use mitra_services::media::MediaServer;
 
 use crate::{
-    authority::Authority,
+    authority::{Authority, AuthorityRoot},
     builders::emoji::{build_emoji, Emoji},
     contexts::{
+        Context,
         AP_CONTEXT,
         MASTODON_CONTEXT,
         MITRA_CONTEXT,
@@ -42,21 +42,15 @@ use super::attachments::{
     attach_payment_option,
 };
 
-type Context = (
-    &'static str,
-    &'static str,
-    &'static str,
-    &'static str,
-    IndexMap<&'static str, &'static str>,
-);
-
 fn build_actor_context() -> Context {
-    (
-        AP_CONTEXT,
-        W3C_CID_CONTEXT,
-        W3ID_SECURITY_CONTEXT,
-        W3ID_DATA_INTEGRITY_CONTEXT,
-        IndexMap::from([
+    Context {
+        vec: vec![
+            AP_CONTEXT,
+            W3C_CID_CONTEXT,
+            W3ID_SECURITY_CONTEXT,
+            W3ID_DATA_INTEGRITY_CONTEXT,
+        ],
+        map: IndexMap::from([
             ("manuallyApprovesFollowers", "as:manuallyApprovesFollowers"),
             ("schema", SCHEMA_ORG_CONTEXT),
             ("PropertyValue", "schema:PropertyValue"),
@@ -79,7 +73,7 @@ fn build_actor_context() -> Context {
             // "Invalid JSON-LD syntax; tried to redefine a protected term."
             //("verificationMethod", "sec:verificationMethod"),
         ]),
-    )
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -132,8 +126,10 @@ pub struct Actor {
     #[serde(rename = "type")]
     object_type: String,
 
-    name: Option<String>,
     preferred_username: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
 
     inbox: String,
     outbox: String,
@@ -191,14 +187,13 @@ pub struct Actor {
 }
 
 pub fn build_local_actor(
-    instance_uri: &HttpUri,
     authority: &Authority,
     media_server: &MediaServer,
     user: &User,
 ) -> Result<Actor, DatabaseError> {
-    assert_eq!(authority.server_uri(), Some(instance_uri.as_str()), "authority should be anchored");
+    let server_uri = authority.expect_server_uri();
     let username = &user.profile.username;
-    let actor_id = local_actor_id_unified(authority, username);
+    let actor_id = local_actor_id_unified(authority, user.id, username);
     let actor_type = if user.profile.is_automated {
         SERVICE
     } else {
@@ -259,6 +254,7 @@ pub fn build_local_actor(
     for payment_option in user.profile.payment_options.clone().into_inner() {
         let attachment = attach_payment_option(
             authority,
+            user.profile.id,
             &user.profile.username,
             payment_option,
         );
@@ -274,16 +270,23 @@ pub fn build_local_actor(
     };
     let mut emojis = vec![];
     for db_emoji in user.profile.emojis.inner() {
-        let emoji = build_emoji(instance_uri.as_str(), media_server, db_emoji);
+        // TODO: FEP-EF61: portable or anonymous emojis?
+        let emoji = build_emoji(server_uri.as_str(), media_server, db_emoji);
         emojis.push(emoji);
     };
     let aliases = user.profile.aliases.clone().into_actor_ids();
     // HTML representation
-    // TODO: portable actors should point to a primary server
-    let profile_url = local_actor_id(instance_uri.as_str(), username);
+    let maybe_profile_url = match authority.root() {
+        AuthorityRoot::Server(uri) => {
+            let profile_url = local_actor_id(uri.as_str(), username);
+            Some(profile_url)
+        },
+        // TODO: FEP-EF61: client should use server's URL template
+        AuthorityRoot::Key(_) => None,
+    };
 
     let gateways = authority.is_fep_ef61()
-        .then_some(vec![instance_uri.to_string()])
+        .then_some(vec![server_uri.to_string()])
         .unwrap_or_default();
     let actor = Actor {
         _context: build_actor_context(),
@@ -310,7 +313,7 @@ pub fn build_local_actor(
         manually_approves_followers: user.profile.manually_approves_followers,
         // Some applications don't work properly if this flag is not set
         discoverable: true,
-        url: Some(profile_url),
+        url: maybe_profile_url,
         published: Some(user.profile.created_at),
         updated: Some(user.profile.updated_at),
         gateways: gateways,
@@ -333,8 +336,8 @@ pub fn build_instance_actor(
         _context: build_actor_context(),
         id: actor_id,
         object_type: APPLICATION.to_string(),
-        name: Some(instance.hostname()),
-        preferred_username: instance.hostname(),
+        name: Some(instance.webfinger_hostname()),
+        preferred_username: instance.webfinger_hostname(),
         inbox: actor_inbox,
         outbox: actor_outbox,
         followers: None,
@@ -363,7 +366,9 @@ pub fn build_instance_actor(
 
 #[cfg(test)]
 mod tests {
+    use apx_sdk::core::url::http_uri::HttpUri;
     use serde_json::json;
+    use uuid::uuid;
     use mitra_models::profiles::types::DbActorProfile;
     use super::*;
 
@@ -382,7 +387,6 @@ mod tests {
         let authority = Authority::server(&instance_uri);
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let actor = build_local_actor(
-            &instance_uri,
             &authority,
             &media_server,
             &user,
@@ -415,7 +419,6 @@ mod tests {
             ],
             "id": "https://server.example/users/testuser",
             "type": "Person",
-            "name": null,
             "preferredUsername": "testuser",
             "inbox": "https://server.example/users/testuser/inbox",
             "outbox": "https://server.example/users/testuser/outbox",
@@ -469,19 +472,19 @@ mod tests {
     fn test_build_local_actor_fep_ef61() {
         let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let mut profile = DbActorProfile::local_for_test("testuser");
+        profile.id = uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f");
         profile.bio = Some("testbio".to_string());
         profile.created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
             .unwrap()
             .with_timezone(&Utc);
         profile.updated_at = profile.created_at;
-        let user = User { profile, ..Default::default() };
+        let user = User::for_test(profile);
         let authority = Authority::key_with_gateway(
-            &instance_uri,
             &user.ed25519_secret_key,
+            &instance_uri,
         );
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let actor = build_local_actor(
-            &instance_uri,
             &authority,
             &media_server,
             &user,
@@ -512,33 +515,32 @@ mod tests {
                     "proofPurpose": "sec:proofPurpose",
                 },
             ],
-            "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+            "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
             "type": "Person",
-            "name": null,
             "preferredUsername": "testuser",
-            "inbox": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/inbox",
-            "outbox": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/outbox",
-            "followers": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/followers",
-            "following": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/following",
-            "subscribers": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/subscribers",
-            "featured": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/collections/featured",
+            "inbox": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f/inbox",
+            "outbox": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f/outbox",
+            "followers": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f/followers",
+            "following": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f/following",
+            "subscribers": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f/subscribers",
+            "featured": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f/collections/featured",
             "assertionMethod": [
                 {
-                    "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
+                    "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f#main-key",
                     "type": "Multikey",
-                    "controller": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+                    "controller": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
                     "publicKeyMultibase": "zDrrewXm1cTFaEwruJq4sA7sPhxciancezhnoCxrdvSLs3gQSupJxKA719sQGmG71CkuQdnDxAUpecZ1b7fYQTTrhKA7KbdxWUPRXqs3e",
                 },
                 {
-                    "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#ed25519-key",
+                    "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f#ed25519-key",
                     "type": "Multikey",
-                    "controller": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+                    "controller": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
                     "publicKeyMultibase": "z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
                 },
             ],
             "publicKey": {
-                "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
-                "owner": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+                "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f#main-key",
+                "owner": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
                 "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAOIh58ZQbo45MuZvv1nMWAzTzN9oghNC\nbxJkFEFD1Y49LEeNHMk6GrPByUz8kn4y8Hf6brb+DVm7ZW4cdhOx1TsCAwEAAQ==\n-----END PUBLIC KEY-----\n",
             },
             "generator": {
@@ -557,7 +559,6 @@ mod tests {
             "summary": "testbio",
             "manuallyApprovesFollowers": false,
             "discoverable": true,
-            "url": "https://server.example/users/testuser",
             "published": "2023-02-24T23:36:38Z",
             "updated": "2023-02-24T23:36:38Z",
             "gateways": [

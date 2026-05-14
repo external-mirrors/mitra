@@ -26,10 +26,6 @@ enum FilterAction {
     Reject,
     /// Accept profiles and posts
     Accept,
-    #[clap(hide = true)]
-    RejectMedia,
-    #[clap(hide = true)]
-    AcceptMedia,
     /// Remove media attachments from posts
     RejectMediaAttachments,
     /// Allow media attachments
@@ -61,10 +57,6 @@ impl FilterAction {
             Self::AcceptIncoming => (DbFilterAction::RejectIncoming, true),
             Self::Reject => (DbFilterAction::Reject, false),
             Self::Accept => (DbFilterAction::Reject, true),
-            Self::RejectMedia =>
-                (DbFilterAction::RejectMediaAttachments, false),
-            Self::AcceptMedia =>
-                (DbFilterAction::RejectMediaAttachments, true),
             Self::RejectMediaAttachments =>
                 (DbFilterAction::RejectMediaAttachments, false),
             Self::AcceptMediaAttachments =>

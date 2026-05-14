@@ -217,6 +217,20 @@ paths:
                       value:
                         description: Value of the field (markdown).
                         type: string
+                source:
+                  description: Preferences.
+                  type: object
+                  properties:
+                    privacy:
+                      allOf:
+                        - $ref: '#/components/schemas/DefaultVisibility'
+                        - description: Default post visibility.
+                          nullable: true
+                    language:
+                      description: Default language to use for authored posts (ISO 639-1).
+                      type: string
+                      nullable: true
+                      example: null
                 mention_policy:
                   description: Mention policy.
                   type: string
@@ -250,7 +264,7 @@ paths:
                 $ref: '#/components/schemas/CredentialAccount'
         400:
           description: Invalid user data.
-  /api/v1/accounts/identity_proof:
+  /api/v1/accounts/identity_claim:
     get:
       summary: Get unsigned data for identity proof.
       security:
@@ -296,6 +310,7 @@ paths:
                     example: 2023-07-07T23:52:12.370231609Z
         400:
           description: Invalid request parameters
+  /api/v1/accounts/identity_proof:
     post:
       summary: Submit identity proof.
       security:
@@ -335,6 +350,29 @@ paths:
                 $ref: '#/components/schemas/Account'
         400:
           description: Invalid proof data.
+    delete:
+      summary: Remove identity proof.
+      security:
+        - tokenAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                did:
+                  description: Signer (DID).
+                  type: string
+                  example: 'did:pkh:eip155:1:0xb9c5714089478a327f09197987f16f9e5d936e8a'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        400:
+          description: Invalid request.
   /api/v1/accounts/relationships:
     get:
       summary: Find out whether a given user is followed, blocked, muted, etc.
@@ -834,8 +872,7 @@ paths:
           description: Return results older than this ID.
           required: false
           schema:
-            type: string
-            format: uuid
+            type: integer
         - name: limit
           in: query
           description: Maximum number of results to return.
@@ -859,6 +896,42 @@ paths:
               schema:
                 type: string
                 example: '<https://social.example/api/v1/bookmarks?limit=20&max_id=123>; rel="next"'
+  /api/v1/conversations:
+    get:
+      summary: View all direct conversations.
+      security:
+        - tokenAuth: []
+      parameters:
+        - name: max_id
+          in: query
+          description: Return results with conversation ID older than this value.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Maximum number of results to return.
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: Conversation list
+                type: array
+                items:
+                  $ref: '#/components/schemas/Conversation'
+          headers:
+            Link:
+              description: Link to the next page
+              schema:
+                type: string
+                example: '<https://social.example/api/v1/conversations?limit=20&max_id=b82c6e0b-36a6-4224-b5a3-f5d07c09574f>; rel="next"'
   /api/v1/custom_emojis:
     get:
       summary: Returns custom emojis that are available on the server.
@@ -919,9 +992,52 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Account'
+  /api/v1/favourites:
+    get:
+      summary: View posts that the user has liked.
+      security:
+        - tokenAuth: []
+      parameters:
+        - name: all_reactions
+          in: query
+          description: Include emoji reactions
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: max_id
+          in: query
+          description: Return results with reaction ID older than this value.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Maximum number of results to return.
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: Post list
+                type: array
+                items:
+                  $ref: '#/components/schemas/Status'
+          headers:
+            Link:
+              description: Link to the next page
+              schema:
+                type: string
+                example: '<https://social.example/api/v1/favourites?limit=20&max_id=b82c6e0b-36a6-4224-b5a3-f5d07c09574f>; rel="next"'
   /api/v1/follow_requests:
     get:
-      summary: View pending follow requests.
+      summary: View incoming follow requests.
       security:
         - tokenAuth: []
       parameters:
@@ -955,6 +1071,44 @@ paths:
               schema:
                 type: string
                 example: '<https://social.example/api/v1/follow_requests?limit=40&max_id=b82c6e0b-36a6-4224-b5a3-f5d07c09574f>; rel="next"'
+        400:
+          description: Invalid query parameters.
+  /api/v1/follow_requests/outgoing:
+    get:
+      summary: View outgoing follow requests.
+      security:
+        - tokenAuth: []
+      parameters:
+        - name: max_id
+          in: query
+          description: Return results with request ID older than this value.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Maximum number of results to return.
+          required: false
+          schema:
+            type: integer
+            default: 40
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: Profile list
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+          headers:
+            Link:
+              description: Link to the next page
+              schema:
+                type: string
+                example: '<https://social.example/api/v1/follow_requests/outgoing?limit=40&max_id=b82c6e0b-36a6-4224-b5a3-f5d07c09574f>; rel="next"'
         400:
           description: Invalid query parameters.
   /api/v1/follow_requests/{account_id}/authorize:
@@ -1385,6 +1539,12 @@ paths:
       security:
         - tokenAuth: []
       parameters:
+        - name: min_id
+          in: query
+          description: Return results immediately newer than this ID.
+          required: false
+          schema:
+            type: integer
         - name: max_id
           in: query
           description: Return results older than this ID.
@@ -1476,6 +1636,28 @@ paths:
           description: The poll doesn't exist.
         422:
           description: Invalid request data.
+  /api/v1/preferences:
+    get:
+      summary: Preferences defined by the user in their account settings.
+      security:
+        - tokenAuth: []
+      responses:
+        200:
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  'posting:default:visibility':
+                    allOf:
+                      - $ref: '#/components/schemas/DefaultVisibility'
+                      - description: Default visibility of a post
+                  'posting:default:language':
+                    description: Default language of a post (ISO 639-1).
+                    type: string
+                    nullable: true
+                    example: null
   /api/v1/settings/client_config:
     post:
       summary: Update client configuration.
@@ -1499,6 +1681,53 @@ paths:
                 $ref: '#/components/schemas/CredentialAccount'
         400:
           description: Invalid request data.
+  /api/v1/settings/sessions:
+    get:
+      summary: List active sessions.
+      security:
+        - tokenAuth: []
+      responses:
+        200:
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                description: Session list
+                type: array
+                items:
+                  description: Session
+                  type: object
+                  properties:
+                    id:
+                      description: The session ID.
+                      type: integer
+                    client_name:
+                      description: The application name.
+                      type: string
+                    created_at:
+                      description: When this session was created?
+                      type: string
+                      format: date-time
+                    is_current:
+                      description: Is it the current session?
+                      type: boolean
+  /api/v1/settings/sessions/{session_id}:
+    delete:
+      summary: Terminate the session.
+      security:
+        - tokenAuth: []
+      parameters:
+        - name: session_id
+          in: path
+          description: Session ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        204:
+          description: Successful operation.
+        404:
+          description: Session doesn't exist.
   /api/v1/settings/change_password:
     post:
       summary: Set or change account's password.
@@ -1706,7 +1935,7 @@ paths:
                     - text/html
                     - text/markdown
                 language:
-                  description: ISO 639 language code for this post.
+                  description: ISO 639-1 language code for this post.
                   type: string
                   nullable: true
                   example: null
@@ -1836,7 +2065,7 @@ paths:
                     - text/html
                     - text/markdown
                 language:
-                  description: ISO 639 language code for this post.
+                  description: ISO 639-1 language code for this post.
                   type: string
                   nullable: true
                   example: null
@@ -2195,6 +2424,37 @@ paths:
           description: Post does not exist
         422:
           description: Post is not public, or not owned by current user
+  /api/v1/statuses/{status_id}/conversation_tracking:
+    post:
+      summary: Change conversation tracking status
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/status_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  description: The conversation tracking status
+                  type: string
+                  enum:
+                    - normal
+                    - follow
+                  example: follow
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        400:
+          description: Invalid tracking status.
+        404:
+          description: Post not found
   /api/v1/statuses/{status_id}/make_permanent:
     post:
       summary: Save post to IPFS
@@ -2233,7 +2493,7 @@ paths:
           description: Post not found or is local.
   /api/v1/subscriptions:
     post:
-      summary: Add subscriber or extend existing subscription.
+      summary: Add subscriber or extend existing subscription. Can be used if blockchain integration is not enabled.
       security:
         - tokenAuth: []
       requestBody:
@@ -2261,8 +2521,6 @@ paths:
           description: Invalid request.
         404:
           description: User not found.
-        418:
-          description: Blockchain integration is not enabled.
   /api/v1/subscriptions/options:
     get:
       summary: Get list of subscription options
@@ -2933,13 +3191,17 @@ components:
                   items:
                     $ref: '#/components/schemas/Field'
                 privacy:
-                  description: The default post privacy to be used for new posts.
-                  type: string
-                  example: public
+                  allOf:
+                    - $ref: '#/components/schemas/DefaultVisibility'
+                    - description: Default visibility of a post
                 sensitive:
                   description: Whether new posts should be marked sensitive by default.
                   type: boolean
                   example: false
+                language:
+                  description: Default language of a post (ISO 639-1).
+                  type: string
+                  example: null
             role:
               description: The role assigned to the currently authorized user.
               $ref: '#/components/schemas/Role'
@@ -3037,6 +3299,58 @@ components:
         - password
         - eip4361
         - caip122_monero
+    BlockchainInfo:
+      type: object
+      properties:
+        chain_id:
+          description: CAIP-2 chain ID.
+          type: string
+          example: 'monero:418015bb9ae982a1975da7d79277c270'
+        chain_metadata:
+          description: Additional information about the blockchain
+          type: object
+          properties:
+            is_forwarding_required:
+              description: Is payment forwarding required?
+              type: boolean
+              example: true
+            description:
+              description: Description of the payment method (HTML).
+              type: string
+              nullable: true
+            payment_amount_min:
+              description: Minimum payment amount (in piconero).
+              type: integer
+              nullable: false
+        features:
+          description: Blockchain features.
+          type: object
+          properties:
+            subscriptions:
+              description: Subscriptions feature flag.
+              type: boolean
+              example: true
+    Conversation:
+      description: Represents a conversation with "direct message" visibility.
+      type: object
+      properties:
+        id:
+          description: The ID of the conversation in the database.
+          type: string
+          format: uuid
+        unread:
+          description: Is the conversation currently marked as unread?
+          type: boolean
+          example: false
+        accounts:
+          description: Participants in the conversation.
+          type: array
+          items:
+            $ref: '#/components/schemas/Account'
+        last_status:
+          allOf:
+            - description: The last message in the conversation.
+            - $ref: '#/components/schemas/Status'
     CustomEmoji:
       type: object
       properties:
@@ -3089,6 +3403,13 @@ components:
         me:
           description: Has current user reacted with this emoji?
           type: boolean
+    FeedVisibility:
+      type: string
+      enum:
+        - public
+        - authenticated
+        - restricted
+        - disabled
     Field:
       type: object
       properties:
@@ -3138,6 +3459,19 @@ components:
               example:
                 - text/html
                 - text/markdown
+    InstanceConfigurationAccounts:
+      description: Limits related to accounts.
+      type: object
+      properties:
+        max_profile_fields:
+          description: The maximum number of custom profile fields allowed to be set.
+          type: integer
+        profile_field_name_limit:
+          description: The maximum size of a profile field name, in characters.
+          type: integer
+        profile_field_value_limit:
+          description: The maximum size of a profile field value, in characters.
+          type: integer
     Instance:
       type: object
       properties:
@@ -3183,6 +3517,8 @@ components:
           description: Configured values and limits for this instance.
           type: object
           properties:
+            accounts:
+              $ref: '#/components/schemas/InstanceConfigurationAccounts'
             statuses:
               description: Limits related to authoring posts.
               type: object
@@ -3209,6 +3545,26 @@ components:
                   description: The maximum size of any uploaded image, in bytes.
                   type: integer
                   example: 5242880
+            polls:
+              description: Limits related to polls.
+              type: object
+              properties:
+                max_options:
+                  description: Each poll is allowed to have up to this many options.
+                  type: integer
+                  example: 10
+                max_characters_per_option:
+                  description: Each poll option is allowed to have this many characters.
+                  type: integer
+                  example: 100
+                min_expiration:
+                  description: The shortest allowed poll duration, in seconds.
+                  type: integer
+                  example: 0
+                max_expiration:
+                  description: The longest allowed poll duration, in seconds.
+                  type: integer
+                  example: 1073741824
         contact_account:
           allOf:
             - description: A user who may be contacted for any inquiries.
@@ -3221,6 +3577,7 @@ components:
         login_message:
           description: Login message for signer.
           type: string
+          example: "Do not sign this message on other sites!"
         new_accounts_read_only:
           description: Whether new accounts are in read only mode.
           type: boolean
@@ -3241,32 +3598,7 @@ components:
           description: Information about blockchain integrations.
           type: array
           items:
-            type: object
-            properties:
-              chain_id:
-                description: CAIP-2 chain ID.
-                type: string
-                example: 'eip155:1'
-              chain_metadata:
-                description: Additional information about blockchain
-                type: object
-                properties:
-                  description:
-                    description: Description of a payment method (HTML).
-                    type: string
-                    nullable: true
-                  payment_amount_min:
-                    description: Minimum payment amount (in piconero).
-                    type: integer
-                    nullable: false
-              features:
-                description: Blockchain features.
-                type: object
-                properties:
-                  subscriptions:
-                    description: Subscriptions feature flag.
-                    type: boolean
-                    example: true
+            $ref: '#/components/schemas/BlockchainInfo'
         ipfs_gateway_url:
           description: IPFS gateway URL.
           type: string
@@ -3284,6 +3616,9 @@ components:
           type: string
         description:
           description: A short, plain-text description defined by the admin.
+          type: string
+        extended_description:
+          description: Admin-defined description of the site (HTML).
           type: string
         version:
           description: Mastodon API compatibility version and the version of Mitra server.
@@ -3307,6 +3642,8 @@ components:
           description: Configured values and limits for this instance.
           type: object
           properties:
+            accounts:
+              $ref: '#/components/schemas/InstanceConfigurationAccounts'
             statuses:
               description: Limits related to authoring posts.
               type: object
@@ -3333,6 +3670,54 @@ components:
                   description: The maximum size of any uploaded image, in bytes.
                   type: integer
                   example: 5242880
+            polls:
+              description: Limits related to polls.
+              type: object
+              properties:
+                max_options:
+                  description: Each poll is allowed to have up to this many options.
+                  type: integer
+                  example: 10
+                max_characters_per_option:
+                  description: Each poll option is allowed to have this many characters.
+                  type: integer
+                  example: 100
+                min_expiration:
+                  description: The shortest allowed poll duration, in seconds.
+                  type: integer
+                  example: 0
+                max_expiration:
+                  description: The longest allowed poll duration, in seconds.
+                  type: integer
+                  example: 1073741824
+            timelines_access:
+              description: Access restrictions on different timelines.
+              type: object
+              properties:
+                live_feeds:
+                  description: Access restrictions on public feeds.
+                  type: object
+                  properties:
+                    local:
+                      allOf:
+                        - description: Access restrictions for local posts in the public feed.
+                        - $ref: '#/components/schemas/FeedVisibility'
+                    remote:
+                      allOf:
+                        - description: Access restrictions for remote posts in the public feed.
+                        - $ref: '#/components/schemas/FeedVisibility'
+                hashtag_feeds:
+                  description: Access restrictions on hashtag feeds.
+                  type: object
+                  properties:
+                    local:
+                      allOf:
+                        - description: Access restrictions for local posts in hashtag feeds.
+                        - $ref: '#/components/schemas/FeedVisibility'
+                    remote:
+                      allOf:
+                        - description: Access restrictions for remote posts in hashtag feeds.
+                        - $ref: '#/components/schemas/FeedVisibility'
         registrations:
           description: Information about registering for this website.
           type: object
@@ -3360,6 +3745,40 @@ components:
               allOf:
                 - description: A user that can be contacted natively over the network regarding inquiries or issues.
                 - $ref: '#/components/schemas/Account'
+        authentication_methods:
+          description: List of supported authentication methods.
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthenticationMethod'
+        login_message:
+          description: Login message for signer.
+          type: string
+          example: "Do not sign this message on other sites!"
+        new_accounts_read_only:
+          description: Whether new accounts are in read only mode.
+          type: boolean
+          example: false
+        like_emoji:
+          description: Which emoji is used to represent the "like" reaction
+          type: string
+          enum:
+            - thumbs_up
+            - heart
+        favorite_emojis:
+          description: Which emojis to show by default in the emoji picker.
+          type: array
+          items:
+            type: string
+            example: "❤️"
+        blockchains:
+          description: Information about blockchain integrations.
+          type: array
+          items:
+            $ref: '#/components/schemas/BlockchainInfo'
+        ipfs_gateway_url:
+          description: IPFS gateway URL.
+          type: string
+          nullable: true
         pleroma:
           $ref: '#/components/schemas/InstancePleroma'
     Invoice:
@@ -3413,7 +3832,7 @@ components:
       properties:
         id:
           description: The internal database ID of the custom feed.
-          type: integer
+          type: string
         title:
           description: The user-defined title of the custom feed.
           type: string
@@ -3472,6 +3891,7 @@ components:
             - subscription
             - subscription_expiration
             - subscriber_leaving
+            - payment_anonymous
             - move
             - admin.sign_up
           example: favourite
@@ -3504,6 +3924,10 @@ components:
         emoji_url:
           description: A link to the custom emoji.
           type: string
+          nullable: true
+        payment_amount:
+          description: Payment amount in units (only for `subscription` and `payment_anonymous` events).
+          type: integer
           nullable: true
         created_at:
           description: The timestamp of the notification.
@@ -3790,6 +4214,12 @@ components:
           description: Have you bookmarked this post?
           type: boolean
           example: false
+        conversation_tracking:
+          description: The conversation tracking status.
+          type: string
+          enum:
+            - normal
+            - follow
         hidden:
           description: Is this post hidden? A linked (quoted) post can be hidden if its author is muted.
           type: boolean
@@ -3879,3 +4309,9 @@ components:
         - subscribers
         - conversation
         - direct
+    DefaultVisibility:
+      type: string
+      enum:
+        - public
+        - private
+        - subscribers

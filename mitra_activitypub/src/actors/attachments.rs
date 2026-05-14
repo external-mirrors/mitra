@@ -18,6 +18,7 @@ use apx_sdk::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
+use uuid::Uuid;
 
 use mitra_models::{
     profiles::types::{
@@ -156,18 +157,14 @@ pub struct PaymentLink {
 
 const PAYMENT_LINK_NAME_MONERO: &str = "MoneroSubscription";
 
-// TODO: remove
-fn valueflows_proposal_rel_legacy() -> String {
-    format!("{}{}", "https://w3id.org/valueflows/", PROPOSAL)
-}
-
 fn valueflows_proposal_rel() -> String {
     format!("{}{}", W3ID_VALUEFLOWS_CONTEXT, PROPOSAL)
 }
 
 pub fn attach_payment_option(
     authority: &Authority,
-    username: &str,
+    profile_id: Uuid,
+    profile_username: &str,
     payment_option: PaymentOption,
 ) -> PaymentLink {
     let mut rel = vec![PAYMENT_LINK_RELATION_TYPE.to_string()];
@@ -176,7 +173,7 @@ pub fn attach_payment_option(
         PaymentOption::Link(_) => unimplemented!(),
         PaymentOption::MoneroSubscription(payment_info) => {
             let name = PAYMENT_LINK_NAME_MONERO.to_string();
-            let actor_id = local_actor_id_unified(authority, username);
+            let actor_id = local_actor_id_unified(authority, profile_id, profile_username);
             let href = local_actor_proposal_id(
                 &actor_id,
                 &payment_info.chain_id,
@@ -223,9 +220,7 @@ pub fn parse_link(
             name: link.name,
             href: link.href,
         };
-        if link.rel.contains(&valueflows_proposal_rel_legacy()) ||
-            link.rel.contains(&valueflows_proposal_rel())
-        {
+        if link.rel.contains(&valueflows_proposal_rel()) {
             LinkAttachment::Proposal(db_payment_link)
         } else {
             LinkAttachment::PaymentLink(db_payment_link)
@@ -316,6 +311,7 @@ mod tests {
     };
     use chrono::Utc;
     use serde_json::json;
+    use mitra_models::profiles::types::DbActorProfile;
     use crate::identity::{
         create_identity_claim_fep_c390,
         create_identity_proof_fep_c390,
@@ -379,19 +375,18 @@ mod tests {
     fn test_payment_option() {
         let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let authority = Authority::server(&instance_uri);
-        let username = "testuser";
+        let profile = DbActorProfile::local_for_test("testuser");
         let price = NonZeroU64::new(240000).unwrap();
-        let payout_address = "test";
         let payment_option = PaymentOption::monero_subscription(
             ChainId::monero_mainnet(),
             price,
-            payout_address.to_string(),
         );
         let subscription_page_url =
             "https://example.com/users/testuser/proposals/monero:418015bb9ae982a1975da7d79277c270";
         let attachment = attach_payment_option(
             &authority,
-            username,
+            profile.id,
+            &profile.username,
             payment_option,
         );
         assert_eq!(attachment.object_type, LINK);

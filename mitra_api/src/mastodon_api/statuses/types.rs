@@ -1,14 +1,20 @@
+use std::time::Duration;
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use mitra_activitypub::identifiers::{
-    compatible_post_object_id,
-    local_tag_collection,
-    post_object_id,
-    profile_actor_url,
+use mitra_activitypub::{
+    authority::Authority,
+    identifiers::{
+        compatible_post_object_id,
+        local_tag_collection,
+        post_object_id,
+        profile_actor_url,
+    },
 };
 use mitra_models::{
+    conversations::types::TrackingStatus,
     emojis::types::{CustomEmoji as DbCustomEmoji},
     posts::types::{PostDetailed as DbPostDetailed, Visibility},
     profiles::types::DbActorProfile,
@@ -25,14 +31,17 @@ use crate::mastodon_api::{
     polls::types::Poll,
     reactions::types::PleromaEmojiReaction,
     serializers::{
-        deserialize_language_code_opt,
         serialize_datetime,
         serialize_datetime_opt,
     },
 };
+use super::utils::parse_language_code;
 
 pub const POST_CONTENT_TYPE_HTML: &str = "text/html";
 pub const POST_CONTENT_TYPE_MARKDOWN: &str = "text/markdown";
+
+const TRACKING_STATUS_NORMAL: &str = "normal";
+const TRACKING_STATUS_FOLLOW: &str = "follow";
 
 /// https://docs.joinmastodon.org/entities/Quote/
 #[derive(Serialize)]
@@ -51,12 +60,12 @@ pub struct Mention {
 }
 
 impl Mention {
-    fn from_profile(instance_uri: &str, profile: DbActorProfile) -> Self {
+    fn from_profile(authority: &Authority, profile: DbActorProfile) -> Self {
         Mention {
             id: profile.id.to_string(),
             username: profile.username.clone(),
             acct: profile.preferred_handle().to_owned(),
-            url: profile_actor_url(instance_uri, &profile),
+            url: profile_actor_url(authority, &profile),
         }
     }
 }
@@ -86,6 +95,13 @@ struct PleromaData {
     parent_visible: bool,
     quote: Option<Box<Status>>,
     quote_visible: bool,
+}
+
+fn tracking_status_to_str(tracking_mode: Option<TrackingStatus>) -> &'static str {
+    match tracking_mode {
+        None => TRACKING_STATUS_NORMAL,
+        Some(TrackingStatus::Follow) => TRACKING_STATUS_FOLLOW,
+    }
 }
 
 /// https://docs.joinmastodon.org/entities/status/
@@ -122,6 +138,7 @@ pub struct Status {
     pub favourited: bool,
     pub reblogged: bool,
     bookmarked: bool,
+    conversation_tracking: Option<&'static str>,
 
     // Pleroma API
     pleroma: PleromaData,
@@ -132,17 +149,28 @@ pub struct Status {
     links: Vec<Status>,
 }
 
+pub fn visibility_to_str(visibility: Visibility) -> &'static str {
+    match visibility {
+        Visibility::Public => "public",
+        Visibility::Direct => "direct",
+        Visibility::Followers => "private",
+        Visibility::Subscribers => "subscribers",
+        Visibility::Conversation => "conversation",
+    }
+}
+
 impl Status {
     pub fn from_post(
-        instance_uri: &str,
+        authority: &Authority,
         media_server: &ClientMediaServer,
         post: DbPostDetailed,
     ) -> Self {
-        let object_id = post_object_id(instance_uri, &post);
+        let instance_uri = authority.expect_server_uri().as_str();
+        let object_id = post_object_id(authority, &post);
         let object_url = if let Some(url) = post.url {
             url
         } else {
-            compatible_post_object_id(instance_uri, &post)
+            compatible_post_object_id(authority, &post)
         };
         let maybe_poll = if let Some(ref db_poll) = post.poll {
             let maybe_voted_for = post.actions.as_ref()
@@ -161,7 +189,7 @@ impl Status {
             .map(|item| Attachment::from_db(media_server, item))
             .collect();
         let mentions: Vec<Mention> = post.mentions.into_iter()
-            .map(|item| Mention::from_profile(instance_uri, item))
+            .map(|item| Mention::from_profile(authority, item))
             .collect();
         let tags: Vec<Tag> = post.tags.into_iter()
             .map(|tag_name| Tag::from_tag_name(instance_uri, tag_name))
@@ -170,37 +198,31 @@ impl Status {
             .map(|emoji| CustomEmoji::from_db(media_server, emoji))
             .collect();
         let account = Account::from_profile(
-            instance_uri,
+            authority,
             media_server,
             post.author,
         );
         // Nested Status entities may be built without related_posts
         let related_posts = post.related_posts.unwrap_or_default();
         let reblog = if let Some(repost_of) = related_posts.repost_of {
-            let status = Status::from_post(instance_uri, media_server, *repost_of);
+            let status = Status::from_post(authority, media_server, *repost_of);
             Some(Box::new(status))
         } else {
             None
         };
         let maybe_first_link = related_posts.linked.first();
         let maybe_quoted_status = maybe_first_link.cloned().map(|post| {
-            let status = Status::from_post(instance_uri, media_server, post);
+            let status = Status::from_post(authority, media_server, post);
             Box::new(status)
         });
         let maybe_quote = maybe_first_link.cloned().map(|post| {
-            let status = Status::from_post(instance_uri, media_server, post);
+            let status = Status::from_post(authority, media_server, post);
             Quote { state: "accepted", quoted_status: Box::new(status) }
         });
         let links: Vec<Status> = related_posts.linked.into_iter().map(|post| {
-            Status::from_post(instance_uri, media_server, post)
+            Status::from_post(authority, media_server, post)
         }).collect();
-        let visibility = match post.visibility {
-            Visibility::Public => "public",
-            Visibility::Direct => "direct",
-            Visibility::Followers => "private",
-            Visibility::Subscribers => "subscribers",
-            Visibility::Conversation => "conversation",
-        };
+        let visibility = visibility_to_str(post.visibility);
         let mut emoji_reactions = vec![];
         let mut favourites_count = 0;
         for reaction in post.reactions {
@@ -258,6 +280,8 @@ impl Status {
             favourited: post.actions.as_ref().is_some_and(|actions| actions.liked),
             reblogged: post.actions.as_ref().is_some_and(|actions| actions.reposted),
             bookmarked: post.actions.as_ref().is_some_and(|actions| actions.bookmarked),
+            conversation_tracking: post.actions.as_ref()
+                .map(|actions| tracking_status_to_str(actions.conversation_tracking_status)),
             pleroma: PleromaData {
                 emoji_reactions,
                 in_reply_to_account_acct: related_posts
@@ -283,15 +307,6 @@ pub struct StatusTombstone {
     pub text: String,
 }
 
-fn default_post_content_type() -> String { POST_CONTENT_TYPE_MARKDOWN.to_string() }
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct PollParams {
-    pub options: Vec<String>,
-    pub expires_in: u32,
-    pub multiple: Option<bool>,
-}
-
 pub fn visibility_from_str(value: &str) -> Result<Visibility, ValidationError> {
     let visibility = match value {
         "public" | "unlisted" => Visibility::Public,
@@ -304,13 +319,28 @@ pub fn visibility_from_str(value: &str) -> Result<Visibility, ValidationError> {
     Ok(visibility)
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct PollParams {
+    pub options: Vec<String>,
+    pub expires_in: u32,
+    pub multiple: Option<bool>,
+}
+
+impl PollParams {
+    pub fn expires_at(&self) -> DateTime<Utc> {
+        let duration = self.expires_in.into();
+        Utc::now() + Duration::from_secs(duration)
+    }
+}
+
+fn default_post_content_type() -> String { POST_CONTENT_TYPE_MARKDOWN.to_string() }
+
 // https://docs.joinmastodon.org/methods/statuses/
 #[derive(Debug, Deserialize)]
 pub struct StatusData {
     pub status: Option<String>,
 
-    #[serde(default, deserialize_with = "deserialize_language_code_opt")]
-    pub language: Option<Language>,
+    pub language: Option<String>,
 
     #[serde(default, alias = "media_ids[]")]
     pub media_ids: Vec<Uuid>,
@@ -343,6 +373,12 @@ pub struct StatusData {
 }
 
 impl StatusData {
+    pub fn language(&self) -> Result<Option<Language>, ValidationError> {
+        self.language.as_ref()
+            .map(|value| parse_language_code(value))
+            .transpose()
+    }
+
     pub fn poll_params(&self) -> Result<Option<PollParams>, ValidationError> {
         let maybe_poll_params = if let Some(ref poll_params) = self.poll {
             Some(poll_params.clone())
@@ -413,13 +449,12 @@ impl StatusSource {
     }
 }
 
-/// https://docs.joinmastodon.org/methods/statuses/#edit
+// https://docs.joinmastodon.org/methods/statuses/#edit
 #[derive(Deserialize)]
 pub struct StatusUpdateData {
     pub status: String,
 
-    #[serde(default, deserialize_with = "deserialize_language_code_opt")]
-    pub language: Option<Language>,
+    pub language: Option<String>,
 
     #[serde(default, alias = "media_ids[]")]
     pub media_ids: Vec<Uuid>,
@@ -432,6 +467,14 @@ pub struct StatusUpdateData {
 
     // Pleroma API
     pub quote_id: Option<Uuid>,
+}
+
+impl StatusUpdateData {
+    pub fn language(&self) -> Result<Option<Language>, ValidationError> {
+        self.language.as_ref()
+            .map(|value| parse_language_code(value))
+            .transpose()
+    }
 }
 
 #[derive(Serialize)]
@@ -465,13 +508,39 @@ pub struct RebloggedByQueryParams {
     pub limit: PageSize,
 }
 
+#[derive(Deserialize)]
+pub struct ConversationTrackingData {
+    status: String,
+}
+
+impl ConversationTrackingData {
+    pub fn status(&self) -> Result<Option<TrackingStatus>, ValidationError> {
+        let maybe_tracking_status = match self.status.as_str() {
+            TRACKING_STATUS_NORMAL => None,
+            TRACKING_STATUS_FOLLOW => Some(TrackingStatus::Follow),
+            _ => return Err(ValidationError("invalid tracking status")),
+        };
+        Ok(maybe_tracking_status)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
+    fn test_visibility() {
+        let visibility = Visibility::Followers;
+        let visibility_str = visibility_to_str(visibility);
+        assert_eq!(visibility_str, "private");
+        let result = visibility_from_str(visibility_str);
+        assert_eq!(result.unwrap(), visibility);
+    }
+
+    #[test]
     fn test_status_from_post() {
         let instance_uri = "https://social.example";
+        let authority = Authority::server_unchecked(instance_uri);
         let media_server = ClientMediaServer::for_test("/media");
         let author = DbActorProfile::local_for_test("test");
         let post = DbPostDetailed {
@@ -480,7 +549,7 @@ mod tests {
                 .with_timezone(&Utc),
             ..DbPostDetailed::local_for_test(&author)
         };
-        let status = Status::from_post(instance_uri, &media_server, post);
+        let status = Status::from_post(&authority, &media_server, post);
         assert_eq!(status.content, "");
         let status_json = serde_json::to_value(status).unwrap();
         assert_eq!(

@@ -1,4 +1,5 @@
 use actix_web::{
+    delete,
     dev::ConnectionInfo,
     get,
     post,
@@ -7,9 +8,11 @@ use actix_web::{
     Scope,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
+use chrono::Utc;
 
 use mitra_activitypub::{
     adapters::users::delete_user,
+    authority::Authority,
     builders::{
         follow::follow_or_create_request,
         move_person::prepare_move_person,
@@ -25,6 +28,10 @@ use mitra_models::{
         DatabaseError,
     },
     notifications::helpers::create_move_notification,
+    oauth::queries::{
+        delete_oauth_token_by_id,
+        get_oauth_tokens,
+    },
     profiles::helpers::find_verified_aliases,
     profiles::queries::{
         get_profile_by_acct,
@@ -53,7 +60,7 @@ use crate::http::get_request_base_url;
 use crate::mastodon_api::{
     accounts::helpers::get_aliases,
     accounts::types::Account,
-    auth::get_current_user,
+    auth::{get_current_session, get_current_user},
     errors::MastodonError,
     media_server::ClientMediaServer,
 };
@@ -70,6 +77,7 @@ use super::types::{
     MoveFollowersRequest,
     PasswordChangeRequest,
     RemoveAliasRequest,
+    Session,
 };
 
 // Similar to Pleroma settings store
@@ -97,13 +105,52 @@ async fn client_config_view(
         client_config_value,
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         current_user,
     );
     Ok(HttpResponse::Ok().json(account))
+}
+
+#[get("/sessions")]
+async fn session_list_view(
+    auth: BearerAuth,
+    db_pool: web::Data<DatabaseConnectionPool>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let (current_session_id, current_user) =
+        get_current_session(db_client, auth.token()).await?;
+    let tokens = get_oauth_tokens(db_client, current_user.id).await?;
+    let sessions: Vec<_> = tokens.into_iter()
+        .filter(|token| token.expires_at >= Utc::now())
+        .map(Session::from_db)
+        .map(|mut session| {
+            if session.id == current_session_id {
+                session.is_current = true;
+            };
+            session
+        })
+        .collect();
+    Ok(HttpResponse::Ok().json(sessions))
+}
+
+#[delete("/sessions/{session_id}")]
+async fn terminate_session_view(
+    auth: BearerAuth,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    session_id: web::Path<i32>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    delete_oauth_token_by_id(
+        db_client,
+        current_user.id,
+        session_id.into_inner(),
+    ).await?;
+    Ok(HttpResponse::NoContent().finish())
 }
 
 #[post("/change_password")]
@@ -121,9 +168,10 @@ async fn change_password_view(
     set_user_password(db_client, current_user.id, &password_digest).await?;
     current_user.password_digest = Some(password_digest);
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         current_user,
     );
@@ -148,7 +196,8 @@ async fn add_alias_view(
         return Err(ValidationError("alias must be on another server").into());
     };
     let instance = config.instance();
-    let alias_id = profile_actor_id(instance.uri_str(), &alias);
+    let authority = Authority::from(&instance);
+    let alias_id = profile_actor_id(&authority, &alias);
     let mut profile_data = ProfileUpdateData::from(&current_user.profile);
     if !profile_data.aliases.contains(&alias_id) {
         profile_data.aliases.push(alias_id);
@@ -174,7 +223,7 @@ async fn add_alias_view(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let aliases = get_aliases(
         db_client,
-        instance.uri_str(),
+        &authority,
         &media_server,
         &current_user.profile,
     ).await?;
@@ -213,10 +262,11 @@ async fn remove_alias_view(
         &current_user,
     ).await?.save_and_enqueue(db_client).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let aliases = get_aliases(
         db_client,
-        instance.uri_str(),
+        &authority,
         &media_server,
         &current_user.profile,
     ).await?;
@@ -233,7 +283,7 @@ async fn export_followers_view(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let csv = export_followers(
         db_client,
-        &config.instance().hostname(),
+        &config.instance().webfinger_hostname(),
         current_user.id,
     ).await?;
     let response = HttpResponse::Ok()
@@ -252,7 +302,7 @@ async fn export_follows_view(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let csv = export_follows(
         db_client,
-        &config.instance().hostname(),
+        &config.instance().webfinger_hostname(),
         current_user.id,
     ).await?;
     let response = HttpResponse::Ok()
@@ -295,6 +345,7 @@ async fn import_followers_view(
         return Err(ValidationError("identity proof is required").into());
     };
     let instance = config.instance();
+    let authority = Authority::from(&instance);
     if request_data.from_actor_id.starts_with(instance.uri_str()) {
         return Err(ValidationError("can't move from local actor").into());
     };
@@ -315,7 +366,7 @@ async fn import_followers_view(
             &current_user.profile,
         ).await?
             .into_iter()
-            .map(|profile| profile_actor_id(instance.uri_str(), &profile));
+            .map(|profile| profile_actor_id(&authority, &profile));
         if !aliases.any(|actor_id| actor_id == request_data.from_actor_id) {
             return Err(ValidationError("old profile is not an alias").into());
         };
@@ -334,7 +385,7 @@ async fn import_followers_view(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        instance.uri_str(),
+        &authority,
         &media_server,
         current_user,
     );
@@ -352,8 +403,9 @@ async fn move_followers_view(
     let db_client = &mut **get_database_client(&db_pool).await?;
     let instance = config.instance();
     let current_user = get_current_user(db_client, auth.token()).await?;
+    let authority = Authority::from(&instance);
     let current_actor_id = profile_actor_id(
-        instance.uri_str(),
+        &authority,
         &current_user.profile,
     );
     let target = get_profile_by_acct(db_client, &request_data.target_acct).await?;
@@ -387,7 +439,7 @@ async fn move_followers_view(
             follower.id,
         ).await?;
     };
-    let target_actor_id = profile_actor_id(instance.uri_str(), &target);
+    let target_actor_id = profile_actor_id(&authority, &target);
     prepare_move_person(
         &instance,
         &current_user,
@@ -399,7 +451,7 @@ async fn move_followers_view(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        instance.uri_str(),
+        &authority,
         &media_server,
         current_user,
     );
@@ -421,6 +473,8 @@ async fn delete_account_view(
 pub fn settings_api_scope() -> Scope {
     web::scope("/v1/settings")
         .service(client_config_view)
+        .service(session_list_view)
+        .service(terminate_session_view)
         .service(change_password_view)
         .service(add_alias_view)
         .service(remove_alias_view)

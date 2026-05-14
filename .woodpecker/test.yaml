@@ -1,0 +1,12 @@
+when:
+  - branch: [main]
+    event: [push, pull_request]
+
+steps:
+  test:
+    image: docker.io/rust
+    commands:
+      - rustup default stable
+      - rustup component add clippy
+      - cargo check --tests -j 4
+      - cargo clippy -j 4

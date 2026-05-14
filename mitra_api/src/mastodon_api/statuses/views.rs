@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use actix_web::{
     delete,
     dev::ConnectionInfo,
@@ -43,13 +41,15 @@ use mitra_adapters::posts::check_post_limits;
 use mitra_config::Config;
 use mitra_models::{
     bookmarks::queries::{create_bookmark, delete_bookmark},
+    conversations::queries::set_conversation_tracking_status,
     database::{
         get_database_client,
         DatabaseConnectionPool,
         DatabaseError,
     },
-    polls::types::PollData,
+    polls::types::{PollData, PollResult},
     posts::helpers::{
+        add_related_posts,
         add_user_actions,
         can_create_post,
         get_post_by_id_for_view,
@@ -73,10 +73,11 @@ use mitra_models::{
         RelatedPosts,
         Visibility,
     },
+    profiles::types::Origin::Local,
     reactions::queries::{
         create_reaction,
         delete_reaction,
-        get_reactions,
+        get_post_reactions_detailed,
     },
     reactions::types::{ReactionData, ReactionDetailed},
     users::types::Permission,
@@ -86,7 +87,6 @@ use mitra_services::{
     media::{MediaServer, MediaStorage},
 };
 use mitra_validators::{
-    common::Origin::Local,
     errors::ValidationError,
     posts::{
         validate_local_post_links,
@@ -122,6 +122,7 @@ use super::helpers::{
 use super::types::{
     visibility_from_str,
     Context,
+    ConversationTrackingData,
     FavouritedByQueryParams,
     ReblogParams,
     RebloggedByQueryParams,
@@ -224,13 +225,12 @@ async fn create_status(
             Visibility::Conversation => None, // will be rejected by validator
             Visibility::Direct => None,
         };
-        PostContext::Top { audience }
+        PostContext::Top { object_id: None, audience }
     };
 
     // Prepare poll data
     let maybe_poll_data = if let Some(poll_params) = status_data.poll_params()? {
-        let duration = poll_params.expires_in.into();
-        let (results, poll_emojis) = parse_poll_options(
+        let (poll_options, poll_emojis) = parse_poll_options(
             db_client,
             &poll_params.options,
         ).await?;
@@ -239,11 +239,13 @@ async fn create_status(
                 emojis.push(poll_emoji);
             };
         };
-        let ends_at = Utc::now() + Duration::from_secs(duration);
+        let ends_at = poll_params.expires_at();
         let poll_data = PollData {
             multiple_choices: poll_params.multiple.unwrap_or(false),
             ends_at: Some(ends_at),
-            results: results,
+            results: poll_options.into_iter()
+                .map(|name| PollResult::new(&name))
+                .collect(),
         };
         Some(poll_data)
     } else {
@@ -256,7 +258,7 @@ async fn create_status(
         context: context,
         content: content,
         content_source: content_source,
-        language: status_data.language,
+        language: status_data.language()?,
         visibility: visibility,
         is_sensitive: status_data.sensitive,
         poll: maybe_poll_data,
@@ -300,10 +302,11 @@ async fn create_status(
                 return Err(MastodonError::PermissionError);
             };
             let base_url = get_request_base_url(connection_info);
+            let authority = Authority::from(&instance);
             let media_server = ClientMediaServer::new(&config, &base_url);
             let status = build_status(
                 db_client,
-                instance.uri_str(),
+                &authority,
                 &media_server,
                 Some(&current_user),
                 post,
@@ -348,9 +351,10 @@ async fn create_status(
     ).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&instance);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = Status::from_post(
-        instance.uri_str(),
+        &authority,
         &media_server,
         post,
     );
@@ -408,10 +412,11 @@ async fn get_status(
     ).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         maybe_current_user.as_ref(),
         post,
@@ -479,7 +484,7 @@ async fn edit_status(
     let post_data = PostUpdateData {
         content: content,
         content_source: content_source,
-        language: status_data.language,
+        language: status_data.language()?,
         is_sensitive: status_data.sensitive,
         poll: post.poll.map(PollData::from),
         attachments: status_data.media_ids,
@@ -533,9 +538,10 @@ async fn edit_status(
     ).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&instance);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = Status::from_post(
-        instance.uri_str(),
+        &authority,
         &media_server,
         post,
     );
@@ -564,9 +570,10 @@ async fn delete_status(
 
     let content_source = post.content_source.clone().unwrap_or_default();
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = Status::from_post(
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         post,
     );
@@ -596,10 +603,11 @@ async fn get_context(
         maybe_current_user.as_ref().map(|user| user.id),
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let statuses = build_status_list(
         db_client,
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         maybe_current_user.as_ref(),
         posts,
@@ -641,10 +649,11 @@ async fn get_thread_view(
         maybe_current_user.as_ref().map(|user| user.id),
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let statuses = build_status_list(
         db_client,
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         maybe_current_user.as_ref(),
         posts,
@@ -714,10 +723,11 @@ async fn favourite(
     };
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         Some(&current_user),
         post,
@@ -777,10 +787,11 @@ async fn unfavourite(
     };
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         Some(&current_user),
         post,
@@ -812,7 +823,7 @@ async fn get_favourited_by(
         *status_id,
     ).await?;
     let reactions: Vec<_> = if let Some(current_user) = maybe_current_user {
-        get_reactions(
+        get_post_reactions_detailed(
             db_client,
             post.id,
             Some(current_user.id),
@@ -831,11 +842,11 @@ async fn get_favourited_by(
     let maybe_last_id = get_last_item(&reactions, &params.limit)
         .map(|reaction| reaction.id);
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let accounts: Vec<Account> = reactions.into_iter()
         .map(|reaction| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             reaction.author,
         ))
@@ -896,10 +907,11 @@ async fn reblog(
     ).await?.save_and_enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         Some(&current_user),
         repost,
@@ -935,10 +947,11 @@ async fn unreblog(
     ).await?.save_and_enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         Some(&current_user),
         post,
@@ -984,11 +997,11 @@ async fn get_reblogged_by(
     let maybe_last_id = get_last_item(&reposts, &params.limit)
         .map(|(repost_id, _)| *repost_id);
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let accounts: Vec<Account> = reposts.into_iter()
         .map(|(_, author)| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             author,
         ))
@@ -1023,10 +1036,11 @@ async fn bookmark_view(
         Err(other_error) => return Err(other_error.into()),
     };
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         Some(&current_user),
         post,
@@ -1055,10 +1069,11 @@ async fn unbookmark_view(
         Err(other_error) => return Err(other_error.into()),
     };
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         Some(&current_user),
         post,
@@ -1092,10 +1107,11 @@ async fn pin(
     ).await?.save_and_enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         Some(&current_user),
         post,
@@ -1129,10 +1145,47 @@ async fn unpin(
     ).await?.save_and_enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        config.instance().uri_str(),
+        &authority,
+        &media_server,
+        Some(&current_user),
+        post,
+    ).await?;
+    Ok(HttpResponse::Ok().json(status))
+}
+
+#[post("/{status_id}/conversation_tracking")]
+async fn conversation_tracking_view(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    status_id: web::Path<Uuid>,
+    request_data: web::Json<ConversationTrackingData>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let post = get_post_by_id_for_view(
+        db_client,
+        Some(&current_user.profile),
+        *status_id,
+    ).await?;
+    let maybe_tracking_status = request_data.status()?;
+    set_conversation_tracking_status(
+        db_client,
+        post.expect_conversation().id,
+        current_user.id,
+        maybe_tracking_status,
+    ).await?;
+    let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
+    let media_server = ClientMediaServer::new(&config, &base_url);
+    let status = build_status(
+        db_client,
+        &authority,
         &media_server,
         Some(&current_user),
         post,
@@ -1158,6 +1211,7 @@ async fn make_permanent(
         // Users can only archive their own public posts
         return Err(MastodonError::PermissionError);
     };
+    add_related_posts(db_client, vec![&mut post]).await?;
     let ipfs_api_url = config.ipfs_api_url.as_ref()
         .ok_or(MastodonError::NotSupported)?;
     let media_storage = MediaStorage::new(&config);
@@ -1178,7 +1232,7 @@ async fn make_permanent(
     let authority = Authority::server(instance.uri());
     let media_server = MediaServer::new(&config);
     let note = build_note(
-        instance.uri(),
+        &instance.webfinger_hostname(),
         &authority,
         &media_server,
         &post,
@@ -1194,10 +1248,11 @@ async fn make_permanent(
     post.ipfs_cid = Some(post_metadata_cid);
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         Some(&current_user),
         post,
@@ -1253,6 +1308,7 @@ pub fn status_api_scope() -> Scope {
         .service(unpin)
         .service(bookmark_view)
         .service(unbookmark_view)
+        .service(conversation_tracking_view)
         .service(make_permanent)
         .service(load_conversation)
 }

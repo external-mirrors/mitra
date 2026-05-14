@@ -12,6 +12,7 @@ use crate::conversations::{
         create_conversation,
         get_conversation,
     },
+    types::TrackingStatus,
 };
 use crate::database::{
     catch_unique_violation,
@@ -68,7 +69,7 @@ async fn create_post_attachments(
     let mut attachments: Vec<MediaAttachment> = attachments_rows.iter()
         .map(|row| row.try_get("media_attachment"))
         .collect::<Result<_, _>>()?;
-    attachments.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+    attachments.sort_by_key(|attachment| attachment.created_at);
     Ok(attachments)
 }
 
@@ -214,10 +215,12 @@ pub async fn create_post(
 
     // Create or find existing conversation
     let maybe_conversation = match post_data.context {
-        PostContext::Top { ref audience } => {
+        PostContext::Top { ref object_id, ref audience } => {
             let conversation = create_conversation(
                 &transaction,
                 post_id,
+                post_data.object_id.is_none(), // is_managed
+                object_id.as_deref(),
                 audience.as_deref(),
             ).await?;
             Some(conversation)
@@ -333,7 +336,7 @@ pub async fn create_post(
     if let Some(in_reply_to_id) = db_post.in_reply_to_id {
         update_reply_count(&transaction, in_reply_to_id, 1).await?;
         let in_reply_to_author = get_post_author(&transaction, in_reply_to_id).await?;
-        if in_reply_to_author.is_local() &&
+        if in_reply_to_author.has_user_account() &&
             in_reply_to_author.id != db_post.author_id
         {
             create_reply_notification(
@@ -349,7 +352,7 @@ pub async fn create_post(
     if let Some(repost_of_id) = db_post.repost_of_id {
         update_repost_count(&transaction, repost_of_id, 1).await?;
         let repost_of_author = get_post_author(&transaction, repost_of_id).await?;
-        if repost_of_author.is_local() &&
+        if repost_of_author.has_user_account() &&
             // Don't notify themselves that they reposted their post
             repost_of_author.id != db_post.author_id &&
             !notified_users.contains(&repost_of_author.id)
@@ -365,7 +368,7 @@ pub async fn create_post(
     };
     // Notify mentioned users
     for profile in db_mentions.iter() {
-        if profile.is_local() &&
+        if profile.has_user_account() &&
             profile.id != db_post.author_id &&
             // Don't send mention notification to the author of parent post
             // or to the author of reposted post
@@ -377,6 +380,7 @@ pub async fn create_post(
                 profile.id,
                 db_post.id,
             ).await?;
+            notified_users.push(profile.id);
         };
     };
     // Construct post object
@@ -524,7 +528,7 @@ pub async fn update_post(
 
     // Create notifications
     for profile in db_mentions.iter() {
-        if profile.is_local() &&
+        if profile.has_user_account() &&
             profile.id != db_post.author_id &&
             !old_mentions.contains(&profile.id)
         {
@@ -728,20 +732,23 @@ pub async fn get_home_timeline(
     max_post_id: Option<Uuid>,
     limit: u16,
 ) -> Result<Vec<PostDetailed>, DatabaseError> {
-    // Select posts from follows, subscriptions,
-    // posts where current user is mentioned
-    // and user's own posts.
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE
-            (
-                post.author_id = $current_user_id
-                OR (
+            -- using UNION ('ugly-OR') because it is more efficient
+            EXISTS (
+                -- user's own posts
+                SELECT 1 WHERE post.author_id = $current_user_id
+                UNION ALL
+                -- posts from followed authors
+                SELECT 1
+                WHERE
                     -- is following or subscribed to the post author
                     EXISTS (
                         SELECT 1 FROM relationship
@@ -794,11 +801,17 @@ pub async fn get_home_timeline(
                         WHERE custom_feed.owner_id = $current_user_id
                             AND custom_feed_source.source_id = post.author_id
                     )
-                )
-                OR EXISTS (
-                    SELECT 1 FROM post_mention
-                    WHERE post_id = post.id AND profile_id = $current_user_id
-                )
+                UNION ALL
+                -- posts where user is mentioned
+                SELECT 1 FROM post_mention
+                WHERE post_id = post.id AND profile_id = $current_user_id
+                UNION ALL
+                -- posts from followed conversations
+                SELECT 1 FROM conversation_tracking
+                WHERE
+                    conversation_tracking.conversation_id = post.conversation_id
+                    AND account_id = $current_user_id
+                    AND tracking_status = {tracking_status_follow}
             )
             -- author is not muted
             AND {mute_filter}
@@ -812,6 +825,7 @@ pub async fn get_home_timeline(
         relationship_subscription=i16::from(RelationshipType::Subscription),
         relationship_hide_reposts=i16::from(RelationshipType::HideReposts),
         relationship_hide_replies=i16::from(RelationshipType::HideReplies),
+        tracking_status_follow=i16::from(TrackingStatus::Follow),
         mute_filter=build_mute_filter(),
         visibility_filter=build_visibility_filter(),
     );
@@ -839,12 +853,14 @@ pub async fn get_public_timeline(
     let mut filter = "".to_owned();
     if only_local {
         filter += "(actor_profile.user_id IS NOT NULL
+            OR automated_account_id IS NOT NULL
             OR actor_profile.portable_user_id IS NOT NULL) AND";
     };
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -885,7 +901,8 @@ pub async fn get_direct_timeline(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -934,7 +951,8 @@ pub(super) async fn get_related_posts(
         "
         WITH post_ids AS (SELECT unnest($1::uuid[]) AS post_id)
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1005,7 +1023,8 @@ pub async fn get_posts_by_author(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1042,7 +1061,8 @@ pub async fn get_posts_by_tag(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1087,7 +1107,8 @@ pub async fn get_custom_feed_timeline(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1160,7 +1181,8 @@ pub async fn get_post_by_id(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1214,7 +1236,8 @@ pub async fn get_thread(
             JOIN tree_node ON conversation_post.in_reply_to_id = tree_node.id
         )
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN tree_node ON post.id = tree_node.id
@@ -1260,7 +1283,8 @@ pub async fn get_conversation_items(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1334,7 +1358,8 @@ pub async fn get_remote_post_by_object_id(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1358,7 +1383,8 @@ pub async fn get_remote_repost_by_activity_id(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1635,37 +1661,37 @@ pub(super) async fn find_posts_hidden_by_user(
 
 /// Finds all contexts (identified by top-level post)
 /// updated before the specified date
-/// that do not contain local posts, reposts, mentions, links or reactions.
+/// that do not contain local posts, reposts, mentions,
+/// links, reactions or follows.
 pub async fn find_extraneous_posts(
     db_client: &impl DatabaseClient,
     updated_before: DateTime<Utc>,
 ) -> Result<Vec<Uuid>, DatabaseError> {
     let rows = db_client.query(
         "
-        WITH RECURSIVE context_post (context_id, post_id, created_at) AS (
-            SELECT post.id, post.id, post.created_at
+        WITH context_post (conversation_id, post_id, created_at) AS (
+            -- both posts and reposts are counted towards `context.updated_at`
+            SELECT
+                CASE
+                    WHEN post.repost_of_id IS NOT NULL
+                    THEN repost_of.conversation_id
+                    ELSE post.conversation_id
+                END,
+                post.id,
+                post.created_at
             FROM post
-            WHERE
-                -- top-level posts
-                post.in_reply_to_id IS NULL
-                AND post.repost_of_id IS NULL
-                AND post.created_at < $1
-            UNION
-            SELECT context_post.context_id, post.id, post.created_at
-            FROM post
-            JOIN context_post ON (
-                post.in_reply_to_id = context_post.post_id
-                OR post.repost_of_id = context_post.post_id
-            )
+            LEFT JOIN post AS repost_of ON post.repost_of_id = repost_of.id
         )
-        SELECT context.id
+        SELECT context.root_id
         FROM (
             SELECT
-                context_post.context_id AS id,
+                conversation.id,
+                conversation.root_id,
                 array_agg(context_post.post_id) AS posts,
                 max(context_post.created_at) AS updated_at
             FROM context_post
-            GROUP BY context_post.context_id
+            JOIN conversation ON context_post.conversation_id = conversation.id
+            GROUP BY conversation.id, conversation.root_id
         ) AS context
         WHERE
             context.updated_at < $1
@@ -1678,6 +1704,7 @@ pub async fn find_extraneous_posts(
                     post.id = ANY(context.posts)
                     AND (
                         actor_profile.user_id IS NOT NULL
+                        OR actor_profile.automated_account_id IS NOT NULL
                         OR actor_profile.portable_user_id IS NOT NULL
                     )
             )
@@ -1690,6 +1717,7 @@ pub async fn find_extraneous_posts(
                     post_mention.post_id = ANY(context.posts)
                     AND (
                         actor_profile.user_id IS NOT NULL
+                        OR actor_profile.automated_account_id IS NOT NULL
                         OR actor_profile.portable_user_id IS NOT NULL
                     )
             )
@@ -1702,6 +1730,7 @@ pub async fn find_extraneous_posts(
                     post_reaction.post_id = ANY(context.posts)
                     AND (
                         actor_profile.user_id IS NOT NULL
+                        OR actor_profile.automated_account_id IS NOT NULL
                         OR actor_profile.portable_user_id IS NOT NULL
                     )
             )
@@ -1715,6 +1744,7 @@ pub async fn find_extraneous_posts(
                     post_link.target_id = ANY(context.posts)
                     AND (
                         actor_profile.user_id IS NOT NULL
+                        OR actor_profile.automated_account_id IS NOT NULL
                         OR actor_profile.portable_user_id IS NOT NULL
                     )
             )
@@ -1739,11 +1769,19 @@ pub async fn find_extraneous_posts(
                 FROM poll_vote
                 WHERE poll_vote.poll_id = ANY(context.posts)
             )
+            -- no followers of a context
+            AND NOT EXISTS (
+                SELECT 1
+                FROM conversation_tracking
+                WHERE
+                    conversation_tracking.conversation_id = context.id
+                    AND conversation_tracking.tracking_status = 1
+            )
         ",
         &[&updated_before],
     ).await?;
     let ids: Vec<Uuid> = rows.iter()
-        .map(|row| row.try_get("id"))
+        .map(|row| row.try_get("root_id"))
         .collect::<Result<_, _>>()?;
     Ok(ids)
 }
@@ -1872,7 +1910,8 @@ pub async fn search_posts(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1941,6 +1980,7 @@ pub async fn get_post_count(
     if only_local {
         condition.push_str(" AND (
             actor_profile.user_id IS NOT NULL
+            OR actor_profile.automated_account_id IS NOT NULL
             OR actor_profile.portable_user_id IS NOT NULL)");
     };
     let statement = format!(
@@ -1962,6 +2002,7 @@ mod tests {
     use chrono::TimeDelta;
     use serial_test::serial;
     use crate::{
+        activitypub::constants::AP_PUBLIC,
         custom_feeds::queries::{
             add_custom_feed_sources,
             create_custom_feed,
@@ -1999,6 +2040,9 @@ mod tests {
         let post = create_post(db_client, author.id, post_data).await.unwrap();
         assert_eq!(post.content, "test post");
         assert_eq!(post.author.id, author.id);
+        let conversation = post.expect_conversation();
+        assert_eq!(conversation.root_id, post.id);
+        assert_eq!(conversation.audience.as_deref(), Some(AP_PUBLIC));
         assert_eq!(post.attachments.is_empty(), true);
         assert_eq!(post.mentions[0].id, mention_2.id);
         assert_eq!(post.mentions[1].id, mention_1.id);
@@ -2594,7 +2638,10 @@ mod tests {
         let user_3 = create_test_user(db_client, "test_3").await;
         mute(db_client, user_1.id, user_3.id).await.unwrap();
         let post_data_1 = PostCreateData {
-            context: PostContext::new_public(),
+            context: PostContext::Top {
+                object_id: None,
+                audience: Some(AP_PUBLIC.to_owned()),
+            },
             content: "my post".to_string(),
             ..Default::default()
         };
@@ -2642,6 +2689,7 @@ mod tests {
         follow(db_client, user_3.id, user_2.id).await.unwrap();
         let post_data_1 = PostCreateData {
             context: PostContext::Top {
+                object_id: None,
                 audience: Some("https://local/test_1/followers".to_owned()),
             },
             content: "my post".to_string(),

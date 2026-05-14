@@ -1,9 +1,8 @@
 use regex::Regex;
 
-use super::{
-    common::Origin,
-    errors::ValidationError,
-};
+use mitra_models::profiles::types::Origin;
+
+use super::errors::ValidationError;
 
 // https://github.com/mastodon/mastodon/blob/v4.3.7/app/models/custom_emoji.rb#L30
 const EMOJI_LOCAL_NAME_RE: &str = r"^[a-zA-Z0-9_]{2,}$";

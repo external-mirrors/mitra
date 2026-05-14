@@ -1,21 +1,24 @@
 use std::cmp::max;
 use std::error::{Error as _};
-use std::net::IpAddr;
-use std::sync::Arc;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::time::Duration;
 
 use bytes::Bytes;
+#[cfg(not(target_arch = "wasm32"))]
 use http_body_util::{BodyExt, Limited};
 use reqwest::{
     header,
-    redirect::{Policy as RedirectPolicy},
-    Body,
     Client,
     Error,
     Method,
-    Proxy,
     RequestBuilder,
     Response,
+};
+#[cfg(not(target_arch = "wasm32"))]
+use reqwest::{
+    redirect::{Policy as RedirectPolicy},
+    Body,
+    Proxy,
 };
 use thiserror::Error;
 
@@ -70,9 +73,27 @@ pub enum RedirectAction {
 // https://www.w3.org/TR/activitypub/#security-localhost
 // https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html
 fn is_safe_addr(ip_addr: IpAddr) -> bool {
+    let is_unsafe_ipv4 = |addr: Ipv4Addr| {
+        addr.is_loopback()
+        || addr.is_unspecified()
+        || addr.is_private()
+        || addr.is_link_local()
+    };
+    let is_unsafe_ipv6 = |addr: Ipv6Addr| {
+        addr.is_loopback()
+        || addr.is_unspecified()
+        // is_unicast_link_local (Rust 1.84)
+        || (addr.segments()[0] & 0xffc0) == 0xfe80
+        // is_unique_local (Rust 1.84)
+        || (addr.segments()[0] & 0xfe00) == 0xfc00
+    };
     match ip_addr {
-        IpAddr::V4(addr_v4) => !addr_v4.is_loopback() && !addr_v4.is_private(),
-        IpAddr::V6(addr_v6) => !addr_v6.is_loopback(),
+        IpAddr::V4(addr_v4) => !is_unsafe_ipv4(addr_v4),
+        IpAddr::V6(addr_v6) => {
+            let is_unsafe_mapped = addr_v6.to_ipv4_mapped()
+                .is_some_and(is_unsafe_ipv4);
+            !is_unsafe_ipv6(addr_v6) && !is_unsafe_mapped
+        },
     }
 }
 
@@ -102,6 +123,7 @@ fn require_safe_url(url: &str) -> Result<(), UnsafeUrlError> {
     Ok(())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn create_safe_redirect_policy() -> RedirectPolicy {
     RedirectPolicy::custom(|attempt| {
         if attempt.previous().len() > REDIRECT_LIMIT {
@@ -114,6 +136,7 @@ fn create_safe_redirect_policy() -> RedirectPolicy {
     })
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 mod dns_resolver {
     // https://github.com/seanmonstar/reqwest/blob/v0.12.4/src/dns/gai.rs
     use futures_util::future::FutureExt;
@@ -149,6 +172,7 @@ mod dns_resolver {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn create_http_client(
     agent: &FederationAgent,
     network: Network,
@@ -174,7 +198,7 @@ pub fn create_http_client(
     };
     if agent.ssrf_protection_enabled {
         client_builder = client_builder.dns_resolver(
-            Arc::new(dns_resolver::SafeResolver::new()));
+            dns_resolver::SafeResolver::new().into());
     };
     let redirect_policy = match redirect_action {
         RedirectAction::None => RedirectPolicy::none(),
@@ -196,6 +220,30 @@ pub fn create_http_client(
         .connect_timeout(connect_timeout)
         .redirect(redirect_policy)
         .build()
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn create_http_client(
+    _agent: &FederationAgent,
+    _network: Network,
+    timeout: u64,
+    _redirect_action: RedirectAction,
+) -> reqwest::Result<Client> {
+    // Proxies are not supported:
+    // https://github.com/seanmonstar/reqwest/issues/2504
+
+    // DNS resolvers are not supported:
+
+    // Redirection policies are not supported:
+    // https://github.com/seanmonstar/reqwest/issues/2071
+
+    // Timeouts are not supported: https://github.com/seanmonstar/reqwest/pull/2850
+    let _request_timeout = Duration::from_secs(timeout);
+    let _connect_timeout = Duration::from_secs(max(
+        timeout,
+        CONNECTION_TIMEOUT,
+    ));
+    Client::builder().build()
 }
 
 pub fn build_http_request(
@@ -255,6 +303,7 @@ pub fn sign_http_request(
     Ok(request_builder)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn limited_response(
     response: Response,
     limit: usize,
@@ -264,6 +313,16 @@ pub async fn limited_response(
         .await
         .ok()
         .map(|collected| collected.to_bytes())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn limited_response(
+    response: Response,
+    _limit: usize,
+) -> Option<Bytes> {
+    // Body::from(response) is not implemented:
+    // https://github.com/seanmonstar/reqwest/pull/2837
+    response.bytes().await.ok()
 }
 
 pub fn describe_request_error(error: &Error) -> String {
@@ -288,5 +347,32 @@ mod tests {
         assert_eq!(is_safe_url("http://[::1]:5941/test"), false);
         assert_eq!(is_safe_url("http://localhost:5941/test"), true);
         assert_eq!(is_safe_url("https://server.local/test"), true);
+    }
+
+    #[test]
+    fn test_is_safe_url_yggdrasil() {
+        let url = "http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/objects/1";
+        assert_eq!(is_safe_url(url), true);
+    }
+
+    #[test]
+    fn test_is_safe_url_unspecified() {
+        let url = "http://0.0.0.0:8080/admin/";
+        assert_eq!(is_safe_url(url), false);
+    }
+
+    #[test]
+    fn test_is_safe_url_private() {
+        let url = "http://172.17.0.1:8080/admin/";
+        assert_eq!(is_safe_url(url), false);
+        let url = "http://169.254.169.254/latest/meta-data/";
+        assert_eq!(is_safe_url(url), false);
+    }
+
+    #[test]
+    fn test_is_safe_url_ipv4_to_ipv6() {
+        // 127.0.0.1 converted into IPv6 address
+        let url = "http://[::ffff:7f00:1]:5941/test";
+        assert_eq!(is_safe_url(url), false);
     }
 }

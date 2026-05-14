@@ -94,14 +94,8 @@ pub fn is_object(value: &JsonValue) -> bool {
 
 pub fn key_id_to_actor_id(key_id: &str) -> Result<String, &'static str> {
     let key_uri = HttpUri::parse(key_id)?;
-    let actor_id = if key_uri.query().filter(|query| query.contains("id=")).is_some() {
-        // Podcast Index compat
-        // Strip fragment, keep query
-        key_uri.without_fragment()
-    } else {
-        // Strip fragment and query (works with most AP servers)
-        key_uri.without_query_and_fragment()
-    };
+    // Strip fragment, keep query (works with most AP servers)
+    let actor_id = key_uri.without_fragment();
     // GoToSocial compat
     let actor_id = actor_id.trim_end_matches("/main-key");
     Ok(actor_id.to_string())
@@ -262,15 +256,20 @@ mod tests {
         let actor_id = key_id_to_actor_id(key_id).unwrap();
         assert_eq!(actor_id, "https://server.example/actor");
 
-        // Streams
-        let key_id = "https://fediversity.site/channel/mikedev?operation=rsakey";
+        // Forte
+        let key_id = "https://forte.example/.well-known/apgateway/did:example/actor#rsakey";
         let actor_id = key_id_to_actor_id(key_id).unwrap();
-        assert_eq!(actor_id, "https://fediversity.site/channel/mikedev");
+        assert_eq!(actor_id, "https://forte.example/.well-known/apgateway/did:example/actor");
 
         // GoToSocial
         let key_id = "https://myserver.org/actor/main-key";
         let actor_id = key_id_to_actor_id(key_id).unwrap();
         assert_eq!(actor_id, "https://myserver.org/actor");
+
+        // WordPress
+        let key_id = "https://connectedplaces.online/?author=2#main-key";
+        let actor_id = key_id_to_actor_id(key_id).unwrap();
+        assert_eq!(actor_id, "https://connectedplaces.online/?author=2");
 
         // Podcast Index
         let key_id = "https://ap.podcastindex.org/podcasts?id=920666#main-key";

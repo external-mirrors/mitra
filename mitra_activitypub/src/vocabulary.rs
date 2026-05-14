@@ -4,6 +4,7 @@
 pub const ACCEPT: &str = "Accept";
 pub const ADD: &str = "Add";
 pub const ANNOUNCE: &str = "Announce";
+pub const BITE: &str = "Bite";
 pub const BLOCK: &str = "Block";
 pub const CREATE: &str = "Create";
 pub const DELETE: &str = "Delete";
@@ -57,4 +58,5 @@ pub const HASHTAG: &str = "Hashtag";
 pub const LOCK: &str = "Lock"; // Lemmy
 pub const MULTIKEY: &str = "Multikey";
 pub const PROPERTY_VALUE: &str = "PropertyValue";
+pub const QUOTATION: &str = "Quotation";
 pub const VERIFIABLE_IDENTITY_STATEMENT: &str = "VerifiableIdentityStatement";

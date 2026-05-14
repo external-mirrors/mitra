@@ -2,7 +2,6 @@ use apx_sdk::deserialization::deserialize_into_object_id;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         get_database_client,
@@ -13,9 +12,7 @@ use mitra_models::{
     relationships::queries::{
         create_remote_follow_request_opt,
         follow_request_accepted,
-        has_relationship,
     },
-    relationships::types::RelationshipType,
     users::queries::get_user_by_id,
 };
 use mitra_validators::{
@@ -40,22 +37,21 @@ struct Follow {
 }
 
 pub async fn handle_follow(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     // Follow(Person)
     let follow: Follow = serde_json::from_value(activity)?;
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let source_profile = ActorIdResolver::default().only_remote().resolve(
-        &ap_client,
+        ap_client,
         db_pool,
         &follow.actor,
     ).await?;
     let source_actor = source_profile.actor_json
         .expect("actor data should be present");
     let target_profile = ActorIdResolver::default().resolve(
-        &ap_client,
+        ap_client,
         db_pool,
         &follow.object,
     ).await?;
@@ -64,25 +60,20 @@ pub async fn handle_follow(
     let canonical_activity_id = canonicalize_id(&follow.id)?;
     validate_any_object_id(&canonical_activity_id.to_string())?;
     let db_client = &mut **get_database_client(db_pool).await?;
-    let follow_request = create_remote_follow_request_opt(
+    let (follow_request, follow_request_created) = create_remote_follow_request_opt(
         db_client,
         source_profile.id,
         target_profile.id,
         &canonical_activity_id.to_string(),
     ).await?;
     let target_user = if target_profile.is_local() {
+        // Will not work if account is automated
         get_user_by_id(db_client, target_profile.id).await?
     } else {
         // Activity has been performed by a portable account
         return Ok(Some(Descriptor::object("Actor")));
     };
-    let is_following = has_relationship(
-        db_client,
-        follow_request.source_id,
-        follow_request.target_id,
-        RelationshipType::Follow,
-    ).await?;
-    if !is_following && target_user.profile.manually_approves_followers {
+    if follow_request_created && target_user.profile.manually_approves_followers {
         create_follow_request_notification(
             db_client,
             follow_request.source_id,
@@ -97,7 +88,7 @@ pub async fn handle_follow(
         };
         // Send Accept activity even if follow request has already been processed
         prepare_accept_follow(
-            &config.instance(),
+            &ap_client.instance,
             &target_user,
             &source_actor,
             &canonical_activity_id.to_string(),

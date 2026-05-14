@@ -5,11 +5,14 @@ use uuid::Uuid;
 
 use mitra_utils::id::generate_ulid;
 
-use crate::database::{
-    catch_unique_violation,
-    DatabaseClient,
-    DatabaseError,
-    DatabaseTypeError,
+use crate::{
+    database::{
+        catch_unique_violation,
+        DatabaseClient,
+        DatabaseError,
+        DatabaseTypeError,
+    },
+    payment_methods::types::PaymentType,
 };
 
 use super::types::{DbChainId, Invoice, InvoiceStatus};
@@ -19,6 +22,7 @@ pub async fn create_local_invoice(
     db_client: &impl DatabaseClient,
     sender_id: Uuid,
     recipient_id: Uuid,
+    payment_type: PaymentType,
     chain_id: &ChainId,
     payment_address: &str,
     amount: u64,
@@ -33,10 +37,11 @@ pub async fn create_local_invoice(
             sender_id,
             recipient_id,
             chain_id,
+            payment_type,
             payment_address,
             amount
         )
-        SELECT $1, $2, $3, $4, $5, $6
+        SELECT $1, $2, $3, $4, $5, $6, $7
         WHERE EXISTS (
             -- local recipient
             SELECT 1 FROM user_account WHERE id = $3
@@ -48,6 +53,7 @@ pub async fn create_local_invoice(
             &sender_id,
             &recipient_id,
             &DbChainId::new(chain_id),
+            &payment_type,
             &payment_address,
             &db_amount,
         ],
@@ -119,30 +125,42 @@ pub async fn get_invoice_by_id(
 
 pub async fn get_local_invoice_by_address(
     db_client: &impl DatabaseClient,
+    payment_type: PaymentType,
     chain_id: &ChainId,
     payment_address: &str,
 ) -> Result<Invoice, DatabaseError> {
+    // Always return newest invoice
     let maybe_row = db_client.query_opt(
         "
         SELECT invoice
         FROM invoice
         JOIN user_account ON (invoice.recipient_id = user_account.id)
-        WHERE chain_id = $1 AND payment_address = $2
+        WHERE
+            payment_type = $1
+            AND chain_id = $2
+            AND payment_address = $3
+        ORDER BY invoice.created_at DESC
+        LIMIT 1
         ",
-        &[&DbChainId::new(chain_id), &payment_address],
+        &[
+            &payment_type,
+            &DbChainId::new(chain_id),
+            &payment_address,
+        ],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
     let invoice = row.try_get("invoice")?;
     Ok(invoice)
 }
 
-pub async fn get_invoice_by_participants(
+pub async fn get_local_invoice_by_participants(
     db_client: &impl DatabaseClient,
     sender_id: Uuid,
     recipient_id: Uuid,
+    payment_type: PaymentType,
     chain_id: &ChainId,
 ) -> Result<Invoice, DatabaseError> {
-    // Always return oldest invoice
+    // Always return newest invoice
     let maybe_row = db_client.query_opt(
         "
         SELECT invoice
@@ -150,13 +168,16 @@ pub async fn get_invoice_by_participants(
         WHERE
             sender_id = $1
             AND recipient_id = $2
-            AND chain_id = $3
+            AND payment_type = $3
+            AND chain_id = $4
+            AND object_id IS NULL
         ORDER BY created_at DESC
         LIMIT 1
         ",
         &[
             &sender_id,
             &recipient_id,
+            &payment_type,
             &DbChainId::new(chain_id),
         ],
     ).await?;
@@ -182,27 +203,27 @@ pub async fn get_remote_invoice_by_object_id(
     Ok(invoice)
 }
 
-pub async fn get_invoices_by_status(
+pub async fn get_local_invoices_by_status(
     db_client: &impl DatabaseClient,
+    payment_type: PaymentType,
     chain_id: &ChainId,
     status: InvoiceStatus,
-    only_local: bool,
 ) -> Result<Vec<Invoice>, DatabaseError> {
-    let condition = if only_local { "AND object_id IS NULL" } else { "" };
-    let statement = format!(
+    let rows = db_client.query(
         "
         SELECT invoice
         FROM invoice
-        JOIN actor_profile ON (invoice.recipient_id = actor_profile.id)
         WHERE
-            chain_id = $1
-            AND invoice_status = $2
-            {condition}
+            payment_type = $1
+            AND chain_id = $2
+            AND invoice_status = $3
+            AND object_id IS NULL
         ",
-    );
-    let rows = db_client.query(
-        &statement,
-        &[&DbChainId::new(chain_id), &status],
+        &[
+            &payment_type,
+            &DbChainId::new(chain_id),
+            &status,
+        ],
     ).await?;
     let invoices = rows.iter()
         .map(|row| row.try_get("invoice"))
@@ -210,12 +231,22 @@ pub async fn get_invoices_by_status(
     Ok(invoices)
 }
 
-pub async fn get_local_invoices_by_status(
+pub async fn get_remote_invoices_by_status(
     db_client: &impl DatabaseClient,
-    chain_id: &ChainId,
     status: InvoiceStatus,
 ) -> Result<Vec<Invoice>, DatabaseError> {
-    get_invoices_by_status(db_client, chain_id, status, true).await
+    let rows = db_client.query(
+        "
+        SELECT invoice
+        FROM invoice
+        WHERE invoice_status = $1 AND object_id IS NOT NULL
+        ",
+        &[&status],
+    ).await?;
+    let invoices = rows.iter()
+        .map(|row| row.try_get("invoice"))
+        .collect::<Result<_, _>>()?;
+    Ok(invoices)
 }
 
 pub async fn set_invoice_status(
@@ -249,7 +280,8 @@ pub async fn set_invoice_status(
         &[&invoice_id, &new_status],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
-    let invoice = row.try_get("invoice")?;
+    let invoice: Invoice = row.try_get("invoice")?;
+    invoice.check_consistency()?;
     transaction.commit().await?;
     Ok(invoice)
 }
@@ -266,6 +298,24 @@ pub(super) async fn set_invoice_payout_tx_id(
         RETURNING invoice
         ",
         &[&invoice_id, &payout_tx_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
+    let invoice = row.try_get("invoice")?;
+    Ok(invoice)
+}
+
+pub(super) async fn set_invoice_payout_amount(
+    db_client: &impl DatabaseClient,
+    invoice_id: Uuid,
+    payout_amount: Option<i64>,
+) -> Result<Invoice, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        UPDATE invoice SET payout_amount = $2
+        WHERE id = $1
+        RETURNING invoice
+        ",
+        &[&invoice_id, &payout_amount],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
     let invoice = row.try_get("invoice")?;
@@ -345,21 +395,25 @@ mod tests {
         let (recipient_id, sender_id) =
             create_participants(db_client).await;
         let chain_id = ChainId::monero_mainnet();
+        let payment_type = PaymentType::Monero;
         let payment_address = "8MxABajuo71BZya9";
         let amount = 100000000000109212;
         let invoice = create_local_invoice(
             db_client,
             sender_id,
             recipient_id,
+            payment_type,
             &chain_id,
             payment_address,
             amount,
         ).await.unwrap();
+        invoice.check_consistency().unwrap();
         assert_eq!(invoice.sender_id, sender_id);
         assert_eq!(invoice.recipient_id, recipient_id);
         assert_eq!(invoice.chain_id.into_inner(), chain_id);
         assert_eq!(invoice.amount, amount as i64);
         assert_eq!(invoice.invoice_status, InvoiceStatus::Open);
+        assert_eq!(invoice.payment_type.unwrap(), payment_type);
         assert_eq!(invoice.payment_address.unwrap(), payment_address);
         assert_eq!(invoice.payout_tx_id, None);
         assert_eq!(invoice.updated_at, invoice.created_at);
@@ -380,6 +434,7 @@ mod tests {
             &chain_id,
             amount,
         ).await.unwrap();
+        invoice.check_consistency().unwrap();
         assert_eq!(invoice.sender_id, sender_id);
         assert_eq!(invoice.recipient_id, recipient_id);
         assert_eq!(invoice.chain_id.into_inner(), chain_id);
@@ -399,6 +454,7 @@ mod tests {
             db_client,
             sender_id,
             recipient_id,
+            PaymentType::Monero,
             &ChainId::monero_mainnet(),
             "8MxABajuo71BZya9",
             100000000000000_u64,

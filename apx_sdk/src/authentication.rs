@@ -1,4 +1,4 @@
-//! Verifying the authenticity of a portable object.
+//! Verifying the authenticity of objects.
 
 use serde_json::{Value as JsonValue};
 use thiserror::Error;
@@ -16,8 +16,11 @@ use apx_core::{
     url::{
         ap_uri::ApUri,
         canonical::CanonicalUri,
+        http_uri::is_same_http_origin,
     },
 };
+
+use crate::fetch::{FetchError, FetchedObject};
 
 #[derive(Debug, Error)]
 pub enum AuthenticationError {
@@ -43,6 +46,7 @@ pub enum AuthenticationError {
     JsonSignatureError(#[from] JsonSignatureError),
 }
 
+/// Verifies the authenticity of a portable object.
 pub fn verify_portable_object(
     object: &JsonValue,
 ) -> Result<ApUri, AuthenticationError> {
@@ -90,6 +94,36 @@ pub fn verify_portable_object(
         },
     };
     Ok(canonical_object_id)
+}
+
+/// Verifies the authenticity of a fetched object.
+pub fn verify_fetched_object(
+    object: &FetchedObject,
+    fep_ef61_trusted_origins: Vec<String>,
+) -> Result<(), FetchError> {
+    match verify_portable_object(&object.value) {
+        Ok(_) => (),
+        Err(AuthenticationError::InvalidObjectID(_)) => {
+            return Err(FetchError::UrlError);
+        },
+        Err(AuthenticationError::NotPortable) => {
+            // Verify origin if object is not portable
+            object.verify_origin()?;
+        },
+        Err(AuthenticationError::NoProof) => {
+            let is_trusted = fep_ef61_trusted_origins
+                .iter()
+                .any(|origin| {
+                    is_same_http_origin(object.location.as_str(), origin)
+                        .unwrap_or(false)
+                });
+            if !is_trusted {
+                return Err(FetchError::UnexpectedObjectId(object.location.to_string()));
+            };
+        },
+        Err(other_error) => return Err(FetchError::InvalidProof(other_error)),
+    };
+    Ok(())
 }
 
 #[cfg(test)]

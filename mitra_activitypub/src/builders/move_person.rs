@@ -23,7 +23,7 @@ use crate::{
 #[derive(Serialize)]
 struct MovePerson {
     #[serde(rename = "@context")]
-    context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
     activity_type: String,
@@ -54,7 +54,7 @@ fn build_move_person(
         (actor_id.clone(), linked_actor_id.to_string())
     };
     MovePerson {
-        context: build_default_context(),
+        _context: build_default_context(),
         activity_type: MOVE.to_string(),
         id: activity_id,
         actor: actor_id.clone(),

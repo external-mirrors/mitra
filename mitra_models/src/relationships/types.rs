@@ -181,3 +181,8 @@ pub struct FollowRequest {
     #[allow(dead_code)]
     created_at: DateTime<Utc>,
 }
+
+pub enum FollowRequestDirection {
+    Incoming,
+    Outgoing,
+}

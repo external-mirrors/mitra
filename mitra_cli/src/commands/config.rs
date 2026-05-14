@@ -11,9 +11,11 @@ use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
     properties::{
         constants::{
+            FAVORITE_EMOJIS,
             FEDERATED_TIMELINE_RESTRICTED,
             FILTER_BLOCKLIST_PUBLIC,
             FILTER_KEYWORDS,
+            LIKE_EMOJI,
         },
         queries::{
             set_internal_property,
@@ -23,6 +25,9 @@ use mitra_models::{
 
 #[derive(Clone, ValueEnum)]
 enum ParameterName {
+    /// Which emojis to show by default in the emoji picker (an array of strings)
+    #[clap(name = FAVORITE_EMOJIS)]
+    FavoriteEmojis,
     /// Make federated timeline visible only to moderators (true or false, default: false)
     #[clap(name = FEDERATED_TIMELINE_RESTRICTED)]
     FederatedTimelineRestricted,
@@ -32,14 +37,19 @@ enum ParameterName {
     /// Keywords for reject-keywords filter action (an array of strings, example: ["foo", "bar"])
     #[clap(name = FILTER_KEYWORDS)]
     FilterKeywords,
+    /// Emoji that is used to represent the "like" reaction ("thumbs_up" or "heart", default: "thumbs_up")
+    #[clap(name = LIKE_EMOJI)]
+    LikeEmoji,
 }
 
 impl ParameterName {
     fn as_str(&self) -> &'static str {
         let name_str = match self {
+            Self::FavoriteEmojis => FAVORITE_EMOJIS,
             Self::FederatedTimelineRestricted => FEDERATED_TIMELINE_RESTRICTED,
             Self::FilterBlocklistPublic => FILTER_BLOCKLIST_PUBLIC,
             Self::FilterKeywords => FILTER_KEYWORDS,
+            Self::LikeEmoji => LIKE_EMOJI,
         };
         assert!(EDITABLE_PROPERTIES.contains(&name_str));
         name_str
@@ -82,7 +92,11 @@ impl UpdateConfig {
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &**get_database_client(db_pool).await?;
-        let value: JsonValue = serde_json::from_str(&self.value)?;
+        let value = match serde_json::from_str(&self.value) {
+            Ok(value) => value,
+            // `from_str` can't parse strings because they are not quoted
+            Err(_) => JsonValue::String(self.value),
+        };
         validate_editable_parameter(self.name.as_str(), &value)?;
         set_internal_property(db_client, self.name.as_str(), &value).await?;
         println!("configuration updated");

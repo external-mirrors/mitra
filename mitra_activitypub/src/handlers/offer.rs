@@ -1,6 +1,10 @@
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
+use mitra_adapters::payments::monero::{
+    create_payment_address,
+    PaymentError,
+};
 use mitra_config::Config;
 use mitra_models::{
     database::{
@@ -8,16 +12,17 @@ use mitra_models::{
         DatabaseConnectionPool,
     },
     invoices::queries::create_local_invoice,
+    payment_methods::queries::get_payment_method_by_chain_id,
     profiles::queries::get_remote_profile_by_actor_id,
     profiles::types::MoneroSubscription,
     users::queries::get_user_by_name,
 };
-use mitra_services::monero::wallet::create_monero_address;
 use mitra_validators::errors::ValidationError;
 
 use crate::{
     builders::accept_offer::prepare_accept_offer,
     identifiers::parse_local_primary_intent_id,
+    importers::ApClient,
     vocabulary::AGREEMENT,
 };
 
@@ -38,6 +43,7 @@ struct Offer {
 
 pub async fn handle_offer(
     config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
@@ -50,15 +56,17 @@ pub async fn handle_offer(
     let primary_commitment = offer.object.primary_commitment();
     let reciprocal_commitment = offer.object.reciprocal_commitment();
     let (username, chain_id) = parse_local_primary_intent_id(
-        config.instance().uri_str(),
+        ap_client.instance.uri_str(),
         &primary_commitment.satisfies,
     )?;
     let proposer = get_user_by_name(db_client, &username).await?;
-    let monero_config = config.monero_config()
+    let payment_method = get_payment_method_by_chain_id(
+        db_client,
+        proposer.id,
+        &chain_id,
+    )
+        .await?
         .ok_or(ValidationError("recipient can't accept payment"))?;
-    if chain_id != monero_config.chain_id {
-        return Err(ValidationError("recipient can't accept payment").into());
-    };
     let subscription_option: MoneroSubscription = proposer.profile
         .payment_options
         .find_subscription_option(&chain_id)
@@ -71,14 +79,19 @@ pub async fn handle_offer(
     if duration != expected_duration {
         return Err(ValidationError("invalid duration").into());
     };
-    let payment_address = create_monero_address(monero_config).await
-        .map_err(|_| HandlerError::ServiceError("failed to create monero address"))?
-        .to_string();
+    let payment_address = create_payment_address(
+        config,
+        &payment_method,
+    ).await.map_err(|error| match error {
+        PaymentError::DatabaseError(db_error) => db_error.into(),
+        _ => HandlerError::ServiceError("failed to create monero address"),
+    })?;
     let db_invoice = create_local_invoice(
         db_client,
         actor_profile.id,
         proposer.id,
-        &subscription_option.chain_id,
+        payment_method.payment_type,
+        payment_method.chain_id.inner(),
         &payment_address,
         amount,
     ).await?;

@@ -1,10 +1,8 @@
 use uuid::Uuid;
 
 use mitra_config::PostLimits;
-use mitra_validators::{
-    common::Origin,
-    errors::ValidationError,
-};
+use mitra_models::profiles::types::Origin;
+use mitra_validators::errors::ValidationError;
 
 pub fn check_post_limits(
     limits: &PostLimits,

@@ -3,15 +3,13 @@ use postgres_types::FromSql;
 use tokio_postgres::Row;
 use uuid::Uuid;
 
-use crate::attachments::types::MediaAttachment;
-use crate::conversations::types::Conversation;
 use crate::database::{
     int_enum::{int_enum_from_sql, int_enum_to_sql},
     DatabaseError,
     DatabaseTypeError,
 };
 use crate::emojis::types::CustomEmoji;
-use crate::posts::types::{Post, PostDetailed, PostReaction};
+use crate::posts::types::{Post, PostDetailed};
 use crate::profiles::types::DbActorProfile;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -84,6 +82,7 @@ struct Notification {
     recipient_id: Uuid,
     post_id: Option<Uuid>,
     reaction_id: Option<Uuid>,
+    invoice_id: Option<Uuid>,
     event_type: EventType,
     created_at: DateTime<Utc>,
 }
@@ -94,6 +93,7 @@ pub struct NotificationDetailed {
     pub post: Option<PostDetailed>,
     pub reaction_content: Option<String>,
     pub reaction_emoji: Option<CustomEmoji>,
+    pub payment_amount: Option<i64>,
     pub event_type: EventType,
     pub created_at: DateTime<Utc>,
 }
@@ -107,40 +107,22 @@ impl TryFrom<&Row> for NotificationDetailed {
         let db_sender: DbActorProfile = row.try_get("sender")?;
         let maybe_db_post: Option<Post> = row.try_get("post")?;
         let maybe_post = match maybe_db_post {
-            Some(db_post) => {
-                let db_post_author: DbActorProfile = row.try_get("post_author")?;
-                let db_conversation: Option<Conversation> = row.try_get("conversation")?;
-                let maybe_poll = row.try_get("poll")?;
-                let db_attachments: Vec<MediaAttachment> = row.try_get("attachments")?;
-                let db_mentions: Vec<DbActorProfile> = row.try_get("mentions")?;
-                let db_tags: Vec<String> = row.try_get("tags")?;
-                let db_links: Vec<Uuid> = row.try_get("links")?;
-                let db_emojis: Vec<CustomEmoji> = row.try_get("emojis")?;
-                let db_reactions: Vec<PostReaction> = row.try_get("reactions")?;
-                let post = PostDetailed::new(
-                    db_post,
-                    db_post_author,
-                    db_conversation,
-                    maybe_poll,
-                    db_attachments,
-                    db_mentions,
-                    db_tags,
-                    db_links,
-                    db_emojis,
-                    db_reactions,
-                )?;
+            Some(_) => {
+                let post = PostDetailed::try_from(row)?;
                 Some(post)
             },
             None => None,
         };
         let maybe_reaction_content = row.try_get("reaction_content")?;
         let maybe_reaction_emoji = row.try_get("reaction_emoji")?;
+        let maybe_payment_amount = row.try_get("payment_amount")?;
         let notification = Self {
             id: db_notification.id,
             sender: db_sender,
             post: maybe_post,
             reaction_content: maybe_reaction_content,
             reaction_emoji: maybe_reaction_emoji,
+            payment_amount: maybe_payment_amount,
             event_type: db_notification.event_type,
             created_at: db_notification.created_at,
         };

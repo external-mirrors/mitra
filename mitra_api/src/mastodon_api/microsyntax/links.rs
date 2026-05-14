@@ -2,6 +2,7 @@ use indexmap::IndexMap;
 use regex::{Captures, Regex};
 
 use mitra_activitypub::{
+    authority::Authority,
     identifiers::{canonicalize_id, compatible_post_object_id},
     importers::get_post_by_object_id,
 };
@@ -40,7 +41,7 @@ fn find_object_links(text: &str) -> Vec<String> {
 
 pub async fn find_linked_posts(
     db_client: &impl DatabaseClient,
-    instance_uri: &str,
+    authority: &Authority,
     text: &str,
 ) -> Result<IndexMap<String, PostDetailed>, DatabaseError> {
     let links = find_object_links(text);
@@ -58,7 +59,7 @@ pub async fn find_linked_posts(
         };
         match get_post_by_object_id(
             db_client,
-            instance_uri,
+            authority,
             &canonical_id,
         ).await {
             Ok(post) => {
@@ -103,13 +104,15 @@ pub fn replace_object_links(
 }
 
 pub fn insert_quote(
-    instance_uri: &str,
+    authority: &Authority,
     content: &str,
     quote_of: &PostDetailed,
 ) -> String {
+    // Not adding `quote-inline` class because FEP-044f implementations
+    // may hide the link without actually displaying the quote
     format!(
         r#"{content}<p>RE: <a href="{0}">{0}</a></p>"#,
-        compatible_post_object_id(instance_uri, quote_of),
+        compatible_post_object_id(authority, quote_of),
     )
 }
 

@@ -34,6 +34,17 @@ pub fn parse_id_from_db(
     Ok(canonical_uri)
 }
 
+// Accepts 'ap' URIs with query parameters.
+// Accepts compatible IDs.
+// Doesn't accept IRIs.
+pub fn parse_id_from_db_lenient(
+    url: &str,
+) -> Result<CanonicalUri, DatabaseTypeError> {
+    let canonical_uri = CanonicalUri::parse(url)
+        .map_err(|_| DatabaseTypeError)?;
+    Ok(canonical_uri)
+}
+
 // URLs associated with portable actors in database
 // are not guaranteed to be 'ap' URIs. They could be HTTP URLs.
 pub fn db_url_to_http_url(
@@ -52,6 +63,27 @@ pub fn db_url_to_http_url(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_parse_id_from_db_lenient() {
+        let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/posts/1";
+        let result = parse_id_from_db_lenient(url);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parse_id_from_db_lenient_compatible_id() {
+        let url = "https://gateway.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/posts/1";
+        let result = parse_id_from_db_lenient(url);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parse_id_from_db_lenient_iri() {
+        let url = "https://zh.wikipedia.org/wiki/百分号编码";
+        let result = parse_id_from_db_lenient(url);
+        assert!(result.is_err());
+    }
 
     #[test]
     fn test_parse_http_url_from_db_uppercase_host() {

@@ -1,7 +1,8 @@
 use apx_core::{
     url::{
         canonical::CanonicalUri,
-        http_uri::Hostname,
+        common::Origin,
+        http_uri::{Hostname, HttpUri},
         http_url_whatwg::get_hostname,
     },
 };
@@ -71,7 +72,7 @@ use crate::{
         proposal::{parse_proposal, Proposal},
     },
     identifiers::canonicalize_id,
-    importers::{perform_webfinger_query, ApClient},
+    importers::ApClient,
     keys::{Multikey, PublicKeyPem},
     ownership::is_same_origin,
     vocabulary::{
@@ -83,6 +84,10 @@ use crate::{
         PROPERTY_VALUE,
         SERVICE,
         VERIFIABLE_IDENTITY_STATEMENT,
+    },
+    webfinger::{
+        perform_webfinger_query,
+        peform_reverse_webfinger_query,
     },
 };
 
@@ -121,14 +126,10 @@ impl Actor {
         &self.inner.id
     }
 
-    pub fn preferred_username(&self) -> &str {
-        &self.inner.preferred_username
-    }
-
-    pub fn is_local(&self, local_hostname: &str) -> Result<bool, ValidationError> {
+    pub fn is_local(&self, local_origin: Origin) -> Result<bool, ValidationError> {
         let canonical_actor_id = CanonicalUri::parse(self.id())
             .map_err(|_| ValidationError("invalid actor ID"))?;
-        Ok(canonical_actor_id.authority() == local_hostname)
+        Ok(canonical_actor_id.origin() == local_origin)
     }
 }
 
@@ -271,43 +272,59 @@ impl ValidatedActor {
 // Determine hostname part of 'acct' URI
 async fn get_webfinger_hostname(
     agent: &FederationAgent,
-    instance_hostname: &str,
+    instance_uri: &HttpUri,
     actor: &ValidatedActor,
-    has_account: bool,
-) -> Result<WebfingerHostname, HandlerError> {
+    has_portable_account: bool,
+) -> Result<(Option<String>, WebfingerHostname), HandlerError> {
     let canonical_actor_id = CanonicalUri::parse(&actor.id)
         .map_err(|_| ValidationError("invalid actor ID"))?;
-    let webfinger_hostname = match canonical_actor_id {
+    let (server_hostname, webfinger_hostname) = match canonical_actor_id {
         CanonicalUri::Http(http_uri) => {
-            // TODO: implement reverse webfinger lookup
-            // https://swicg.github.io/activitypub-webfinger/#reverse-discovery
-            let hostname = http_uri.hostname().to_string();
-            WebfingerHostname::Remote(hostname)
+            let server_hostname = http_uri.hostname().to_string();
+            let webfinger_hostname = match peform_reverse_webfinger_query(
+                agent,
+                &actor.preferred_username,
+                &http_uri,
+            ).await {
+                Ok(webfinger_hostname) => webfinger_hostname,
+                Err(error) => {
+                    log::warn!(
+                        "reverse webfinger query failed for {}: {}",
+                        http_uri,
+                        error,
+                    );
+                    server_hostname.clone()
+                },
+            };
+            (Some(server_hostname), WebfingerHostname::Remote(webfinger_hostname))
         },
         CanonicalUri::Ap(_) => {
             if let Some(gateway) = actor.gateways.first() {
                 // Primary gateway
-                let hostname = get_hostname(gateway)
+                let gateway_hostname = get_hostname(gateway)
                     .map_err(|_| ValidationError("invalid gateway URL"))?;
-                if hostname == instance_hostname {
+                if gateway_hostname == instance_uri.hostname().as_str() {
                     // Portable actor with local account (unmanaged)
-                    if has_account {
-                        return Ok(WebfingerHostname::Local);
+                    if has_portable_account {
+                        return Ok((None, WebfingerHostname::Local));
                     } else {
                         // WARNING: only allowed when profile is being created
-                        return Ok(WebfingerHostname::Unknown);
+                        return Ok((None, WebfingerHostname::Unknown));
                     };
                 };
                 let webfinger_address = WebfingerAddress::new_unchecked(
                     &actor.preferred_username,
-                    &hostname,
+                    &gateway_hostname,
                 );
-                let actor_id = perform_webfinger_query(
+                let webfinger_actor_id = perform_webfinger_query(
                     agent,
                     &webfinger_address,
                 ).await?;
-                if actor_id == actor.id {
-                    WebfingerHostname::Remote(hostname)
+                let canonical_webfinger_actor_id = CanonicalUri::parse(&webfinger_actor_id)
+                    .map_err(|_| ValidationError("invalid actor ID in JRD"))?;
+                if canonical_webfinger_actor_id == canonical_actor_id {
+                    // Actor is hosted by this gateway
+                    (Some(gateway_hostname.clone()), WebfingerHostname::Remote(gateway_hostname))
                 } else {
                     return Err(ValidationError("unexpected actor ID in JRD").into());
                 }
@@ -316,7 +333,7 @@ async fn get_webfinger_hostname(
             }
         },
     };
-    Ok(webfinger_hostname)
+    Ok((server_hostname, webfinger_hostname))
 }
 
 enum ActorImageResult {
@@ -422,8 +439,9 @@ fn parse_public_keys(
         } else if !is_same_origin(&public_key.id, &public_key.owner)? {
             // Not supported (the key must be fetched from its origin)
             log::warn!("key and key owner have different origins");
-        } else {
-            let db_key = public_key.to_db_key()?;
+        } else if let Ok(db_key) = public_key.to_db_key()
+            .inspect_err(|error| log::warn!("{error}"))
+        {
             keys.push(db_key);
         };
     };
@@ -437,19 +455,16 @@ fn parse_public_keys(
             log::warn!("key and key owner have different origins");
             continue;
         };
-        let db_key = multikey.to_db_key()?;
-        keys.push(db_key);
+        if let Ok(db_key) = multikey.to_db_key()
+            .inspect_err(|error| log::warn!("{error}"))
+        {
+            keys.push(db_key);
+        };
     };
     keys.sort_by_key(|item| item.id.clone());
     keys.dedup_by_key(|item| item.id.clone());
     if keys.is_empty() {
-        let canonical_actor_id = CanonicalUri::parse(&actor.id)
-            .map_err(|_| ValidationError("invalid actor ID"))?;
-        if matches!(canonical_actor_id, CanonicalUri::Ap(_)) {
-            log::warn!("public keys are not found in portable actor object");
-        } else {
-            return Err(ValidationError("public keys not found"));
-        };
+        log::warn!("public keys are not found in the actor document");
     };
     Ok(keys)
 }
@@ -640,9 +655,9 @@ pub async fn create_remote_profile(
     actor: Actor,
 ) -> Result<DbActorProfile, HandlerError> {
     let Actor { inner: actor, value: actor_json } = actor;
-    let webfinger_hostname = get_webfinger_hostname(
+    let (server_hostname, webfinger_hostname) = get_webfinger_hostname(
         &ap_client.agent(),
-        &ap_client.instance.hostname(),
+        ap_client.instance.uri(),
         &actor,
         false,
     ).await?;
@@ -679,7 +694,8 @@ pub async fn create_remote_profile(
     ).await?;
     let mut profile_data = ProfileCreateData {
         username: actor.preferred_username.clone(),
-        hostname: webfinger_hostname,
+        hostname: server_hostname,
+        webfinger_hostname: webfinger_hostname,
         display_name: actor.name.clone(),
         bio: actor.summary.clone(),
         avatar: maybe_avatar.ok(),
@@ -722,11 +738,11 @@ pub async fn update_remote_profile(
     let actor_data_old = profile.expect_actor_data();
     let actor_data = actor.to_db_actor()?;
     assert_eq!(actor_data_old.id, actor_data.id, "actor ID shouldn't change");
-    let webfinger_hostname = get_webfinger_hostname(
+    let (server_hostname, webfinger_hostname) = get_webfinger_hostname(
         &ap_client.agent(),
-        &ap_client.instance.hostname(),
+        ap_client.instance.uri(),
         &actor,
-        profile.has_account(),
+        profile.has_portable_account(),
     ).await?;
     validate_actor_data(&actor_data)?;
     let moderation_domain = get_moderation_domain(&actor_data)
@@ -753,7 +769,8 @@ pub async fn update_remote_profile(
     ).await?;
     let mut profile_data = ProfileUpdateData {
         username: actor.preferred_username.clone(),
-        hostname: webfinger_hostname,
+        hostname: server_hostname,
+        webfinger_hostname: webfinger_hostname,
         display_name: actor.name.clone(),
         bio: actor.summary.clone(),
         bio_source: actor.summary.clone(),
@@ -806,6 +823,7 @@ mod tests {
 
     #[test]
     fn test_actor_is_local() {
+        let local_origin = Origin::new_tuple("https", "social.example", 443);
         let actor = Actor {
             inner: ValidatedActor {
                 id: "https://social.example/users/1".to_string(),
@@ -813,12 +831,13 @@ mod tests {
             },
             value: Default::default()
         };
-        let is_local = actor.is_local("social.example").unwrap();
+        let is_local = actor.is_local(local_origin).unwrap();
         assert!(is_local);
     }
 
     #[test]
     fn test_actor_is_local_compatible_id() {
+        let local_origin = Origin::new_tuple("https", "gateway.example", 443);
         let actor = Actor {
             inner: ValidatedActor {
                 id: "https://gateway.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor".to_string(),
@@ -826,7 +845,7 @@ mod tests {
             },
             value: Default::default()
         };
-        let is_local = actor.is_local("gateway.example").unwrap();
+        let is_local = actor.is_local(local_origin).unwrap();
         assert!(!is_local);
     }
 
@@ -858,14 +877,22 @@ mod tests {
         let ed25519_secret_key = generate_ed25519_key();
         let actor_public_key =
             PublicKeyPem::build(actor_id, &rsa_secret_key).unwrap();
-        let actor_auth_key_1 =
+        let actor_multikey_1 =
             Multikey::build_rsa(actor_id, &rsa_secret_key).unwrap();
-        let actor_auth_key_2 =
+        let actor_multikey_2 =
             Multikey::build_ed25519(actor_id, &ed25519_secret_key);
+        let actor_multikey_3 = Multikey::build_ed25519(
+            "https://test.example/users/2",
+            &ed25519_secret_key,
+        );
         let actor = ValidatedActor {
             id: actor_id.to_string(),
             public_key: Some(actor_public_key),
-            assertion_method: vec![actor_auth_key_1, actor_auth_key_2],
+            assertion_method: vec![
+                actor_multikey_1,
+                actor_multikey_2,
+                actor_multikey_3,
+            ],
             ..Default::default()
         };
         let public_keys = parse_public_keys(&actor).unwrap();

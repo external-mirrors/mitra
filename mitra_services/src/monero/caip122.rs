@@ -2,18 +2,18 @@
 use std::str::FromStr;
 
 use apx_core::{
-    caip2::{ChainId, MoneroNetwork},
+    caip2::ChainId,
     caip10::AccountId,
+    url::http_uri::HttpUri,
 };
 use chrono::{DateTime, Utc};
-use monero_rpc::monero::{
-    network::Network,
+use monero::{
     util::address::Error as AddressError,
 };
 
 use mitra_config::MoneroConfig;
 
-use super::utils::parse_monero_address;
+use super::utils::{address_network, parse_monero_address};
 use super::wallet::{verify_monero_signature, MoneroError};
 
 const PREAMBLE: &str = " wants you to sign in with your Monero account:";
@@ -163,19 +163,19 @@ pub struct Caip122SessionData {
 
 pub async fn verify_monero_caip122_signature(
     config: &MoneroConfig,
-    instance_hostname: &str,
-    login_message: &str,
+    instance_uri: &HttpUri,
+    expected_statement: &str,
     message_str: &str,
     signature: &str,
 ) -> Result<Caip122SessionData, Caip122Error> {
     let message: Caip122Message = message_str.parse()?;
-    if message.domain != instance_hostname {
+    if message.domain != instance_uri.hostname().as_str() {
         return Err(Caip122Error::InvalidMessage("domain doesn't match instance hostname"));
     };
     let statement = message.statement.as_ref()
         .ok_or(Caip122Error::InvalidMessage("statement is missing"))?;
-    if statement != login_message {
-        return Err(Caip122Error::InvalidMessage("statement doesn't match login message"));
+    if statement != expected_statement {
+        return Err(Caip122Error::InvalidMessage("unexpected statement"));
     };
     if !message.valid_now() {
         return Err(Caip122Error::InvalidMessage("message is not currently valid"));
@@ -187,11 +187,7 @@ pub async fn verify_monero_caip122_signature(
         signature,
     ).await?;
     let address = parse_monero_address(&message.address)?;
-    let network = match address.network {
-        Network::Mainnet => MoneroNetwork::Mainnet,
-        Network::Stagenet => MoneroNetwork::Stagenet,
-        Network::Testnet => MoneroNetwork::Testnet,
-    };
+    let network = address_network(address);
     let chain_id = ChainId::from_monero_network(network);
     let session_data = Caip122SessionData {
         account_id: AccountId {

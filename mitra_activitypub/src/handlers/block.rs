@@ -1,7 +1,6 @@
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         get_database_client,
@@ -9,12 +8,16 @@ use mitra_models::{
         DatabaseError,
     },
     relationships::queries::unfollow,
-    users::queries::get_user_by_name,
 };
 
 use crate::{
-    identifiers::parse_local_actor_id,
-    importers::{ActorIdResolver, ApClient},
+    authority::Authority,
+    identifiers::canonicalize_id,
+    importers::{
+        get_user_by_actor_id,
+        ActorIdResolver,
+        ApClient,
+    },
 };
 
 use super::{Descriptor, HandlerResult};
@@ -26,23 +29,24 @@ struct Block {
 }
 
 pub async fn handle_block(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     let block: Block = serde_json::from_value(activity)?;
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let source_profile = ActorIdResolver::default().only_remote().resolve(
-        &ap_client,
+        ap_client,
         db_pool,
         &block.actor,
     ).await?;
-    let target_username = parse_local_actor_id(
-        config.instance().uri_str(),
-        &block.object,
-    )?;
+    let canonical_object_id = canonicalize_id(&block.object)?;
     let db_client = &mut **get_database_client(db_pool).await?;
-    let target_user = get_user_by_name(db_client, &target_username).await?;
+    let authority = Authority::from(&ap_client.instance);
+    let target_user = get_user_by_actor_id(
+        db_client,
+        &authority,
+        &canonical_object_id,
+    ).await?;
     // Similar to Undo(Follow)
     match unfollow(db_client, source_profile.id, target_user.id).await {
         Ok(_) | Err(DatabaseError::NotFound(_)) => (),

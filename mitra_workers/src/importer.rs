@@ -12,7 +12,7 @@ use mitra_activitypub::{
     errors::HandlerError,
     importers::{
         is_actor_importer_error,
-        get_or_import_profile_by_webfinger_address,
+        get_or_import_actor_by_webfinger_address,
         ApClient,
     },
 };
@@ -66,7 +66,8 @@ impl ImporterJobData {
             JobType::DataImport,
             &job_data,
             scheduled_for,
-        ).await
+        ).await?;
+        Ok(())
     }
 }
 
@@ -83,7 +84,7 @@ pub async fn import_follows_task(
     let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     for webfinger_address in address_list {
         let webfinger_address: WebfingerAddress = webfinger_address.parse()?;
-        let profile = match get_or_import_profile_by_webfinger_address(
+        let profile = match get_or_import_actor_by_webfinger_address(
             &ap_client,
             db_pool,
             &webfinger_address,
@@ -137,7 +138,7 @@ pub async fn import_followers_task(
     let mut remote_followers = vec![];
     for follower_address in address_list {
         let follower_address: WebfingerAddress = follower_address.parse()?;
-        let follower = match get_or_import_profile_by_webfinger_address(
+        let follower = match get_or_import_actor_by_webfinger_address(
             &ap_client,
             db_pool,
             &follower_address,

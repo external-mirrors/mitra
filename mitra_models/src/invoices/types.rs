@@ -1,5 +1,5 @@
 use apx_core::caip2::ChainId;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeDelta, Utc};
 use postgres_protocol::types::{text_from_sql, text_to_sql};
 use postgres_types::{
     accepts,
@@ -12,9 +12,13 @@ use postgres_types::{
 };
 use uuid::Uuid;
 
-use crate::database::{
-    int_enum::{int_enum_from_sql, int_enum_to_sql},
-    DatabaseTypeError,
+use crate::{
+    database::{
+        int_enum::{int_enum_from_sql, int_enum_to_sql},
+        DatabaseError,
+        DatabaseTypeError,
+    },
+    payment_methods::types::PaymentType,
 };
 
 #[derive(Debug)]
@@ -143,60 +147,135 @@ pub struct Invoice {
     pub chain_id: DbChainId,
     pub amount: i64, // requested payment amount
     pub invoice_status: InvoiceStatus,
+    pub payment_type: Option<PaymentType>, // only for local
     pub payment_address: Option<String>,
-    pub payout_tx_id: Option<String>,
+    pub payout_tx_id: Option<String>, // could be empty in old invoices
+    pub payout_amount: Option<i64>, // could be empty in old invoices
     pub object_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
 impl Invoice {
+    fn is_local(&self) -> bool {
+        self.object_id.is_none() && self.invoice_status != InvoiceStatus::Requested
+    }
+
+    pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
+        if self.is_local() {
+            // Local invoice
+            match self.payment_type {
+                Some(PaymentType::Monero | PaymentType::MoneroLight) => {
+                    if !self.chain_id.inner().is_monero() {
+                        return Err(DatabaseTypeError);
+                    };
+                },
+                None => return Err(DatabaseTypeError),
+            };
+            if self.payment_address.is_none() {
+                return Err(DatabaseTypeError);
+            };
+        } else {
+            // Remote invoice
+            if self.payment_type.is_some() {
+                return Err(DatabaseTypeError);
+            };
+            if self.payout_tx_id.is_some() || self.payout_amount.is_some() {
+                return Err(DatabaseTypeError);
+            };
+            if self.payment_address.is_none()
+                && self.invoice_status != InvoiceStatus::Requested
+            {
+                return Err(DatabaseTypeError);
+            };
+        };
+        Ok(())
+    }
+
     pub fn amount_u64(&self) -> Result<u64, DatabaseTypeError> {
         u64::try_from(self.amount).map_err(|_| DatabaseTypeError)
     }
 
     pub fn can_change_status(&self, to: InvoiceStatus) -> bool {
         use InvoiceStatus::*;
-        let allowed = match self.invoice_status {
-            Open => {
-                if self.object_id.is_some() {
-                    vec![Paid, Completed, Timeout, Cancelled]
-                } else {
-                    vec![Paid, Timeout, Cancelled]
-                }
-            },
-            Paid => {
-                if self.object_id.is_some() {
-                    vec![Completed]
-                } else if self.payout_tx_id.is_some() {
-                    vec![Forwarded, Underpaid]
-                } else {
-                    vec![Underpaid]
-                }
-            },
-            Forwarded => vec![Completed, Failed],
-            Timeout => {
-                if self.object_id.is_some() {
-                    vec![Completed]
-                } else {
-                    vec![Paid]
-                }
-            },
-            Cancelled => vec![Paid],
-            Underpaid => vec![Paid],
-            Completed => {
-                if self.object_id.is_some() {
-                    vec![]
-                } else {
-                    vec![Paid]
-                }
-            },
-            Failed => vec![Paid],
-            Requested => {
-                if self.payment_address.is_some() && self.object_id.is_some() {
-                    vec![Open, Cancelled]
-                } else {
-                    vec![Cancelled]
+        let allowed = if self.is_local() {
+            match self.payment_type.expect("payment type should be specified") {
+                PaymentType::Monero => {
+                    match self.invoice_status {
+                        Open => vec![Paid, Timeout, Cancelled],
+                        Paid => {
+                            if self.payout_tx_id.is_some() {
+                                vec![Forwarded]
+                            } else {
+                                vec![Underpaid]
+                            }
+                        },
+                        Forwarded => {
+                            if self.payout_amount.is_some() {
+                                vec![Completed]
+                            } else {
+                                vec![Failed]
+                            }
+                        },
+                        Timeout => vec![Paid],
+                        Cancelled => vec![Paid],
+                        Underpaid => vec![Paid],
+                        Completed => {
+                            if self.payout_tx_id.is_none() && self.payout_amount.is_none() {
+                                // Re-opening
+                                vec![Paid]
+                            } else {
+                                vec![]
+                            }
+                        },
+                        Failed => {
+                            if self.payout_tx_id.is_none() {
+                                // Re-opening
+                                vec![Paid]
+                            } else {
+                                vec![]
+                            }
+                        },
+                        Requested => vec![], // unreachable
+                    }
+                },
+                PaymentType::MoneroLight => {
+                    match self.invoice_status {
+                        Open => {
+                            if self.payout_tx_id.is_some() {
+                                vec![Paid]
+                            } else {
+                                vec![Timeout, Cancelled]
+                            }
+                        },
+                        Paid => {
+                            if self.payout_amount.is_some() {
+                                vec![Completed]
+                            } else {
+                                vec![]
+                            }
+                        },
+                        Completed => vec![],
+                        _ => vec![],
+                    }
+                },
+            }
+        } else {
+            match self.invoice_status {
+                Open => vec![Paid, Completed, Timeout, Cancelled],
+                Paid => vec![Completed],
+                Forwarded => vec![], // unreachable
+                Timeout => vec![Completed],
+                Cancelled => vec![Paid],
+                Underpaid => vec![], // unreachable
+                Completed => vec![],
+                Failed => vec![], // unreachable
+                Requested => {
+                    if self.payment_address.is_some() {
+                        vec![Open, Cancelled]
+                    } else {
+                        vec![Cancelled]
+                    }
                 }
             }
         };
@@ -209,23 +288,117 @@ impl Invoice {
             _ => self.payment_address.clone().ok_or(DatabaseTypeError),
         }
     }
+
+    pub fn try_payout_amount_u64(&self) -> Result<u64, DatabaseError> {
+        let amount_i64 = self.payout_amount
+            .ok_or(DatabaseTypeError)?;
+        let amount_u64 = u64::try_from(amount_i64)
+            .map_err(|_| DatabaseTypeError)?;
+        Ok(amount_u64)
+    }
+
+    pub fn expires_at(&self, timeout: u32) -> DateTime<Utc> {
+        self.created_at + TimeDelta::seconds(timeout.into())
+    }
 }
 
-#[cfg(feature = "test-utils")]
-impl Default for Invoice {
-    fn default() -> Self {
-        Self {
-            id: Default::default(),
-            sender_id: Default::default(),
-            recipient_id: Default::default(),
-            chain_id: DbChainId(ChainId::monero_mainnet()),
-            amount: 1,
-            invoice_status: InvoiceStatus::Open,
-            payment_address: Some("".to_string()),
-            payout_tx_id: None,
-            object_id: None,
-            created_at: Default::default(),
-            updated_at: Default::default(),
-        }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_change_status_local_monero() {
+        let mut invoice = Invoice::default();
+        invoice.check_consistency().unwrap();
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Forwarded), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Completed), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), true);
+        invoice.invoice_status = InvoiceStatus::Paid;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Forwarded), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Underpaid), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+        invoice.payout_tx_id = Some("abcd".to_owned());
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Forwarded), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Underpaid), false);
+        invoice.invoice_status = InvoiceStatus::Forwarded;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Completed), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Failed), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+        invoice.payout_amount = Some(1);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Completed), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Failed), false);
+        invoice.invoice_status = InvoiceStatus::Completed;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+        invoice.payout_tx_id = None;
+        invoice.payout_amount = None;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), true);
+    }
+
+    #[test]
+    fn test_change_status_local_monero_light() {
+        let mut invoice = Invoice {
+            payment_type: Some(PaymentType::MoneroLight),
+            ..Invoice::default()
+        };
+        invoice.check_consistency().unwrap();
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), true);
+        invoice.payout_tx_id = Some("abcd".to_owned());
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+        invoice.invoice_status = InvoiceStatus::Paid;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Forwarded), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Completed), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+        invoice.payout_amount = Some(1);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Completed), true);
+        invoice.invoice_status = InvoiceStatus::Completed;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+        invoice.payout_tx_id = None;
+        invoice.payout_amount = None;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), false);
+    }
+
+    #[test]
+    fn test_change_status_remote() {
+        let mut invoice = Invoice {
+            invoice_status: InvoiceStatus::Requested,
+            payment_type: None,
+            payment_address: None,
+            ..Invoice::default()
+        };
+        invoice.check_consistency().unwrap();
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), true);
+        invoice.object_id = Some("https://social.example".to_owned());
+        invoice.payment_address = Some("abcd".to_owned());
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), true);
+        invoice.invoice_status = InvoiceStatus::Open;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), true);
+        invoice.invoice_status = InvoiceStatus::Paid;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Forwarded), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Underpaid), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Completed), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+        invoice.invoice_status = InvoiceStatus::Completed;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), false);
     }
 }

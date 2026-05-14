@@ -2,6 +2,7 @@ use anyhow::Error;
 use clap::Parser;
 
 use mitra_adapters::init::{
+    check_app_directories,
     create_database_client,
     create_database_connection_pool,
     initialize_app,
@@ -9,16 +10,27 @@ use mitra_adapters::init::{
     initialize_storage,
 };
 use mitra_api::server::run_server;
+use mitra_config::SoftwareMetadata;
+use mitra_cli::cli::{print_completer, Cli, SubCommand};
 use mitra_workers::workers::start_workers;
 
-mod cli;
-mod commands;
-
-use cli::{Cli, SubCommand};
+fn get_software_metadata() -> SoftwareMetadata {
+    SoftwareMetadata {
+        name: "Mitra",
+        version: env!("CARGO_PKG_VERSION"),
+        repository: "https://codeberg.org/silverpill/mitra",
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let opts: Cli = Cli::parse();
+
+    if let SubCommand::Completion { shell } = opts.subcmd {
+        print_completer(shell);
+        return Ok(());
+    };
+
     let maybe_override_log_level = match opts.subcmd {
         SubCommand::Server | SubCommand::Worker(_) => {
             // Do not override log level when running a process
@@ -28,7 +40,11 @@ async fn main() -> Result<(), Error> {
             Some(opts.log_level)
         },
     };
-    let mut config = initialize_app(maybe_override_log_level);
+    let mut config = initialize_app(
+        get_software_metadata(),
+        maybe_override_log_level,
+    );
+    check_app_directories(&config);
     let mut db_client_value = create_database_client(&config).await;
     let db_client = &mut db_client_value;
     initialize_database(&mut config, db_client).await;
@@ -52,19 +68,22 @@ async fn main() -> Result<(), Error> {
         SubCommand::GenerateInviteCode(cmd) => cmd.execute(&db_pool).await,
         SubCommand::ListInviteCodes(cmd) => cmd.execute(&db_pool).await,
         SubCommand::CreateAccount(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::CreateSystemAccount(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::ListAccounts(cmd) => cmd.execute(&db_pool).await,
         SubCommand::SetPassword(cmd) => cmd.execute(&db_pool).await,
         SubCommand::SetRole(cmd) => cmd.execute(&db_pool).await,
         SubCommand::RevokeOauthTokens(cmd) => cmd.execute(&db_pool).await,
         SubCommand::ImportObject(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::ReadOutbox(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::LoadReplies(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::FetchObject(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::Webfinger(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::LoadPortableObject(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::CreateActivity(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::SendActivity(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::DeleteUser(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::CreatePost(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::ImportPosts(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::ExportPosts(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::DeletePost(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::AddEmoji(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::ImportEmoji(cmd) => cmd.execute(&config, &db_pool).await,
@@ -85,6 +104,7 @@ async fn main() -> Result<(), Error> {
         SubCommand::ListActiveAddresses(cmd) => cmd.execute(&config).await,
         SubCommand::GetPaymentAddress(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::InstanceReport(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::Completion { .. } => unreachable!(),
     };
     result
 }

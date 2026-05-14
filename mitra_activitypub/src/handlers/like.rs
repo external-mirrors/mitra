@@ -9,7 +9,6 @@ use apx_sdk::{
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         db_client_await,
@@ -31,6 +30,7 @@ use mitra_validators::{
 };
 
 use crate::{
+    authority::Authority,
     builders::add_context_activity::sync_conversation,
     filter::get_moderation_domain,
     identifiers::canonicalize_id,
@@ -74,16 +74,20 @@ struct Like {
 }
 
 fn get_visibility(
-    _actor: &DbActor,
+    actor_data: &DbActor,
     to: &[String],
     cc: &[String],
 ) -> Result<Visibility, ValidationError> {
-    let audience = [to, cc].concat();
-    let normalized_audience = normalize_audience(&audience)?;
-    let visibility = if normalized_audience.iter()
+    let audience = normalize_audience(&[to, cc].concat())?;
+    let visibility = if audience.iter()
         .any(|target_id| target_id.to_string() == AP_PUBLIC)
     {
         Visibility::Public
+    } else if audience.iter()
+        .any(|target_id| Some(target_id.to_string()) == actor_data.followers)
+    {
+        log::warn!("followers-only reaction converted to direct");
+        Visibility::Direct
     } else {
         Visibility::Direct
     };
@@ -91,22 +95,22 @@ fn get_visibility(
 }
 
 pub async fn handle_like(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     let like: Like = serde_json::from_value(activity.clone())?;
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let instance = &ap_client.instance;
     let author = ActorIdResolver::default().only_remote().resolve(
-        &ap_client,
+        ap_client,
         db_pool,
         &like.actor,
     ).await?;
+    let authority = Authority::from(instance);
     let canonical_object_id = canonicalize_id(&like.object)?;
     let post = match get_post_by_object_id(
         db_client_await!(db_pool),
-        instance.uri_str(),
+        &authority,
         &canonical_object_id,
     ).await {
         Ok(post) => post,
@@ -128,7 +132,7 @@ pub async fn handle_like(
                 let moderation_domain =
                     get_moderation_domain(author.expect_actor_data())?;
                 let maybe_db_emoji = handle_emoji(
-                    &ap_client,
+                    ap_client,
                     db_pool,
                     &moderation_domain,
                     emoji_value.clone(),
@@ -142,8 +146,8 @@ pub async fn handle_like(
             if let Some(db_emoji) = maybe_db_emoji {
                 (Some(content), Some(db_emoji.id))
             } else {
-                log::warn!("invalid custom emoji reaction");
-                return Ok(None);
+                log::warn!("ignoring reaction content: {content}");
+                (None, None)
             }
         },
         None => {

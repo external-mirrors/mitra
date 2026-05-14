@@ -46,6 +46,10 @@ pub async fn update_expired_subscriptions(
                 subscription.sender_id,
             ).await?;
         };
+        if sender.is_anonymous() {
+            // Don't generate notification
+            continue;
+        };
         create_subscriber_leaving_notification(
             db_client,
             sender.id,

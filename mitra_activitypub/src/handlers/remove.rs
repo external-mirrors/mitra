@@ -2,7 +2,6 @@ use apx_sdk::deserialization::deserialize_into_object_id;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         get_database_client,
@@ -18,11 +17,12 @@ use mitra_models::{
     },
     profiles::queries::get_remote_profile_by_actor_id,
     relationships::queries::unsubscribe,
-    users::queries::get_user_by_name,
 };
 
 use crate::{
-    identifiers::parse_local_actor_id,
+    authority::Authority,
+    identifiers::canonicalize_id,
+    importers::{get_user_by_actor_id, ApClient},
 };
 
 use super::{Descriptor, HandlerResult};
@@ -38,7 +38,7 @@ struct Remove {
 }
 
 pub async fn handle_remove(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
@@ -52,11 +52,13 @@ pub async fn handle_remove(
         .expect("actor data should be present");
     if Some(remove.target.clone()) == actor.subscribers {
         // Removing from subscribers
-        let username = parse_local_actor_id(
-            config.instance().uri_str(),
-            &remove.object,
-        )?;
-        let user = get_user_by_name(db_client, &username).await?;
+        let canonical_object_id = canonicalize_id(&remove.object)?;
+        let authority = Authority::from(&ap_client.instance);
+        let user = get_user_by_actor_id(
+            db_client,
+            &authority,
+            &canonical_object_id,
+        ).await?;
         // actor is recipient, user is sender
         match unsubscribe(db_client, user.id, actor_profile.id).await {
             Ok(_) => {

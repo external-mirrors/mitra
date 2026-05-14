@@ -10,7 +10,7 @@ use crate::profiles::types::DbActorProfile;
 use crate::users::types::{DbUser, User};
 
 use super::{
-    types::{OauthApp, OauthAppData},
+    types::{OauthApp, OauthAppData, OauthToken},
     utils::hash_oauth_token,
 };
 
@@ -127,24 +127,34 @@ pub async fn get_user_by_authorization_code(
 pub async fn save_oauth_token(
     db_client: &impl DatabaseClient,
     owner_id: Uuid,
+    maybe_app_id: Option<i32>,
     token: &str,
     created_at: DateTime<Utc>,
     expires_at: DateTime<Utc>,
-) -> Result<(), DatabaseError> {
+) -> Result<i32, DatabaseError> {
     let token_digest = hash_oauth_token(token);
-    db_client.execute(
+    let row = db_client.query_one(
         "
         INSERT INTO oauth_token (
             owner_id,
+            application_id,
             token_digest,
             created_at,
             expires_at
         )
-        VALUES ($1, $2, $3, $4)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING oauth_token.id
         ",
-        &[&owner_id, &token_digest, &created_at, &expires_at],
+        &[
+            &owner_id,
+            &maybe_app_id,
+            &token_digest,
+            &created_at,
+            &expires_at,
+        ],
     ).await?;
-    Ok(())
+    let token_id = row.try_get("id")?;
+    Ok(token_id)
 }
 
 pub async fn delete_oauth_token(
@@ -181,6 +191,24 @@ pub async fn delete_oauth_token(
     Ok(())
 }
 
+pub async fn delete_oauth_token_by_id(
+    db_client: &impl DatabaseClient,
+    current_user_id: Uuid,
+    token_id: i32,
+) -> Result<(), DatabaseError> {
+    let deleted_count = db_client.execute(
+        "
+        DELETE FROM oauth_token
+        WHERE id = $1 AND owner_id = $2
+        ",
+        &[&token_id, &current_user_id],
+    ).await?;
+    if deleted_count == 0 {
+        return Err(DatabaseError::NotFound("oauth token"));
+    };
+    Ok(())
+}
+
 pub async fn delete_oauth_tokens(
     db_client: &impl DatabaseClient,
     owner_id: Uuid,
@@ -192,14 +220,38 @@ pub async fn delete_oauth_tokens(
     Ok(())
 }
 
+pub async fn get_oauth_tokens(
+    db_client: &impl DatabaseClient,
+    owner_id: Uuid,
+) -> Result<Vec<OauthToken>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT
+            oauth_token.id,
+            oauth_token.created_at,
+            oauth_token.expires_at,
+            oauth_application.app_name
+        FROM oauth_token
+        LEFT JOIN oauth_application
+            ON oauth_token.application_id = oauth_application.id
+        WHERE owner_id = $1
+        ",
+        &[&owner_id],
+    ).await?;
+    let tokens = rows.into_iter()
+        .map(OauthToken::try_from)
+        .collect::<Result<_, _>>()?;
+    Ok(tokens)
+}
+
 pub async fn get_user_by_oauth_token(
     db_client: &impl DatabaseClient,
     token: &str,
-) -> Result<User, DatabaseError> {
+) -> Result<(i32, User), DatabaseError> {
     let token_digest = hash_oauth_token(token);
     let maybe_row = db_client.query_opt(
         "
-        SELECT user_account, actor_profile
+        SELECT oauth_token.id, user_account, actor_profile
         FROM oauth_token
         JOIN user_account ON oauth_token.owner_id = user_account.id
         JOIN actor_profile ON user_account.id = actor_profile.id
@@ -210,10 +262,11 @@ pub async fn get_user_by_oauth_token(
         &[&token_digest],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
+    let token_id = row.try_get("id")?;
     let db_user: DbUser = row.try_get("user_account")?;
     let db_profile: DbActorProfile = row.try_get("actor_profile")?;
     let user = User::new(db_user, db_profile)?;
-    Ok(user)
+    Ok((token_id, user))
 }
 
 #[cfg(test)]
@@ -270,19 +323,30 @@ mod tests {
     async fn test_create_and_delete_oauth_token() {
         let db_client = &mut create_test_database().await;
         let user = create_test_user(db_client, "test").await;
+        let app_name = "test_app";
+        let app_data = OauthAppData {
+            app_name: app_name.to_owned(),
+            ..Default::default()
+        };
+        let app = create_oauth_app(db_client, app_data).await.unwrap();
         let token = "test-token";
         save_oauth_token(
             db_client,
             user.id,
+            Some(app.id),
             token,
             Utc::now(),
             Utc::now() + TimeDelta::days(7),
         ).await.unwrap();
-        let authenticated_user = get_user_by_oauth_token(
+        let (token_id, authenticated_user) = get_user_by_oauth_token(
             db_client,
             token,
         ).await.unwrap();
         assert_eq!(authenticated_user.id, user.id);
+        let tokens = get_oauth_tokens(db_client, user.id).await.unwrap();
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0].id, token_id);
+        assert_eq!(tokens[0].client_name.as_ref().unwrap(), app_name);
 
         delete_oauth_token(
             db_client,
@@ -294,5 +358,34 @@ mod tests {
             token,
         ).await.err().unwrap();
         assert_eq!(error.to_string(), "user not found");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_oauth_token_by_id() {
+        let db_client = &mut create_test_database().await;
+        let user = create_test_user(db_client, "test").await;
+        let app_name = "test_app";
+        let app_data = OauthAppData {
+            app_name: app_name.to_owned(),
+            ..Default::default()
+        };
+        let app = create_oauth_app(db_client, app_data).await.unwrap();
+        let token = "test-token";
+        let token_id = save_oauth_token(
+            db_client,
+            user.id,
+            Some(app.id),
+            token,
+            Utc::now(),
+            Utc::now() + TimeDelta::days(7),
+        ).await.unwrap();
+        delete_oauth_token_by_id(
+            db_client,
+            user.id,
+            token_id,
+        ).await.unwrap();
+        let tokens = get_oauth_tokens(db_client, user.id).await.unwrap();
+        assert_eq!(tokens.len(), 0);
     }
 }

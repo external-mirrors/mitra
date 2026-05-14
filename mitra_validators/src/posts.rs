@@ -12,7 +12,7 @@ use mitra_models::{
 use mitra_utils::html::{clean_html, clean_html_all, clean_html_strict};
 
 use super::{
-    activitypub::{validate_any_object_id, validate_object_id},
+    activitypub::validate_any_object_id,
     errors::ValidationError,
     polls::validate_poll_data,
 };
@@ -23,8 +23,8 @@ pub const LINK_LIMIT: usize = 10;
 pub const EMOJI_LIMIT: usize = 50;
 
 const TITLE_LENGTH_MAX: usize = 300;
-const CONTENT_MAX_SIZE: usize = 100000;
-const CONTENT_ALLOWED_TAGS: [&str; 12] = [
+const CONTENT_MAX_SIZE: usize = 150_000;
+const CONTENT_ALLOWED_TAGS: [&str; 15] = [
     "a",
     "br",
     "pre",
@@ -37,6 +37,10 @@ const CONTENT_ALLOWED_TAGS: [&str; 12] = [
     "blockquote",
     "p",
     "span",
+    // These tags have no markdown equivalents
+    "ruby",
+    "rt",
+    "rp",
 ];
 const URL_LENGTH_MAX: usize = 2000;
 
@@ -96,9 +100,15 @@ pub fn validate_post_create_data(
     post_data: &PostCreateData,
 ) -> Result<(), ValidationError> {
     match post_data.context {
-        PostContext::Top { .. } => {
+        PostContext::Top { ref object_id, ref audience } => {
             if post_data.visibility == Visibility::Conversation {
                 return Err(ValidationError("top-level post can't have conversation visibility"));
+            };
+            if let Some(object_id) = object_id {
+                validate_any_object_id(object_id)?;
+            };
+            if let Some(audience) = audience {
+                validate_any_object_id(audience)?;
             };
         },
         PostContext::Repost { .. } => {
@@ -228,7 +238,7 @@ pub fn validate_repost_data(
         return Err(ValidationError("invalid repost visibility"));
     };
     if let Some(ref object_id) = repost_data.object_id {
-        validate_object_id(object_id)?;
+        validate_any_object_id(object_id)?;
     };
     Ok(())
 }
@@ -261,6 +271,7 @@ mod tests {
             r#"<p><span class="h-card"><a href="https://social.example/user" class="u-url mention">@user</a></span> test "#,
             r#"<a class="hashtag" href="https://social.example/collections/tags/tag1" rel="tag">#tag1</a> "#,
             r#"<a href="https://external.example" class="test-class">link</a> "#,
+            r#"<ruby> 明日 <rp>(</rp><rt>Ashita</rt><rp>)</rp> </ruby><br>"#,
             r#"<strong class="hashtag">nottag</strong><br> "#,
             r#"<img src="https://image.example/image.png"> "#,
             r#"<script>dangerous</script></p>"#,
@@ -270,6 +281,7 @@ mod tests {
             r#"<p><span class="h-card"><a href="https://social.example/user" class="u-url mention" rel="noopener">@user</a></span> test "#,
             r#"<a class="hashtag" href="https://social.example/collections/tags/tag1" rel="tag noopener">#tag1</a> "#,
             r#"<a href="https://external.example" class="" rel="noopener">link</a> "#,
+            r#"<ruby> 明日 <rp>(</rp><rt>Ashita</rt><rp>)</rp> </ruby><br>"#,
             r#"<strong>nottag</strong><br>  "#,
             r#"</p>"#,
         );

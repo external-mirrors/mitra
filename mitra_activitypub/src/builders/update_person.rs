@@ -30,7 +30,7 @@ use crate::{
 #[derive(Serialize)]
 struct UpdatePerson {
     #[serde(rename = "@context")]
-    context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
     activity_type: String,
@@ -50,7 +50,6 @@ fn build_update_person(
 ) -> Result<UpdatePerson, DatabaseError> {
     let authority = Authority::server(instance_uri);
     let actor = build_local_actor(
-        instance_uri,
         &authority,
         media_server,
         user,
@@ -63,7 +62,7 @@ fn build_update_person(
         generate_ulid(),
     );
     let activity = UpdatePerson {
-        context: build_default_context(),
+        _context: build_default_context(),
         activity_type: UPDATE.to_string(),
         id: activity_id,
         actor: actor.id.clone(),

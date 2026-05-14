@@ -58,7 +58,8 @@ pub async fn get_bookmarked_posts(
         "
         SELECT
             bookmark.id,
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id

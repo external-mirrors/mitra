@@ -2,7 +2,6 @@
 use actix_web::{get, web, HttpResponse};
 use apx_sdk::{
     addresses::WebfingerAddress,
-    core::url::common::Uri,
     jrd::{
         JsonResourceDescriptor,
         Link,
@@ -12,11 +11,13 @@ use apx_sdk::{
 use serde::Deserialize;
 
 use mitra_activitypub::{
+    authority::Authority,
     identifiers::{
+        canonicalize_id,
         local_actor_id,
         local_instance_actor_id,
-        parse_local_actor_id,
     },
+    importers::get_profile_by_actor_id,
     utils::db_url_to_http_url,
 };
 use mitra_config::{Config, Instance};
@@ -27,6 +28,7 @@ use mitra_models::{
         DatabaseConnectionPool,
         DatabaseError,
     },
+    profiles::types::WebfingerHostname,
     users::queries::{
         get_portable_user_by_name,
         is_registered_user,
@@ -58,18 +60,36 @@ async fn get_jrd(
         let username = if resource == instance.uri_str() ||
             resource == local_instance_actor_id(instance.uri_str())
         {
-            instance.hostname()
+            instance.webfinger_hostname()
         } else {
-            parse_local_actor_id(instance.uri_str(), resource)
-                .map_err(|_| HttpError::NotFound("user"))?
+            let canonical_uri = canonicalize_id(resource)?;
+            let authority = Authority::from(&instance);
+            let profile = get_profile_by_actor_id(
+                db_client,
+                &authority,
+                &canonical_uri,
+            ).await?;
+            match profile.webfinger_hostname() {
+                WebfingerHostname::Local => profile.username, // has account
+                _ => return Err(HttpError::NotFound("user")),
+            }
         };
-        WebfingerAddress::new_unchecked(&username, &instance.hostname())
+        WebfingerAddress::new_unchecked(&username, &instance.webfinger_hostname())
     };
-    if webfinger_address.hostname() != instance.hostname() {
+    let webfinger_address = if webfinger_address.hostname() == instance.webfinger_hostname() {
+        webfinger_address
+    } else if webfinger_address.hostname() == instance.uri().hostname().as_str() {
+        // Split-domain setup
+        WebfingerAddress::new_unchecked(
+            webfinger_address.username(),
+            &instance.webfinger_hostname(),
+        )
+    } else {
         // Wrong instance
         return Err(HttpError::NotFound("user"));
     };
-    let links = if webfinger_address.username() == instance.hostname() {
+    let links = if webfinger_address.username() == instance.webfinger_hostname() {
+        // Server actor
         let actor_id = local_instance_actor_id(instance.uri_str());
         let actor_link = Link::actor(&actor_id);
         // Add remote interaction template
@@ -139,7 +159,7 @@ async fn get_jrd(
 
 #[derive(Deserialize)]
 pub struct WebfingerQueryParams {
-    resource: Uri,
+    resource: String,
 }
 
 #[get("/.well-known/webfinger")]

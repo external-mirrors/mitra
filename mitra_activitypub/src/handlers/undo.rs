@@ -4,7 +4,6 @@ use apx_sdk::{
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         db_client_await,
@@ -90,20 +89,19 @@ struct Undo {
 }
 
 pub async fn handle_undo(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     if let Some(FOLLOW) = activity["object"]["type"].as_str() {
         // Undo() with nested follow activity
-        return handle_undo_follow(&ap_client, db_pool, activity).await;
+        return handle_undo_follow(ap_client, db_pool, activity).await;
     };
 
     let undo: Undo = serde_json::from_value(activity.clone())?;
     let canonical_actor_id = canonicalize_id(&undo.actor)?;
     let actor_profile = ActorIdResolver::default().only_remote().resolve(
-        &ap_client,
+        ap_client,
         db_pool,
         &canonical_actor_id.to_string(),
     ).await?;

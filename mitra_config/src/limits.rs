@@ -138,7 +138,7 @@ const fn default_post_character_limit() -> usize { 5000 }
 const fn default_attachment_limit() -> usize { 16 }
 // Mastodon's limit is 4
 // https://github.com/mastodon/mastodon/blob/v4.3.7/app/models/status.rb#L42
-const fn default_attachment_local_limit() -> usize { default_attachment_limit() }
+const fn default_attachment_local_limit() -> usize { 4 }
 
 #[derive(Clone, Deserialize)]
 pub struct PostLimits {

@@ -1,16 +1,41 @@
+use apx_core::caip2::ChainId;
 use uuid::Uuid;
 
-use crate::database::{
-    DatabaseClient,
-    DatabaseError,
+use crate::{
+    database::{
+        DatabaseClient,
+        DatabaseError,
+        DatabaseTypeError,
+    },
+    payment_methods::types::PaymentType,
 };
 
-use super::queries::{
-    set_invoice_payout_tx_id,
-    set_invoice_status,
-    set_remote_invoice_data,
+use super::{
+    queries::{
+        get_invoice_by_id,
+        set_invoice_payout_amount,
+        set_invoice_payout_tx_id,
+        set_invoice_status,
+        set_remote_invoice_data,
+    },
+    types::{Invoice, InvoiceStatus},
 };
-use super::types::{Invoice, InvoiceStatus};
+
+pub async fn get_local_invoice_by_id(
+    db_client: &impl DatabaseClient,
+    payment_type: PaymentType,
+    chain_id: &ChainId,
+    invoice_id: Uuid,
+) -> Result<Invoice, DatabaseError> {
+    let invoice = get_invoice_by_id(db_client, invoice_id).await?;
+    if invoice.object_id.is_some()
+        || invoice.payment_type != Some(payment_type)
+        || invoice.chain_id.inner() != chain_id
+    {
+        return Err(DatabaseError::NotFound("invoice"));
+    };
+    Ok(invoice)
+}
 
 pub async fn local_invoice_forwarded(
     db_client: &mut impl DatabaseClient,
@@ -32,6 +57,28 @@ pub async fn local_invoice_forwarded(
     Ok(invoice)
 }
 
+pub async fn local_invoice_completed(
+    db_client: &mut impl DatabaseClient,
+    invoice_id: Uuid,
+    payout_amount: u64,
+) -> Result<Invoice, DatabaseError> {
+    let mut transaction = db_client.transaction().await?;
+    let payout_amount = i64::try_from(payout_amount)
+        .map_err(|_| DatabaseTypeError)?;
+    set_invoice_payout_amount(
+        &transaction,
+        invoice_id,
+        Some(payout_amount),
+    ).await?;
+    let invoice = set_invoice_status(
+        &mut transaction,
+        invoice_id,
+        InvoiceStatus::Completed,
+    ).await?;
+    transaction.commit().await?;
+    Ok(invoice)
+}
+
 pub async fn local_invoice_reopened(
     db_client: &mut impl DatabaseClient,
     invoice_id: Uuid,
@@ -41,6 +88,31 @@ pub async fn local_invoice_reopened(
         &transaction,
         invoice_id,
         None, // reset
+    ).await?;
+    set_invoice_payout_amount(
+        &transaction,
+        invoice_id,
+        None, // reset
+    ).await?;
+    let invoice = set_invoice_status(
+        &mut transaction,
+        invoice_id,
+        InvoiceStatus::Paid,
+    ).await?;
+    transaction.commit().await?;
+    Ok(invoice)
+}
+
+pub async fn local_monero_light_invoice_paid(
+    db_client: &mut impl DatabaseClient,
+    invoice_id: Uuid,
+    payout_tx_id: &str,
+) -> Result<Invoice, DatabaseError> {
+    let mut transaction = db_client.transaction().await?;
+    set_invoice_payout_tx_id(
+        &transaction,
+        invoice_id,
+        Some(payout_tx_id),
     ).await?;
     let invoice = set_invoice_status(
         &mut transaction,
@@ -75,15 +147,32 @@ pub async fn remote_invoice_opened(
 
 #[cfg(test)]
 mod tests {
-    use apx_core::caip2::ChainId;
     use serial_test::serial;
     use crate::{
         database::test_utils::create_test_database,
-        invoices::queries::{create_local_invoice, create_remote_invoice},
+        invoices::{
+            queries::{create_local_invoice, create_remote_invoice},
+            test_utils::create_test_local_invoice,
+        },
+        payment_methods::types::PaymentType,
         profiles::test_utils::create_test_remote_profile,
         users::test_utils::create_test_user,
     };
     use super::*;
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_local_invoice_by_id() {
+        let db_client = &mut create_test_database().await;
+        let invoice = create_test_local_invoice(db_client).await;
+        let result = get_local_invoice_by_id(
+            db_client,
+            PaymentType::Monero,
+            &ChainId::monero_mainnet(),
+            invoice.id,
+        ).await;
+        assert_eq!(result.is_ok(), true);
+    }
 
     #[tokio::test]
     #[serial]
@@ -100,6 +189,7 @@ mod tests {
             db_client,
             sender.id,
             recipient.id,
+            PaymentType::Monero,
             &ChainId::monero_mainnet(),
             "8MxABajuo71BZya9",
             100000000000000_u64,
@@ -119,11 +209,14 @@ mod tests {
         assert_eq!(invoice.invoice_status, InvoiceStatus::Forwarded);
         assert_eq!(invoice.payout_tx_id.as_deref(), Some(payout_tx_id));
 
-        set_invoice_status(
+        let payout_amount = 1_i64;
+        let invoice = local_invoice_completed(
             db_client,
             invoice.id,
-            InvoiceStatus::Completed,
+            payout_amount as u64,
         ).await.unwrap();
+        assert_eq!(invoice.invoice_status, InvoiceStatus::Completed);
+        assert_eq!(invoice.payout_amount, Some(payout_amount));
 
         let invoice = local_invoice_reopened(
             db_client,
@@ -131,6 +224,7 @@ mod tests {
         ).await.unwrap();
         assert_eq!(invoice.invoice_status, InvoiceStatus::Paid);
         assert_eq!(invoice.payout_tx_id, None);
+        assert_eq!(invoice.payout_amount, None);
     }
 
     #[tokio::test]

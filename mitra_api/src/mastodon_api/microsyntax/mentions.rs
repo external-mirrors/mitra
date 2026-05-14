@@ -3,7 +3,11 @@ use apx_sdk::addresses::WebfingerAddress;
 use indexmap::IndexMap;
 use regex::{Captures, Regex};
 
-use mitra_activitypub::identifiers::profile_actor_url;
+use mitra_activitypub::{
+    authority::Authority,
+    identifiers::profile_actor_url,
+};
+use mitra_adapters::profiles::profile_address;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     profiles::queries::get_profiles_by_accts,
@@ -22,13 +26,16 @@ const MENTION_SEARCH_SECONDARY_RE: &str = r"(?x)
     (?P<after>[\.,:;?!\)']*)$
     ";
 
-fn caps_to_acct(instance_hostname: &str, caps: &Captures) -> Option<String> {
+fn caps_to_address(
+    local_hostname: &str,
+    caps: &Captures,
+) -> Option<WebfingerAddress> {
     let username = &caps["username"];
     let hostname = if let Ok(maybe_hostname) = caps.name("hostname")
         .map(|match_| encode_hostname(match_.as_str()))
         .transpose()
     {
-        maybe_hostname.unwrap_or(instance_hostname.to_string())
+        maybe_hostname.unwrap_or(local_hostname.to_string())
     } else {
         // Invalid hostname
         return None;
@@ -37,15 +44,14 @@ fn caps_to_acct(instance_hostname: &str, caps: &Captures) -> Option<String> {
         username,
         &hostname,
     );
-    let acct = webfinger_address.acct(instance_hostname);
-    Some(acct)
+    Some(webfinger_address)
 }
 
 /// Finds everything that looks like a mention
 fn find_mentions(
-    instance_hostname: &str,
+    local_hostname: &str,
     text: &str,
-) -> Vec<String> {
+) -> Vec<WebfingerAddress> {
     let mention_re = Regex::new(MENTION_SEARCH_RE)
         .expect("regexp should be valid");
     let mention_secondary_re = Regex::new(MENTION_SEARCH_SECONDARY_RE)
@@ -58,12 +64,12 @@ fn find_mentions(
             continue;
         };
         if let Some(secondary_caps) = mention_secondary_re.captures(&caps["mention"]) {
-            let Some(acct) = caps_to_acct(instance_hostname, &secondary_caps) else {
+            let Some(address) = caps_to_address(local_hostname, &secondary_caps) else {
                 // Invalid mention
                 continue;
             };
-            if !mentions.contains(&acct) {
-                mentions.push(acct);
+            if !mentions.contains(&address) {
+                mentions.push(address);
             };
         };
     };
@@ -72,26 +78,31 @@ fn find_mentions(
 
 pub async fn find_mentioned_profiles(
     db_client: &impl DatabaseClient,
-    instance_hostname: &str,
+    local_hostname: &str,
     text: &str,
-) -> Result<IndexMap<String, DbActorProfile>, DatabaseError> {
-    let mentions = find_mentions(instance_hostname, text);
+) -> Result<IndexMap<WebfingerAddress, DbActorProfile>, DatabaseError> {
+    let mentions = find_mentions(local_hostname, text);
+    let mut accts = vec![];
+    for address in mentions {
+        accts.push(address.short_address(local_hostname));
+    };
     // If acct doesn't exist in database, mention is ignored
-    let profiles = get_profiles_by_accts(db_client, mentions).await?;
-    let mut mention_map: IndexMap<String, DbActorProfile> = IndexMap::new();
+    let profiles = get_profiles_by_accts(db_client, accts).await?;
+    let mut mention_map = IndexMap::new();
     for profile in profiles {
-        let acct = profile.acct.as_ref()
-            .expect("acct should be present")
-            .clone();
-        mention_map.insert(acct, profile);
+        let Some(address) = profile_address(local_hostname, &profile) else {
+            // get_profiles_by_accts should not return profiles without address
+            return Err(DatabaseError::type_error());
+        };
+        mention_map.insert(address, profile);
     };
     Ok(mention_map)
 }
 
 pub fn replace_mentions(
-    mention_map: &IndexMap<String, DbActorProfile>,
-    instance_hostname: &str,
-    instance_uri: &str,
+    mention_map: &IndexMap<WebfingerAddress, DbActorProfile>,
+    local_hostname: &str,
+    authority: &Authority,
     text: &str,
 ) -> String {
     let mention_re = Regex::new(MENTION_SEARCH_RE)
@@ -105,16 +116,16 @@ pub fn replace_mentions(
             return caps[0].to_string();
         };
         if let Some(secondary_caps) = mention_secondary_re.captures(&caps["mention"]) {
-            let acct = if let Some(acct) = caps_to_acct(instance_hostname, &secondary_caps) {
-                acct
+            let address = if let Some(address) = caps_to_address(local_hostname, &secondary_caps) {
+                address
             } else {
                 // Invalid mention
                 return caps[0].to_string();
             };
-            if let Some(profile) = mention_map.get(&acct) {
+            if let Some(profile) = mention_map.get(&address) {
                 // Replace with a link to profile.
                 // Actor URL may differ from actor ID.
-                let url = profile_actor_url(instance_uri, profile);
+                let url = profile_actor_url(authority, profile);
                 #[allow(clippy::to_string_in_format_args)]
                 return format!(
                     // https://microformats.org/wiki/h-card
@@ -150,6 +161,13 @@ mod tests {
         "@user2@server2.com copy ",
         "some text",
     );
+
+    fn find_mentions(local_hostname: &str, text: &str) -> Vec<String> {
+        super::find_mentions(local_hostname, text)
+            .into_iter()
+            .map(|address| address.short_address(local_hostname))
+            .collect()
+    }
 
     #[test]
     fn test_find_mentions() {
@@ -216,15 +234,16 @@ mod tests {
             },
         );
         let mention_map = IndexMap::from([
-            ("user1".to_string(), profile_1),
-            ("user_x".to_string(), profile_2),
-            ("user2@server2.com".to_string(), profile_3),
-            ("user3@xn--jxalpdlp.example".to_string(), profile_4),
+            (profile_address(INSTANCE_HOSTNAME, &profile_1).unwrap(), profile_1),
+            (profile_address(INSTANCE_HOSTNAME, &profile_2).unwrap(), profile_2),
+            (profile_address(INSTANCE_HOSTNAME, &profile_3).unwrap(), profile_3),
+            (profile_address(INSTANCE_HOSTNAME, &profile_4).unwrap(), profile_4),
         ]);
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let result = replace_mentions(
             &mention_map,
             INSTANCE_HOSTNAME,
-            INSTANCE_URI,
+            &authority,
             TEXT_WITH_MENTIONS,
         );
 

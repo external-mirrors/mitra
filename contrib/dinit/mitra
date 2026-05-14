@@ -1,0 +1,8 @@
+type = process
+run-as = mitra
+command = /usr/bin/mitra server
+smooth-recovery = true
+pid-file = /run/mitra.pid
+# change the dependency name if it differs on your distribution.
+depends-on = postgres
+logfile = /var/log/mitra.log

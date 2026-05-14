@@ -6,6 +6,336 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [5.3.0] - 2026-05-13
+
+### Added
+
+- Added `send-activity` command.
+- Added `create-activity` command with an option to generate LitePub relay activities.
+- Added option to generate `Bite` activities to `create-activity` command.
+- Added `all_reactions` parameter to `/api/v1/favourites` endpoint.
+- Added `like_emoji` parameter to dynamic configuration.
+- Added `favorite_emojis` parameter to dynamic configuration.
+
+### Changed
+
+- Add `attributedTo` property to `Tombstone` object.
+- Include key ID in "key not found" error message.
+- Don't reject remote actors without public keys.
+- Don't reject remote actors with unsupported key types.
+- Extract authority from request URI when processing `@authority` RFC-9421 component.
+- Improved reporting of authentication errors.
+- Don't set `Poll.voters_count` to `0` if poll has multiple choices.
+- Increased post content limit to 150 kB.
+
+### Fixed
+
+- Fixed confusing log message on WebFinger address discovery.
+
+### Security
+
+- Write warning to log when target authority of a signed request doesn't match instance hostname.
+- Harden SSRF protection by treating link-local and unspecified addresses as unsafe.
+- Block requests to mapped IPv4 private addresses.
+
+## [5.2.0] - 2026-04-24
+
+### Added
+
+- Support portable `Delete(Note)` activities.
+- Added `http_behind_reverse_proxy` configuration option.
+- Allow `<ruby>`, `<rt>` and `<rp>` tags in HTML post content.
+
+### Changed
+
+- Allow split-domain setups where two different subdomains are used.
+- Write warning to log when imported featured post is not found in the database.
+- Stop adding followers collection to the audience of legacy 'Conversation' replies.
+- Write job ID to log when re-queueing deliveries.
+- Use UUIDv7 instead of ULID for primary keys.
+- Added default values for `http_host` and `http_port` configuration parameters.
+- Delete actor profile if inbox endpoint returns `410 Gone`.
+- Add `orderedItems` property to collection page even if item list is empty.
+- Removed OM2 context.
+- Don't reject posts where `context` is a data URI or a tag URI.
+
+### Fixed
+
+- Don't reject objects where `context` is an 'ap' URI.
+- Authenticate fetched object before extracting fragment.
+
+### Security
+
+- Fixed authentication of forwarded `Delete` activities.
+
+## [5.1.0] - 2026-04-08
+
+### Added
+
+- Warn about unused parameters in configuration file.
+- Added `--user-agent` parameter to `fetch-object` command.
+- Add `quote` property to `Note` object when post contains a quote.
+- Convert `Image` objects into posts with an attached image.
+- Discover real webfinger address when importing an actor.
+- Added `webfinger_hostname` configuration parameter for split-domain setups.
+
+### Changed
+
+- Don't check app directories until configuration is validated.
+- Changed MSRV to 1.77.0.
+- Rate-limit portable actor registrations.
+- Raise data integrity error if webfinger hostname is missing in remote profile data.
+- Made unsolicited message check more efficient.
+- Return `410 Gone` if inbox doesn't exist.
+
+### Fixed
+
+- Use global ratelimiters instead of local for each thread.
+- Prevent internal server error when IP address can't be extracted from a request.
+- Don't reject unsolicited messages where target is a portable account.
+- Fixed error during the processing of Gush `Quotation` objects.
+
+## [5.0.0] - 2026-03-23
+
+### Changed
+
+- Changed the default value of `limits.posts.attachment_local_limit` to `4`.
+- Allowed access from all web origins by default.
+- Set minimum migration version to 97.
+- Stop tracking remote actors supporting pre-FEP-0837 subscriptions.
+
+### Removed
+
+- Removed `federation.fep_c0e0_emoji_react_enabled` configuration parameter.
+- Removed `http_cors_allow_all` configuration parameter.
+- Removed support for payment links with `https://w3id.org/valueflows/Proposal` rel type.
+- Removed support for `MitraJcsRsaSignature2022` proof type.
+- Removed deprecated `reject-media` and `accept-media` filter actions.
+- Removed `read-outbox` command.
+- Removed `federated_timeline_restricted` property from `/api/v2/instance` response.
+- Removed `GET /api/v1/accounts/identity_proof` endpoint.
+
+## [4.20.0] - 2026-03-19
+
+### Added
+
+- Implemented reverse WebFinger for portable actors.
+- Added account limits to Mastodon API `Instance` entity.
+- Add `attributedTo` property to portable collections.
+- Added documentation for `check-uris` command.
+- Add `context` property to replies.
+- Implemented `/api/v1/conversations` API endpoint.
+
+### Changed
+
+- Converted `mitra_cli` into library crate.
+- Import object when executing `load-portable-object` command.
+- Increased maximum number of poll options to 20.
+- Improved error message when signed header has invalid value.
+- Add actor ID to "signer not found in cache" error message.
+- Make single HTTP request when searching for profile/post by URL.
+- Reduced compilation time by disabling unused Actix features.
+- Don't panic if compatible ID is stored in database.
+- Validate conversation audience URI before saving it to database.
+- Updated `check-uris` command to check all IDs stored in database.
+- Optimized home timeline query.
+
+### Fixed
+
+- Don't serve outbox collection if owner is not registered.
+- Fixed query performace regression related to introduction of automated accounts.
+
+## [4.19.0] - 2026-02-27
+
+### Added
+
+- Allow to repeat portable actor registration.
+- Added `retention.activitypub_objects` configuration option.
+- Implemented cursor-based pagination of portable inbox.
+- Accept incoming portable `Announce` activities.
+- Implemented `/api/v1/follow_requests/outgoing` endpoint.
+
+### Changed
+
+- Write object location to log on JSON parsing errors.
+- Reduced number of database queries made during inbox request verification.
+- Respect `--as-user` parameter when verifying integrity proof with `import-object` command.
+- Respect `--as-user` parameter when importing collections with `import-object` command.
+- Respect `--as-user` parameter when importing activities with `import-object` command.
+- Don't strip query parameters when converting key ID to actor ID.
+- Improved error handling during verification of GET requests to portable inboxes and outboxes.
+- Log error details when verifying activity fetch requests.
+- Return empty collection if request to portable outbox is not signed.
+
+### Fixed
+
+- Fixed content type error when POSTing form data to `/api/v1/lists/{list_id}/accounts` endpoint.
+- Process incoming activities in the order they were received.
+- Eliminated race condition in portable actor registration routine.
+- Fixed incorrect re-rendering of markdown lists.
+- Return error 401 instead of 404 if signer of GET request is not found in cache.
+
+## [4.18.1] - 2026-02-14
+
+### Added
+
+- Support POSTing form data to `/api/v1/lists/{list_id}/accounts` endpoint.
+
+### Changed
+
+- Disabled early filtering for incoming activities with ap:// IDs.
+- Return page with 200 items to `/api/v1/lists/{list_id}/accounts` call if limit is set to 0.
+
+## [4.18.0] - 2026-02-12
+
+### Added
+
+- Added `federation.fetcher_recursion_limit` configuration parameter.
+- Added `--fetcher-recursion-limit` option to `import-object` command.
+- Allow to fetch non-public activities with a signed request.
+- Support sending form data to `/api/v1/lists` endpoint.
+- Added support for `min_id` query parameter to `/api/v1/notifications` endpoint.
+- Support sending `multipart/form-data` to `/api/v1/markers` endpoint.
+- Add payment amount to subscription notifications.
+
+### Changed
+
+- Reduced database lock time during pruning of empty profiles.
+- Include attempt number in activity delivery log message.
+- Changed `List.id` value type from integer to string.
+- Prevent changing invoice status to "Underpaid" if payout tx ID is set.
+- Prevent re-opening invoice if payout tx ID is not cleared.
+- Write payment amount to log when closing invoice.
+- Allow to create multiple invoices with the same payment address.
+- Ignore votes for remote polls.
+
+### Removed
+
+- Removed ability to pass address to `reopen-invoice` command.
+
+### Fixed
+
+- Don't generate repeated notifications if follow request already exists.
+- Fixed local origin check in actor importer that didn't take port number into account.
+- Canonicalize actor ID when performing gateway verification.
+- Don't create new anonymous invoices until previous payment is processed.
+- Prevent conflicts between open invoice monitor and anonymous payment monitor.
+
+## [4.17.0] - 2026-02-05
+
+### Added
+
+- Added support for configuration files in TOML format.
+- Indicate restricted access to public timeline in `configuration.timelines_access` mapping ([#197](https://codeberg.org/silverpill/mitra/pulls/197)).
+- Added `/api/v1/favourites` API endpoint.
+- Added `/api/v1/preferences` API endpoint.
+- Added shared default post visibility setting.
+- Added shared default post language setting.
+- Added `--limit` parameter to `export-posts` command.
+- Notify about payments made to primary address when direct mode is used.
+
+### Changed
+
+- Send payment notification to remote server when receving a payment for LWS invoice.
+- Generate better error messages when Monero address is not valid.
+- Optimized extraneous posts query.
+- Write extraneous posts query duration to log.
+- Allow portable actor registration without invite code if federation is disabled.
+- Log FEP-ae97 client errors.
+- Improved descriptions of media storage errors.
+
+### Fixed
+
+- Don't prune followed conversations.
+- Include current user's own reactions in post reaction list.
+- Do not attempt to sync conversation when root is deleted.
+- Do not limit `export-posts` command output to 20 posts.
+
+## [4.16.1] - 2026-01-07
+
+### Changed
+
+- Ensure that payout address belongs to expected Monero network.
+- Generate better error messages when Monero address is not valid.
+- Removed "multichain deployments are not recommended" warning.
+
+### Fixed
+
+- Fixed server becoming unresponsive on registration of a view-only wallet.
+- Fixed LWS invoice creation via `Offer` activity.
+
+## [4.16.0] - 2026-01-02
+
+### Added
+
+- Added `--verify-proof` option to `import-object` command.
+- Added support for conversation following.
+- Added `export-posts` command.
+
+### Changed
+
+- Added support for Monero LWS v0.3.
+- Process invalid emoji reactions as likes.
+- Renamed identity proof template endpoint to `/api/v1/accounts/identity_claim`.
+- Changed type of portable inbox and outbox to `OrderedCollection`.
+
+### Removed
+
+- Removed workaround for Pleroma 2.5 `featured` collection parsing bug.
+
+### Fixed
+
+- Don't add `name` property to actor object if it is has no value.
+
+## [4.15.0] - 2025-12-22
+
+### Added
+
+- Added API endpoint for removing identity proofs.
+- Added `completion` command that generates shell completions ([#194](https://codeberg.org/silverpill/mitra/pulls/194)).
+- Support payment tracking with view-only Monero addresses.
+
+### Changed
+
+- Copied custom fields from Instance API v1 response to v2 response.
+- Verify invoice properties before reopening or repairing.
+- Improved descriptions of errors related to payment processing.
+
+### Fixed
+
+- Removed duplicates from aliases returned by `/accounts/v1/{account_id}/aliases/all` endpoint.
+
+## [4.14.0] - 2025-11-28
+
+### Added
+
+- Added `timelines_access` property to `/api/v2/instance` response ([#191](https://codeberg.org/silverpill/mitra/pulls/191)).
+- Added API endpoints for session management.
+- Allow adding subscribers when Monero integration is not enabled.
+
+### Changed
+
+- Write client name to log every time an access token is generated.
+- Always verify client ID if provided in token request.
+- Associate access tokens with OAuth applications.
+- Changed default access token lifetime to 30 days.
+- Verify public keys, identity proofs and payment options when reading profiles from database.
+- Write warning to log if reaction is followers-only.
+
+### Fixed
+
+- Fixed remote invoices not expiring if Monero integration is not enabled.
+
+## [4.13.1] - 2025-11-19
+
+### Changed
+
+- Ignore `quote` property in Bookwyrm quotations.
+
+### Fixed
+
+- Fixed panic on trying to save post to IPFS.
+
 ## [4.13.0] - 2025-11-13
 
 ### Added

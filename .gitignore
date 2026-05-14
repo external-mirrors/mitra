@@ -1,5 +1,6 @@
 .env.local
 config.yaml
+config.toml
 /files/*
 !/files/.gitkeep
 /target

@@ -141,24 +141,6 @@ https://www.w3.org/TR/vc-di-eddsa/#eddsa-jcs-2022
 
 A variant of [eddsa-jcs-2022](https://www.w3.org/TR/vc-di-eddsa/#eddsa-jcs-2022) cryptosuite without context injection.
 
-#### MitraJcsRsaSignature2022
-
-Canonicalization algorithm: JCS  
-Hashing algorithm: SHA-256  
-Signature algorithm: RSASSA-PKCS1-v1_5
-
-#### MitraJcsEip191Signature2022
-
-Canonicalization algorithm: JCS  
-Hashing algorithm: KECCAK-256 (EIP-191)  
-Signature algorithm: ECDSA (EIP-191)
-
-#### MitraJcsEd25519Signature2022
-
-Canonicalization algorithm: JCS  
-Hashing algorithm: BLAKE2b-512  
-Signature algorithm: EdDSA
-
 ## Quotes
 
 Supported representations:
@@ -216,7 +198,9 @@ Subscriber-only posts are addressed to this collection. They are also addressed 
 
 Cross-instance payments are implemented according to [FEP-0837](https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md) specification.
 
-Proposals are linked to actors using [FEP-0ea0](https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md) payment links. [CAIP-19](https://chainagnostic.org/CAIPs/caip-19) asset IDs are used to specify currencies.
+Proposals are linked to actors using [FEP-0ea0](https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md) payment links.
+
+Subscription duration is specified in seconds. [CAIP-19](https://chainagnostic.org/CAIPs/caip-19) asset IDs are used to specify currencies. Currency amounts are specified in basic units (e.g. piconero).
 
 Agreements contain a FEP-0ea0 payment link pointing to [CAIP-10](https://chainagnostic.org/CAIPs/caip-10) account ID.
 
@@ -270,6 +254,13 @@ The `Remove` activity is used to notify subscribers about expired subscriptions.
   "type": "Remove"
 }
 ```
+
+## Limits
+
+| Limited property                                              | Size limit | Consequence of exceeding the limit |
+| ------------------------------------------------------------- | ---------- | ---------------------------------- |
+| Post content                                                  | 150 kB     | Post will be dropped               |
+| Poll options (number of `anyOf`/`oneOf` in a `Question`)      | 20         | Poll will be removed from the post |
 
 ## Mitra Web client
 

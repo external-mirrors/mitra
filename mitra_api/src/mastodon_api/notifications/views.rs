@@ -10,6 +10,7 @@ use actix_web::{
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 
+use mitra_activitypub::authority::Authority;
 use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
@@ -32,6 +33,7 @@ use super::types::{
     NotificationPolicy,
 };
 
+// https://docs.joinmastodon.org/methods/notifications/#get
 #[get("")]
 async fn get_notifications_view(
     auth: BearerAuth,
@@ -44,17 +46,18 @@ async fn get_notifications_view(
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let notifications: Vec<Notification> = get_notifications(
         db_client,
         current_user.id,
+        query_params.min_id,
         query_params.max_id,
         query_params.limit.inner(),
     ).await?
         .into_iter()
         .map(|item| Notification::from_db(
-            instance.uri_str(),
+            &authority,
             &media_server,
             item,
         ))

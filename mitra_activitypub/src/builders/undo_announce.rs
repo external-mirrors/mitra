@@ -10,10 +10,11 @@ use mitra_models::{
 };
 
 use crate::{
+    authority::Authority,
     contexts::{build_default_context, Context},
     identifiers::{
-        local_activity_id,
-        local_actor_id,
+        local_activity_id_unified,
+        local_actor_id_unified,
         profile_actor_id,
     },
     queues::OutgoingActivityJobData,
@@ -28,7 +29,7 @@ use super::announce::{
 #[derive(Serialize)]
 struct UndoAnnounce {
     #[serde(rename = "@context")]
-    context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
     activity_type: String,
@@ -42,7 +43,7 @@ struct UndoAnnounce {
 }
 
 fn build_undo_announce(
-    instance_uri: &str,
+    authority: &Authority,
     actor_profile: &DbActorProfile,
     repost_id: Uuid,
     repost_has_deprecated_ap_id: bool,
@@ -50,20 +51,24 @@ fn build_undo_announce(
     post_author: &DbActorProfile,
 ) -> UndoAnnounce {
     let object_id = local_announce_activity_id(
-        instance_uri,
+        authority,
         repost_id,
         repost_has_deprecated_ap_id,
     );
-    let activity_id = local_activity_id(instance_uri, UNDO, repost_id);
-    let actor_id = local_actor_id(instance_uri, &actor_profile.username);
-    let recipient_id = profile_actor_id(instance_uri, post_author);
+    let activity_id = local_activity_id_unified(authority, UNDO, repost_id);
+    let actor_id = local_actor_id_unified(
+        authority,
+        actor_profile.id,
+        &actor_profile.username,
+    );
+    let recipient_id = profile_actor_id(authority, post_author);
     let (primary_audience, secondary_audience) = get_announce_audience(
         repost_visibility,
         &actor_id,
         &recipient_id,
     );
     UndoAnnounce {
-        context: build_default_context(),
+        _context: build_default_context(),
         activity_type: UNDO.to_string(),
         id: activity_id,
         actor: actor_id,
@@ -81,6 +86,7 @@ pub async fn prepare_undo_announce(
     repost: &Repost,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_ne!(post.id, repost.id);
+    let authority = Authority::from(instance);
     let recipients = get_announce_recipients(
         db_client,
         sender,
@@ -88,7 +94,7 @@ pub async fn prepare_undo_announce(
         post,
     ).await?;
     let activity = build_undo_announce(
-        instance.uri_str(),
+        &authority,
         &sender.profile,
         repost.id,
         repost.has_deprecated_ap_id,
@@ -113,6 +119,7 @@ mod tests {
 
     #[test]
     fn test_build_undo_announce() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let announcer = DbActorProfile::default();
         let post_author_id = "https://social.example/users/test";
         let post_author = DbActorProfile::remote_for_test(
@@ -121,7 +128,7 @@ mod tests {
         );
         let repost_id = generate_ulid();
         let activity = build_undo_announce(
-            INSTANCE_URI,
+            &authority,
             &announcer,
             repost_id,
             true, // legacy activity ID
@@ -142,7 +149,7 @@ mod tests {
         ]);
 
         let activity = build_undo_announce(
-            INSTANCE_URI,
+            &authority,
             &announcer,
             repost_id,
             false, // no legacy activity ID

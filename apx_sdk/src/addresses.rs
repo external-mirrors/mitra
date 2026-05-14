@@ -4,14 +4,18 @@ use std::{fmt, str::FromStr};
 use regex::Regex;
 use thiserror::Error;
 
-use apx_core::url::hostname::guess_protocol;
+use apx_core::url::{
+    common::url_encode,
+    hostname::guess_protocol,
+};
 
 // https://swicg.github.io/activitypub-webfinger/#names
 // username: RFC-3986 unreserved plus % for percent encoding; case-sensitive
-// hostname: normalized (ASCII) or IP literals
-//   https://datatracker.ietf.org/doc/html/rfc3986#section-3.2.2
+// hostname: normalized (ASCII) or IP literals. No port number.
+//   https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.2
 const WEBFINGER_ADDRESS_RE: &str = r"^(?P<username>[A-Za-z0-9\-\._~%]+)@(?P<hostname>[a-z0-9\.-]+|[0-9\.]+|\[[0-9a-f:]+\])$";
 
+/// Error that may occur during the parsing of a WebFinger address
 #[derive(Debug, Error)]
 #[error("{0}")]
 pub struct WebfingerAddressError(&'static str);
@@ -20,7 +24,8 @@ impl WebfingerAddressError {
     pub fn message(&self) -> &'static str { self.0 }
 }
 
-#[derive(Eq, Ord, PartialEq, PartialOrd)]
+/// WebFinger address (user@host)
+#[derive(Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct WebfingerAddress {
     username: String,
     hostname: String, // does not include port number
@@ -48,14 +53,17 @@ impl WebfingerAddress {
         Ok(address)
     }
 
+    /// Returns the 'user' part of the address
     pub fn username(&self) -> &str {
         &self.username
     }
 
+    /// Returns the 'host' part of the address
     pub fn hostname(&self) -> &str {
         &self.hostname
     }
 
+    /// Parses an @user@host handle
     pub fn from_handle(
         handle: &str,
     ) -> Result<Self, WebfingerAddressError> {
@@ -66,13 +74,14 @@ impl WebfingerAddress {
         Ok(address)
     }
 
+    /// Returns the @user@host handle
     pub fn handle(&self) -> String {
         format!("@{}", self)
     }
 
-    /// Returns 'acct' string (short address).
-    /// Used in Mastodon API.
-    pub fn acct(&self, local_hostname: &str) -> String {
+    /// Returns short address (without the 'host' part if account is local).
+    /// This is an `acct` string in Mastodon API.
+    pub fn short_address(&self, local_hostname: &str) -> String {
         if self.hostname == local_hostname {
             self.username.clone()
         } else {
@@ -80,11 +89,13 @@ impl WebfingerAddress {
         }
     }
 
-    // https://datatracker.ietf.org/doc/html/rfc7565#section-7
+    /// Returns the 'acct' URI  
+    /// <https://www.rfc-editor.org/rfc/rfc7565.html>
     pub fn to_acct_uri(&self) -> String {
         format!("acct:{}", self)
     }
 
+    /// Parses an 'acct' URI
     pub fn from_acct_uri(
         uri: &str,
     ) -> Result<Self, WebfingerAddressError> {
@@ -95,12 +106,23 @@ impl WebfingerAddress {
     }
 
     /// Returns WebFinger endpoint URI  
-    /// <https://datatracker.ietf.org/doc/html/rfc7033#section-4>
+    /// <https://www.rfc-editor.org/rfc/rfc7033.html#section-4>
     pub fn endpoint_uri(&self) -> String {
         format!(
             "{}://{}/.well-known/webfinger",
             guess_protocol(self.hostname()),
             self.hostname(),
+        )
+    }
+
+    /// Returns WebFinger resource URI  
+    /// <https://www.rfc-editor.org/rfc/rfc7033.html#section-4>
+    pub fn resource_uri(&self) -> String {
+        let resource = url_encode(&self.to_acct_uri());
+        format!(
+            "{}?resource={}",
+            self.endpoint_uri(),
+            resource,
         )
     }
 }
@@ -121,6 +143,7 @@ impl fmt::Display for WebfingerAddress {
 
 #[cfg(test)]
 mod tests {
+    use reqwest::Client;
     use super::*;
 
     #[test]
@@ -135,7 +158,7 @@ mod tests {
             "user@local.example",
         );
         assert_eq!(
-            address.acct(local_hostname),
+            address.short_address(local_hostname),
             "user",
         );
     }
@@ -152,7 +175,7 @@ mod tests {
             "user@remote.example",
         );
         assert_eq!(
-            address.acct(local_hostname),
+            address.short_address(local_hostname),
             "user@remote.example",
         );
     }
@@ -269,10 +292,13 @@ mod tests {
     fn test_address_endpoint_uri() {
         let value = "user_1@social.example";
         let address = WebfingerAddress::parse(value).unwrap();
-        let endpoint_uri = address.endpoint_uri();
         assert_eq!(
-            endpoint_uri,
+            address.endpoint_uri(),
             "https://social.example/.well-known/webfinger",
+        );
+        assert_eq!(
+            address.resource_uri(),
+            "https://social.example/.well-known/webfinger?resource=acct%3Auser_1%40social.example",
         );
     }
 
@@ -280,10 +306,21 @@ mod tests {
     fn test_address_endpoint_uri_yggdrasil() {
         let value = "admin@[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]";
         let address = WebfingerAddress::parse(value).unwrap();
-        let endpoint_uri = address.endpoint_uri();
         assert_eq!(
-            endpoint_uri,
+            address.endpoint_uri(),
             "http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/.well-known/webfinger",
         );
+        assert_eq!(
+            address.resource_uri(),
+            "http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/.well-known/webfinger?resource=acct%3Aadmin%40%5B319%3A3cf0%3Add1d%3A47b9%3A20c%3A29ff%3Afe2c%3A39be%5D",
+        );
+        let resource_uri_reqwest = Client::new()
+            .get(address.endpoint_uri())
+            .query(&[("resource", address.to_acct_uri())])
+            .build()
+            .unwrap()
+            .url()
+            .to_string();
+        assert_eq!(address.resource_uri(), resource_uri_reqwest);
     }
 }

@@ -120,7 +120,6 @@ mod tests {
         let subscription_option = MoneroSubscription {
             chain_id: ChainId::monero_mainnet(),
             price: NonZeroU64::new(20000).unwrap(),
-            payout_address: "test".to_string(),
         };
         let invoice_id = "edc374aa-e580-4a58-9404-f3e8bf8556b2".parse().unwrap();
         let invoice = Invoice {

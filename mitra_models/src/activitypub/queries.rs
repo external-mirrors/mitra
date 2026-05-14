@@ -13,6 +13,7 @@ use crate::{
     },
     media::types::MediaInfo,
 };
+use super::types::ActivityPubObject;
 
 pub async fn save_activity(
     db_client: &impl DatabaseClient,
@@ -83,6 +84,23 @@ pub async fn save_attributed_object(
         &[&object_id, &object_json, &post_id],
     ).await?;
     Ok(())
+}
+
+pub async fn get_object(
+    db_client: &impl DatabaseClient,
+    object_id: &str,
+) -> Result<JsonValue, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT object_data
+        FROM activitypub_object
+        WHERE object_id = $1
+        ",
+        &[&object_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("activitypub object"))?;
+    let object_data = row.try_get("object_data")?;
+    Ok(object_data)
 }
 
 pub async fn get_object_as_target(
@@ -183,22 +201,64 @@ pub async fn remove_object_from_collection(
 pub async fn get_collection_items(
     db_client: &impl DatabaseClient,
     collection_id: &str,
-    limit: u32,
-) -> Result<Vec<JsonValue>, DatabaseError> {
+    maybe_after_object_id: Option<&str>,
+    limit: u16,
+) -> Result<Vec<ActivityPubObject>, DatabaseError> {
+    let maybe_after: Option<DateTime<Utc>> =
+        if let Some(after_object_id) = maybe_after_object_id
+    {
+        let maybe_row = db_client.query_opt(
+            "
+            SELECT created_at
+            FROM activitypub_object
+            WHERE object_id = $1
+            ",
+            &[&after_object_id],
+        ).await?;
+        maybe_row
+            .map(|row| row.try_get("created_at"))
+            .transpose()?
+    } else {
+        None
+    };
     // Reverse chronological order
-    let rows = db_client.query(
-        "
-        SELECT activitypub_object.object_data
-        FROM activitypub_object
-        JOIN activitypub_collection_item USING (object_id)
-        WHERE collection_id = $1
-        ORDER BY activitypub_object.created_at DESC
-        LIMIT $2
-        ",
-        &[&collection_id, &i64::from(limit)],
-    ).await?;
+    let rows = if let Some(after) = maybe_after {
+        db_client.query(
+            "
+            SELECT activitypub_object
+            FROM (
+                SELECT activitypub_object
+                FROM activitypub_object
+                JOIN activitypub_collection_item USING (object_id)
+                WHERE
+                    collection_id = $1
+                    AND activitypub_object.created_at > $2
+                ORDER BY activitypub_object.created_at ASC
+                LIMIT $3
+            ) AS page_item
+            ORDER BY (activitypub_object).created_at DESC
+            ",
+            &[
+                &collection_id,
+                &after,
+                &i64::from(limit),
+            ],
+        ).await?
+    } else {
+        db_client.query(
+            "
+            SELECT activitypub_object
+            FROM activitypub_object
+            JOIN activitypub_collection_item USING (object_id)
+            WHERE collection_id = $1
+            ORDER BY activitypub_object.created_at DESC
+            LIMIT $2
+            ",
+            &[&collection_id, &i64::from(limit)],
+        ).await?
+    };
     let items = rows.iter()
-        .map(|row| row.try_get("object_data"))
+        .map(|row| row.try_get("activitypub_object"))
         .collect::<Result<_, _>>()?;
     Ok(items)
 }
@@ -324,6 +384,70 @@ pub async fn get_activitypub_media_by_digest(
         _ => return Err(DatabaseTypeError.into()),
     };
     Ok(file_info)
+}
+
+pub async fn get_object_ids(
+    db_client: &impl DatabaseClient,
+) -> Result<Vec<String>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT unnest(array_remove(
+            ARRAY[
+                actor_json ->> 'id',
+                actor_json ->> 'inbox',
+                actor_json ->> 'outbox',
+                actor_json ->> 'followers'
+            ],
+            NULL
+        )) AS object_id
+        FROM actor_profile
+        WHERE actor_profile.actor_json IS NOT NULL
+        UNION ALL
+        SELECT public_key ->> 'id'
+        FROM actor_profile
+        CROSS JOIN jsonb_array_elements(actor_profile.public_keys) AS public_key
+        UNION ALL
+        SELECT payment_option ->> 'object_id'
+        FROM actor_profile
+        CROSS JOIN jsonb_array_elements(actor_profile.payment_options) AS payment_option
+        WHERE payment_option ->> 'object_id' IS NOT NULL
+        UNION ALL
+        SELECT post.object_id
+        FROM post
+        WHERE post.object_id IS NOT NULL
+        UNION ALL
+        SELECT unnest(array_remove(
+            ARRAY[
+                conversation.object_id,
+                conversation.audience
+            ],
+            NULL
+        ))
+        FROM conversation
+        WHERE conversation.audience IS NOT NULL
+        UNION ALL
+        SELECT follow_request.activity_id
+        FROM follow_request
+        WHERE follow_request.activity_id IS NOT NULL
+        UNION ALL
+        SELECT post_reaction.activity_id
+        FROM post_reaction
+        WHERE post_reaction.activity_id IS NOT NULL
+        UNION ALL
+        SELECT emoji.object_id
+        FROM emoji
+        WHERE emoji.object_id IS NOT NULL
+        UNION ALL
+        SELECT invoice.object_id
+        FROM invoice
+        WHERE invoice.object_id IS NOT NULL
+        ",
+        &[],
+    ).await?;
+    let object_ids = rows.iter()
+        .map(|row| row.try_get("object_id"))
+        .collect::<Result<_, _>>()?;
+    Ok(object_ids)
 }
 
 #[cfg(test)]
@@ -519,10 +643,11 @@ mod tests {
         let items = get_collection_items(
             db_client,
             canonical_collection_id,
+            None,
             10,
         ).await.unwrap();
         assert_eq!(items.len(), 1);
-        assert_eq!(items[0], activity);
+        assert_eq!(items[0].object_data, activity);
 
         // Remove from collection
         remove_object_from_collection(
@@ -533,9 +658,89 @@ mod tests {
         let items = get_collection_items(
             db_client,
             canonical_collection_id,
+            None,
             10,
         ).await.unwrap();
         assert_eq!(items.len(), 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_collection_items_with_cursor() {
+        let db_client = &mut create_test_database().await;
+        let actor_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let user = create_test_portable_user(
+            db_client,
+            "test",
+            actor_id,
+        ).await;
+        let activity_1_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/1";
+        let activity_2_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/2";
+        let activity_3_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/3";
+        let activity = json!({});
+        let collection_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/outbox";
+        save_activity(
+            db_client,
+            &CanonicalUri::parse(activity_1_id).unwrap(),
+            &activity,
+        ).await.unwrap();
+        save_activity(
+            db_client,
+            &CanonicalUri::parse(activity_2_id).unwrap(),
+            &activity,
+        ).await.unwrap();
+        save_activity(
+            db_client,
+            &CanonicalUri::parse(activity_3_id).unwrap(),
+            &activity,
+        ).await.unwrap();
+        add_object_to_collection(
+            db_client,
+            user.id,
+            collection_id,
+            activity_1_id,
+        ).await.unwrap();
+        add_object_to_collection(
+            db_client,
+            user.id,
+            collection_id,
+            activity_2_id,
+        ).await.unwrap();
+        add_object_to_collection(
+            db_client,
+            user.id,
+            collection_id,
+            activity_3_id,
+        ).await.unwrap();
+
+        let items = get_collection_items(
+            db_client,
+            collection_id,
+            None,
+            10,
+        ).await.unwrap();
+        assert_eq!(items.len(), 3);
+        assert_eq!(items[0].object_id, activity_3_id);
+        assert_eq!(items[1].object_id, activity_2_id);
+        assert_eq!(items[2].object_id, activity_1_id);
+
+        let items = get_collection_items(
+            db_client,
+            collection_id,
+            Some(activity_1_id),
+            10,
+        ).await.unwrap();
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].object_id, activity_3_id);
+        assert_eq!(items[1].object_id, activity_2_id);
+
+        let items = get_collection_items(
+            db_client,
+            collection_id,
+            Some("https://social.example/test"), // unknown ID
+            10,
+        ).await.unwrap();
+        assert_eq!(items.len(), 3);
     }
 
     #[tokio::test]
@@ -604,5 +809,13 @@ mod tests {
             user.id,
             file_info.digest,
         ).await.unwrap();
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_object_ids() {
+        let db_client = &mut create_test_database().await;
+        let ids = get_object_ids(db_client).await.unwrap();
+        assert_eq!(ids.len(), 0);
     }
 }

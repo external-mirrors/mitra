@@ -1,6 +1,13 @@
 use std::fmt;
 
-use apx_sdk::deserialization::object_to_id;
+use apx_sdk::{
+    core::url::canonical::CanonicalUri,
+    deserialization::{
+        deserialize_into_id_array,
+        object_to_id,
+    },
+};
+use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
@@ -23,7 +30,6 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     forwarder::{
-        get_activity_audience,
         get_activity_recipients,
         EndpointType,
     },
@@ -44,6 +50,7 @@ use super::{
     follow::handle_follow,
     like::handle_like,
     r#move::handle_move,
+    note::normalize_audience,
     offer::handle_offer,
     reject::handle_reject,
     remove::handle_remove,
@@ -51,6 +58,8 @@ use super::{
     update::handle_update,
     HandlerError,
 };
+
+const FORWARDER_LIMIT: usize = 50;
 
 pub enum Descriptor {
     Object(String),
@@ -76,15 +85,42 @@ impl fmt::Display for Descriptor {
     }
 }
 
+#[derive(Deserialize)]
+struct ActivityAudience {
+    #[serde(default, deserialize_with = "deserialize_into_id_array")]
+    to: Vec<String>,
+    #[serde(default, deserialize_with = "deserialize_into_id_array")]
+    cc: Vec<String>,
+}
+
+pub fn get_activity_audience(
+    activity: &JsonValue,
+    // implicit audience
+    maybe_recipient_id: Option<&str>,
+) -> Result<Vec<CanonicalUri>, ValidationError> {
+    let activity: ActivityAudience = serde_json::from_value(activity.clone())
+        .map_err(|_| ValidationError("invalid audience"))?;
+    let mut audience = [activity.to, activity.cc].concat();
+    if let Some(recipient_id) = maybe_recipient_id {
+        audience.push(recipient_id.to_owned());
+    };
+    if audience.is_empty() {
+        log::warn!("activity audience is not known");
+    };
+    // Targets will be sorted
+    let audience = normalize_audience(&audience)?;
+    Ok(audience)
+}
+
 pub async fn handle_activity(
     config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: &JsonValue,
     is_authenticated: bool,
     maybe_recipient_id: Option<&str>,
     maybe_sender_id: Option<&str>,
 ) -> Result<String, HandlerError> {
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let activity = if is_authenticated {
         activity.clone()
     } else {
@@ -92,7 +128,7 @@ pub async fn handle_activity(
         let activity_type = activity["type"].as_str()
             .ok_or(ValidationError("'type' property is missing"))?;
         match activity_type {
-            CREATE | DELETE => {
+            CREATE | UPDATE => {
                 // Object will be fetched in the handler
                 activity.clone()
             },
@@ -120,20 +156,24 @@ pub async fn handle_activity(
     let activity_clone = activity.clone();
     let maybe_descriptor = match activity_type.as_str() {
         ACCEPT => {
-            handle_accept(config, db_pool, activity).await?
+            handle_accept(ap_client, db_pool, activity).await?
         },
         ADD => {
-            handle_add(config, db_pool, activity).await?
+            // `config` is required by Add(Create) handler
+            handle_add(config, ap_client, db_pool, activity).await?
         },
         ANNOUNCE => {
-            handle_announce(config, db_pool, activity).await?
+            // `config` is required by Announce(Create) handler
+            handle_announce(config, ap_client, db_pool, activity).await?
         },
         BLOCK => {
-            handle_block(config, db_pool, activity).await?
+            handle_block(ap_client, db_pool, activity).await?
         },
         CREATE => {
+            // `config` is required by Create(Vote) handler
             handle_create(
                 config,
+                ap_client,
                 db_pool,
                 activity,
                 maybe_sender_id,
@@ -141,34 +181,35 @@ pub async fn handle_activity(
             ).await?
         },
         DELETE => {
-            handle_delete(config, db_pool, activity).await?
+            handle_delete(ap_client, db_pool, activity).await?
         },
         FOLLOW => {
-            handle_follow(config, db_pool, activity).await?
+            handle_follow(ap_client, db_pool, activity).await?
         },
         DISLIKE | LIKE | EMOJI_REACT => {
-            handle_like(config, db_pool, activity).await?
+            handle_like(ap_client, db_pool, activity).await?
         },
         LISTEN => {
             None // ignore
         },
         MOVE => {
-            handle_move(config, db_pool, activity).await?
+            handle_move(ap_client, db_pool, activity).await?
         },
         OFFER => {
-            handle_offer(config, db_pool, activity).await?
+            // `config` required by `create_payment_address`
+            handle_offer(config, ap_client, db_pool, activity).await?
         },
         REJECT => {
-            handle_reject(config, db_pool, activity).await?
+            handle_reject(ap_client, db_pool, activity).await?
         },
         REMOVE => {
-            handle_remove(config, db_pool, activity).await?
+            handle_remove(ap_client, db_pool, activity).await?
         },
         UNDO => {
-            handle_undo(config, db_pool, activity).await?
+            handle_undo(ap_client, db_pool, activity).await?
         },
         UPDATE => {
-            handle_update(config, db_pool, activity, is_authenticated).await?
+            handle_update(ap_client, db_pool, activity, is_authenticated).await?
         },
         _ => {
             log::warn!("activity type is not supported: {}", activity);
@@ -187,10 +228,11 @@ pub async fn handle_activity(
             db_client,
             &audience,
         ).await?;
-        for recipient in recipients.iter() {
+        // TODO: remove limit
+        for recipient in recipients.iter().take(FORWARDER_LIMIT) {
             // Recipient is a local actor: add activity to its inbox
             // and forward to other gateways
-            if recipient.has_account() && recipient.is_portable() {
+            if recipient.has_portable_account() {
                 if !is_new_activity {
                     log::warn!("activity has already been forwarded from inbox");
                     continue;
@@ -266,4 +308,30 @@ pub async fn handle_activity(
         );
     };
     Ok(canonical_activity_id.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use apx_sdk::constants::AP_PUBLIC;
+    use serde_json::json;
+    use super::*;
+
+    #[test]
+    fn test_get_activity_audience() {
+        let activity = json!({
+            "id": "https://social.example/activities/123",
+            "type": "Announce",
+            "actor": "https://social.example/users/1",
+            "object": "https://social.example/objects/321",
+            "to": "as:Public",
+            "cc": "https://social.example/users/1/followers",
+        });
+        let audience = get_activity_audience(&activity, None).unwrap();
+        assert_eq!(audience.len(), 2);
+        assert_eq!(
+            audience[0].to_string(),
+            "https://social.example/users/1/followers",
+        );
+        assert_eq!(audience[1].to_string(), AP_PUBLIC);
+    }
 }

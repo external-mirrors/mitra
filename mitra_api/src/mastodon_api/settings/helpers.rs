@@ -1,12 +1,13 @@
 use apx_sdk::addresses::WebfingerAddress;
 use uuid::Uuid;
 
+use mitra_adapters::profiles::profile_address;
 use mitra_models::{
     database::{
         DatabaseClient,
         DatabaseError,
     },
-    profiles::types::{DbActorProfile, WebfingerHostname},
+    profiles::types::DbActorProfile,
     relationships::queries::{get_followers, get_following},
 };
 use mitra_validators::errors::ValidationError;
@@ -19,14 +20,8 @@ fn export_profiles_to_csv(
 ) -> String {
     let mut csv = String::new();
     for profile in profiles {
-        let webfinger_address = match profile.hostname() {
-            WebfingerHostname::Local => {
-                WebfingerAddress::new_unchecked(&profile.username, local_hostname)
-            },
-            WebfingerHostname::Remote(hostname) => {
-                WebfingerAddress::new_unchecked(&profile.username, &hostname)
-            },
-            WebfingerHostname::Unknown => continue,
+        let Some(webfinger_address) = profile_address(local_hostname, &profile) else {
+            continue;
         };
         csv += &format!("{}\n", webfinger_address);
     };

@@ -22,6 +22,7 @@ use crate::profiles::{
 
 use super::types::{
     FollowRequest,
+    FollowRequestDirection,
     FollowRequestStatus,
     RelatedActorProfile,
     Relationship,
@@ -196,7 +197,7 @@ pub async fn follow(
     ).await?;
     let target_profile = update_follower_count(&transaction, target_id, 1).await?;
     update_following_count(&transaction, source_id, 1).await?;
-    if target_profile.is_local() && !target_profile.manually_approves_followers {
+    if target_profile.has_user_account() && !target_profile.manually_approves_followers {
         create_follow_notification(&transaction, source_id, target_id).await?;
     };
     transaction.commit().await?;
@@ -273,7 +274,7 @@ pub async fn create_remote_follow_request_opt(
     source_id: Uuid,
     target_id: Uuid,
     activity_id: &str,
-) -> Result<FollowRequest, DatabaseError> {
+) -> Result<(FollowRequest, bool), DatabaseError> {
     let request_id = generate_ulid();
     // Update activity ID if follow request already exists
     let row = db_client.query_one(
@@ -298,8 +299,9 @@ pub async fn create_remote_follow_request_opt(
             &FollowRequestStatus::Pending,
         ],
     ).await?;
-    let request = row.try_get("follow_request")?;
-    Ok(request)
+    let request: FollowRequest = row.try_get("follow_request")?;
+    let is_new = request.id == request_id;
+    Ok((request, is_new))
 }
 
 pub async fn follow_request_accepted(
@@ -489,6 +491,7 @@ pub async fn is_local_or_followed(
                     WHERE target_id = actor_profile.id
                 )
                 OR actor_profile.user_id IS NOT NULL
+                OR actor_profile.automated_account_id IS NOT NULL
                 OR actor_profile.portable_user_id IS NOT NULL
             )
         ",
@@ -535,26 +538,37 @@ pub async fn get_following_paginated(
     ).await
 }
 
-/// Returns incoming follow requests
 pub async fn get_follow_requests_paginated(
     db_client: &impl DatabaseClient,
     profile_id: Uuid,
+    direction: FollowRequestDirection,
     max_request_id: Option<Uuid>,
     limit: u16,
 ) -> Result<Vec<RelatedActorProfile<Uuid>>, DatabaseError> {
-    let rows = db_client.query(
+    let statement = format!(
         "
         SELECT follow_request.id, actor_profile
         FROM actor_profile
         JOIN follow_request
-        ON (actor_profile.id = follow_request.source_id)
+        ON (actor_profile.id = follow_request.{source_id})
         WHERE
-            follow_request.target_id = $1
+            follow_request.{target_id} = $1
             AND follow_request.request_status = $2
             AND ($3::uuid IS NULL OR follow_request.id < $3)
         ORDER BY follow_request.id DESC
         LIMIT $4
         ",
+        source_id=match direction {
+            FollowRequestDirection::Incoming => "source_id",
+            FollowRequestDirection::Outgoing => "target_id",
+        },
+        target_id=match direction {
+            FollowRequestDirection::Incoming => "target_id",
+            FollowRequestDirection::Outgoing => "source_id",
+        },
+    );
+    let rows = db_client.query(
+        &statement,
         &[
             &profile_id,
             &FollowRequestStatus::Pending,
@@ -924,14 +938,15 @@ mod tests {
 
         // Create follow request
         let activity_id = "https://example.org/objects/123";
-        let _follow_request = create_remote_follow_request_opt(
+        let (_, is_new) = create_remote_follow_request_opt(
             db_client,
             source.id,
             target.id,
             activity_id,
         ).await.unwrap();
+        assert!(is_new);
         // Repeat
-        let follow_request = create_remote_follow_request_opt(
+        let (follow_request, is_new) = create_remote_follow_request_opt(
             db_client,
             source.id,
             target.id,
@@ -941,6 +956,8 @@ mod tests {
         assert_eq!(follow_request.target_id, target.id);
         assert_eq!(follow_request.activity_id, Some(activity_id.to_string()));
         assert_eq!(follow_request.request_status, FollowRequestStatus::Pending);
+        assert!(!is_new);
+
         // Accept follow request
         follow_request_accepted(db_client, follow_request.id).await.unwrap();
         let follow_request = get_follow_request_by_id(db_client, follow_request.id)
@@ -949,7 +966,7 @@ mod tests {
 
         // Another request received
         let activity_id = "https://social.example/objects/125";
-        let follow_request_updated = create_remote_follow_request_opt(
+        let (follow_request_updated, is_new) = create_remote_follow_request_opt(
             db_client,
             source.id,
             target.id,
@@ -964,6 +981,7 @@ mod tests {
             follow_request_updated.request_status,
             FollowRequestStatus::Accepted,
         );
+        assert!(!is_new);
     }
 
     #[tokio::test]
@@ -997,6 +1015,7 @@ mod tests {
         let results = get_follow_requests_paginated(
             db_client,
             target.id,
+            FollowRequestDirection::Incoming,
             None,
             10,
         ).await.unwrap();

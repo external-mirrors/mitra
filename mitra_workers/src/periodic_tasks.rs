@@ -1,10 +1,15 @@
+use std::time::Instant;
+
 use anyhow::Error;
 
 use mitra_activitypub::queues::{
     process_queued_incoming_activities,
     process_queued_outgoing_activities,
 };
-use mitra_adapters::media::delete_orphaned_media;
+use mitra_adapters::{
+    media::delete_orphaned_media,
+    payments::common::check_open_remote_invoices,
+};
 use mitra_config::Config;
 use mitra_models::{
     activitypub::queries::{
@@ -49,7 +54,12 @@ use super::importer::{
 };
 use super::payments::{
     common::update_expired_subscriptions,
-    monero::{check_closed_invoices, check_monero_subscriptions},
+    monero::{
+        check_closed_monero_invoices,
+        check_monero_invoices,
+        check_monero_light_invoices,
+        check_monero_light_payments,
+    },
 };
 
 pub async fn subscription_expiration_monitor(
@@ -58,37 +68,6 @@ pub async fn subscription_expiration_monitor(
 ) -> Result<(), Error> {
     update_expired_subscriptions(
         &config.instance(),
-        db_pool,
-    ).await?;
-    Ok(())
-}
-
-pub async fn monero_payment_monitor(
-    config: &Config,
-    db_pool: &DatabaseConnectionPool,
-) -> Result<(), Error> {
-    let monero_config = match config.monero_config() {
-        Some(monero_config) => monero_config,
-        None => return Ok(()), // not configured
-    };
-    check_monero_subscriptions(
-        &config.instance(),
-        monero_config,
-        db_pool,
-    ).await?;
-    Ok(())
-}
-
-pub async fn monero_recurrent_payment_monitor(
-    config: &Config,
-    db_pool: &DatabaseConnectionPool,
-) -> Result<(), Error> {
-    let monero_config = match config.monero_config() {
-        Some(monero_config) => monero_config,
-        None => return Ok(()), // not configured
-    };
-    check_closed_invoices(
-        monero_config,
         db_pool,
     ).await?;
     Ok(())
@@ -120,10 +99,16 @@ pub async fn delete_extraneous_posts(
         Some(days) => days_before_now(days),
         None => return Ok(()), // not configured
     };
-    let posts = find_extraneous_posts(
-        db_client_await!(db_pool),
-        updated_before,
-    ).await?;
+    let posts = {
+        let db_client = &**get_database_client(db_pool).await?;
+        let start_time = Instant::now();
+        let posts = find_extraneous_posts(db_client, updated_before).await?;
+        log::info!(
+            "find_extraneous_posts query executed: {:.2?}",
+            start_time.elapsed(),
+        );
+        posts
+    };
     for post_id in posts {
         let db_client = &mut **get_database_client(db_pool).await?;
         let deletion_queue = delete_post(db_client, post_id).await?;
@@ -137,13 +122,16 @@ pub async fn delete_empty_profiles(
     config: &Config,
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
-    let db_client = &mut **get_database_client(db_pool).await?;
     let updated_before = match config.retention.empty_profiles {
         Some(days) => days_before_now(days),
         None => return Ok(()), // not configured
     };
-    let profiles = find_empty_profiles(db_client, updated_before).await?;
+    let profiles = find_empty_profiles(
+        db_client_await!(db_pool),
+        updated_before,
+    ).await?;
     for profile_id in profiles {
+        let db_client = &mut **get_database_client(db_pool).await?;
         let profile = get_profile_by_id(db_client, profile_id).await?;
         let deletion_queue = delete_profile(db_client, profile.id).await?;
         delete_orphaned_media(config, db_client, deletion_queue).await?;
@@ -198,12 +186,14 @@ pub async fn prune_unused_attachments(
 }
 
 pub async fn prune_activitypub_objects(
-    _config: &Config,
+    config: &Config,
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
-    const CACHE_EXPIRATION_DAYS: u32 = 5;
+    let created_before = match config.retention.activitypub_objects {
+        Some(days) => days_before_now(days),
+        None => return Ok(()), // not configured
+    };
     let db_client = &**get_database_client(db_pool).await?;
-    let created_before = days_before_now(CACHE_EXPIRATION_DAYS);
     let deleted_count =
         delete_activitypub_objects(db_client, created_before).await?;
     if deleted_count > 0 {
@@ -252,7 +242,8 @@ pub async fn media_cleanup_queue_executor(
 pub async fn refresh_materialized_views(
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
-    refresh_latest_post_view(db_pool).await?;
+    let db_client = &**get_database_client(db_pool).await?;
+    refresh_latest_post_view(db_client).await?;
     Ok(())
 }
 
@@ -293,5 +284,79 @@ pub async fn importer_queue_executor(
         let db_client = &**get_database_client(db_pool).await?;
         delete_job_from_queue(db_client, job.id).await?;
     };
+    Ok(())
+}
+
+pub async fn monero_payment_monitor(
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), Error> {
+    let monero_config = match config.monero_config() {
+        Some(monero_config) => monero_config,
+        None => return Ok(()), // not configured
+    };
+    check_monero_invoices(
+        &config.instance(),
+        monero_config,
+        db_pool,
+    ).await?;
+    Ok(())
+}
+
+pub async fn monero_recurrent_payment_monitor(
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), Error> {
+    let monero_config = match config.monero_config() {
+        Some(monero_config) => monero_config,
+        None => return Ok(()), // not configured
+    };
+    check_closed_monero_invoices(
+        monero_config,
+        db_pool,
+    ).await?;
+    Ok(())
+}
+
+pub async fn monero_light_payment_monitor(
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), Error> {
+    let monero_config = match config.monero_light_config() {
+        Some(monero_config) => monero_config,
+        None => return Ok(()), // not configured
+    };
+    check_monero_light_invoices(
+        &config.instance(),
+        monero_config,
+        db_pool,
+    ).await?;
+    Ok(())
+}
+
+pub async fn monero_light_non_interactive_payment_monitor(
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), Error> {
+    let Some(monero_config) = config.monero_light_config() else {
+        return Ok(()); // not configured
+    };
+    let start_time = Instant::now();
+    check_monero_light_payments(
+        monero_config,
+        db_pool,
+    ).await?;
+    log::info!(
+        "check_monero_light_payments executed: {:.2?}",
+        start_time.elapsed(),
+    );
+    Ok(())
+}
+
+pub async fn remote_invoice_monitor(
+    _config: &Config,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), Error> {
+    check_open_remote_invoices(db_pool).await?;
     Ok(())
 }

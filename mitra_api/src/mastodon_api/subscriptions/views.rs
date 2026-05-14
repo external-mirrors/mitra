@@ -13,15 +13,24 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    authority::Authority,
     builders::{
         add_person::prepare_add_subscriber,
         offer_agreement::prepare_offer_agreement,
         update_person::prepare_update_person,
     },
 };
-use mitra_adapters::payments::subscriptions::{
-    create_or_update_local_subscription,
-    validate_subscription_price,
+use mitra_adapters::payments::{
+    monero::{
+        create_payment_address,
+        validate_monero_address,
+        validate_monero_standard_address,
+        PaymentError,
+    },
+    subscriptions::{
+        create_or_update_local_subscription,
+        validate_subscription_price,
+    },
 };
 use mitra_config::Config;
 use mitra_models::{
@@ -33,6 +42,13 @@ use mitra_models::{
         set_invoice_status,
     },
     invoices::types::InvoiceStatus,
+    payment_methods::{
+        queries::{
+            create_payment_method,
+            get_payment_method_by_chain_id,
+        },
+        types::{PaymentMethodData, PaymentType},
+    },
     profiles::queries::{
         get_profile_by_id,
         update_profile,
@@ -52,8 +68,11 @@ use mitra_models::{
 use mitra_services::{
     media::MediaServer,
     monero::{
-        utils::validate_monero_address,
-        wallet::create_monero_address,
+        light_wallet::LightWalletClient,
+        utils::{
+            parse_monero_address,
+            parse_monero_view_key,
+        },
     },
 };
 use mitra_validators::{
@@ -87,11 +106,6 @@ async fn create_subscription_view(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    // Local subscriptions require chain_id
-    let monero_config = config.monero_config()
-        .ok_or(MastodonError::NotSupported)?;
-    current_user.profile.monero_subscription(&monero_config.chain_id)
-        .ok_or(ValidationError("subscriptions are not enabled"))?;
     let subscriber = get_profile_by_id(
         db_client,
         subscriber_data.subscriber_id,
@@ -137,10 +151,42 @@ async fn get_subscription_options(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let options: Vec<SubscriptionOption> = current_user.profile
-        .payment_options.into_inner().into_iter()
-        .filter_map(SubscriptionOption::from_payment_option)
-        .collect();
+    let mut options: Vec<SubscriptionOption> = vec![];
+    for payment_option in current_user.profile.payment_options.inner() {
+        let subscription_info = match payment_option {
+            PaymentOption::Link(_) => continue,
+            PaymentOption::MoneroSubscription(subscription_info) => subscription_info,
+            PaymentOption::RemoteMoneroSubscription(_) => continue,
+        };
+        let maybe_payment_method = get_payment_method_by_chain_id(
+            db_client,
+            current_user.id,
+            &subscription_info.chain_id,
+        ).await?;
+        let Some(payment_method) = maybe_payment_method else {
+            // Payment method doesn't exist
+            continue;
+        };
+        let subscription_option = match payment_method.payment_type {
+            PaymentType::Monero => {
+                SubscriptionOption::Monero {
+                    chain_id: subscription_info.chain_id.clone(),
+                    price: subscription_info.price.into(),
+                    payout_address: payment_method.payout_address,
+                }
+            },
+            PaymentType::MoneroLight => {
+                SubscriptionOption::MoneroLight {
+                    chain_id: subscription_info.chain_id.clone(),
+                    price: subscription_info.price.into(),
+                    payout_address: payment_method.payout_address,
+                    view_key: payment_method.view_key
+                        .expect("view key should be present"),
+                }
+            },
+        };
+        options.push(subscription_option);
+    };
     Ok(HttpResponse::Ok().json(options))
 }
 
@@ -158,7 +204,7 @@ async fn register_subscription_option(
         return Err(MastodonError::PermissionError);
     };
 
-    let maybe_payment_option = match subscription_option.into_inner() {
+    let (payment_method_data, payment_option) = match subscription_option.into_inner() {
         SubscriptionOption::Monero { chain_id, price, payout_address } => {
             let monero_config = config.monero_config()
                 .ok_or(MastodonError::NotSupported)?;
@@ -168,41 +214,84 @@ async fn register_subscription_option(
             let price: NonZeroU64 = price.try_into()
                 .map_err(|_| ValidationError("price must be greater than 0"))?;
             validate_subscription_price(price)?;
-            validate_monero_address(&payout_address)
-                .map_err(|_| ValidationError("invalid monero address"))?;
+            validate_monero_address(&payout_address, &chain_id)?;
+            let payment_method_data = PaymentMethodData {
+                owner_id: current_user.id,
+                payment_type: PaymentType::Monero,
+                chain_id: chain_id.clone(),
+                payout_address: payout_address,
+                view_key: None,
+            };
             let payment_option = PaymentOption::monero_subscription(
                 chain_id,
                 price,
-                payout_address,
             );
-            Some(payment_option)
+            (payment_method_data, payment_option)
+        },
+        SubscriptionOption::MoneroLight { chain_id, price, payout_address, view_key } => {
+            let monero_config = config.monero_light_config()
+                .ok_or(MastodonError::NotSupported)?;
+            if chain_id != monero_config.chain_id {
+                return Err(ValidationError("unexpected chain ID").into());
+            };
+            let price: NonZeroU64 = price.try_into()
+                .map_err(|_| ValidationError("price must be greater than 0"))?;
+            validate_subscription_price(price)?;
+            validate_monero_standard_address(&payout_address, &chain_id)?;
+            let payout_address = parse_monero_address(&payout_address)
+                .map_err(|_| ValidationError("invalid monero address"))?;
+            let view_key = parse_monero_view_key(&view_key)
+                .map_err(|_| ValidationError("invalid view key"))?;
+            let payment_method_data = PaymentMethodData {
+                owner_id: current_user.id,
+                payment_type: PaymentType::MoneroLight,
+                chain_id: chain_id.clone(),
+                payout_address: payout_address.to_string(),
+                view_key: Some(view_key.to_string()),
+            };
+            let payment_option = PaymentOption::monero_subscription(
+                chain_id,
+                price,
+            );
+            let lw_client = LightWalletClient::new(
+                monero_config,
+                payout_address,
+                view_key,
+            );
+            lw_client.login().await
+                .map_err(MastodonError::from_internal)?;
+            log::info!("successful LWS login with {payout_address}");
+            (payment_method_data, payment_option)
         },
     };
-    if let Some(payment_option) = maybe_payment_option {
-        let mut profile_data = ProfileUpdateData::from(&current_user.profile);
-        profile_data.add_payment_option(payment_option);
-        // Media cleanup is not needed
-        let (updated_profile, _) = update_profile(
-            db_client,
-            current_user.id,
-            profile_data,
-        ).await?;
-        current_user.profile = updated_profile;
+    // Create or update payment method
+    create_payment_method(db_client, payment_method_data).await?;
+    // Update payment options
+    // TODO: local payment option should have a FK to payment method table
+    let mut profile_data = ProfileUpdateData::from(&current_user.profile);
+    profile_data.add_payment_option(payment_option);
+    // Media cleanup is not needed
+    let (updated_profile, _) = update_profile(
+        db_client,
+        current_user.id,
+        profile_data,
+    ).await?;
+    current_user.profile = updated_profile;
 
-        // Federate
-        let media_server = MediaServer::new(&config);
-        prepare_update_person(
-            db_client,
-            &config.instance(),
-            &media_server,
-            &current_user,
-        ).await?.save_and_enqueue(db_client).await?;
-    };
+    // Federate
+    let media_server = MediaServer::new(&config);
+    prepare_update_person(
+        db_client,
+        &config.instance(),
+        &media_server,
+        &current_user,
+    ).await?.save_and_enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         current_user,
     );
@@ -240,23 +329,30 @@ async fn create_invoice_view(
 
     let db_invoice = if recipient.is_local() {
         // Local recipient
-        let monero_config = config.monero_config()
-            .ok_or(MastodonError::NotSupported)?;
-        if invoice_data.chain_id != monero_config.chain_id {
-            return Err(ValidationError("unexpected chain ID").into());
-        };
+        let payment_method = get_payment_method_by_chain_id(
+            db_client,
+            recipient.id,
+            &invoice_data.chain_id,
+        )
+            .await?
+            .ok_or(ValidationError("recipient can't accept payment"))?;
         let _subscription_option: MoneroSubscription = recipient
             .payment_options
             .find_subscription_option(&invoice_data.chain_id)
             .ok_or(ValidationError("recipient can't accept payment"))?;
-        let payment_address = create_monero_address(monero_config).await
-            .map_err(MastodonError::from_internal)?
-            .to_string();
+        let payment_address = create_payment_address(
+            &config,
+            &payment_method,
+        ).await.map_err(|error| match error {
+            PaymentError::DatabaseError(db_error) => db_error.into(),
+            other_error => MastodonError::from_internal(other_error),
+        })?;
         create_local_invoice(
             db_client,
             sender.id,
             recipient.id,
-            &invoice_data.chain_id,
+            payment_method.payment_type,
+            payment_method.chain_id.inner(),
             &payment_address,
             invoice_data.amount,
         ).await?
@@ -269,9 +365,6 @@ async fn create_invoice_view(
             .payment_options
             .find_subscription_option(&invoice_data.chain_id)
             .ok_or(ValidationError("recipient can't accept payment"))?;
-        if !subscription_option.fep_0837_enabled {
-            return Err(MastodonError::OperationError("recipient doesn't support FEP-0837"));
-        };
         let db_invoice = create_remote_invoice(
             db_client,
             sender.id,

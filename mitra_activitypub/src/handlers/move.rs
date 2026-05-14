@@ -2,7 +2,6 @@
 use serde::Deserialize;
 use serde_json::Value;
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         get_database_client,
@@ -19,6 +18,7 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    authority::Authority,
     builders::{
         follow::follow_or_create_request,
         undo_follow::prepare_undo_follow,
@@ -37,7 +37,7 @@ struct Move {
 }
 
 pub async fn handle_move(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: Value,
 ) -> HandlerResult {
@@ -49,18 +49,18 @@ pub async fn handle_move(
         return Err(ValidationError("actor ID mismatch").into());
     };
 
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let instance = &ap_client.instance;
+    let authority = Authority::from(instance);
 
     let old_profile = ActorIdResolver::default().resolve(
-        &ap_client,
+        ap_client,
         db_pool,
         &activity.object,
     ).await?;
-    let old_actor_id = profile_actor_id(instance.uri_str(), &old_profile);
+    let old_actor_id = profile_actor_id(&authority, &old_profile);
 
     let new_profile = ActorIdResolver::default().force_refetch().resolve(
-        &ap_client,
+        ap_client,
         db_pool,
         &activity.target,
     ).await?;
@@ -69,7 +69,7 @@ pub async fn handle_move(
     let db_client = &mut **get_database_client(db_pool).await?;
     let mut aliases = find_verified_aliases(db_client, &new_profile).await?
         .into_iter()
-        .map(|profile| profile_actor_id(instance.uri_str(), &profile))
+        .map(|profile| profile_actor_id(&authority, &profile))
         .collect::<Vec<_>>();
     // Add aliases reported by server (actor's alsoKnownAs property)
     aliases.extend(new_profile.aliases.clone().into_actor_ids());

@@ -2,7 +2,6 @@ use apx_sdk::deserialization::deserialize_into_object_id;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         get_database_client,
@@ -22,6 +21,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     builders::add_context_activity::sync_conversation,
+    identifiers::canonicalize_id,
     importers::ApClient,
 };
 
@@ -36,13 +36,12 @@ struct Delete {
 }
 
 pub async fn handle_delete(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     let delete: Delete = serde_json::from_value(activity.clone())?;
     let db_client = &mut **get_database_client(db_pool).await?;
-    let ap_client = ApClient::new(config, db_client).await?;
     if delete.object == delete.actor {
         // Self-delete
         let profile = match get_remote_profile_by_actor_id(
@@ -60,18 +59,20 @@ pub async fn handle_delete(
         return Ok(Some(Descriptor::object("Actor")));
     };
     // Delete(Note)
+    let canonical_object_id = canonicalize_id(&delete.object)?;
     let post = match get_remote_post_by_object_id(
         db_client,
-        &delete.object,
+        &canonical_object_id.to_string(),
     ).await {
         Ok(post) => post,
         // Ignore Delete(Note) if post is not found
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
+    let canonical_actor_id = canonicalize_id(&delete.actor)?;
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
-        &delete.actor,
+        &canonical_actor_id.to_string(),
     ).await?;
     if post.author.id != actor_profile.id {
         return Err(ValidationError("actor is not an author").into());

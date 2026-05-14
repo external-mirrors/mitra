@@ -5,10 +5,7 @@ use std::path::Path;
 use actix_cors::{Cors, CorsError};
 use actix_web::{
     dev::Service,
-    http::{
-        header as http_header,
-        Method,
-    },
+    http::{header as http_header},
     middleware::{
         ErrorHandlers,
         ErrorHandlerResponse,
@@ -20,7 +17,6 @@ use actix_web::{
     HttpResponse,
     HttpServer,
 };
-use apx_core::url::http_url_whatwg::get_hostname;
 use log::Level;
 
 use mitra_config::{Config, Environment};
@@ -30,19 +26,22 @@ use mitra_services::{
 };
 use mitra_utils::files::set_file_permissions;
 
-use crate::activitypub::views as activitypub;
-use crate::atom::views::atom_scope;
-use crate::http::{
-    create_default_headers_middleware,
-    json_error_handler,
-    log_response_error,
+use crate::{
+    activitypub::views as activitypub,
+    atom::views::atom_scope,
+    http::{
+        create_default_headers_middleware,
+        json_error_handler,
+        log_response_error,
+    },
+    mastodon_api::{mastodon_api_scope, oauth_api_scope},
+    metrics::views::metrics_api_scope,
+    nodeinfo::views as nodeinfo,
+    ratelimit::RatelimitConfigs,
+    state::AppState,
+    webfinger::views as webfinger,
+    web_client::views as web_client,
 };
-use crate::mastodon_api::{mastodon_api_scope, oauth_api_scope};
-use crate::metrics::views::metrics_api_scope;
-use crate::nodeinfo::views as nodeinfo;
-use crate::state::AppState;
-use crate::webfinger::views as webfinger;
-use crate::web_client::views as web_client;
 
 use crate::media;
 
@@ -58,17 +57,22 @@ pub async fn run_server(
     if config.media_proxy_enabled {
         log::info!("media proxy enabled");
     };
-
+    // Ratelimit configs should be created only once
+    let ratelimit_configs = RatelimitConfigs::new(config.http_behind_reverse_proxy);
     let http_server = HttpServer::new(move || {
+        // This will run at the start of each worker
         let cors_config = match config.environment {
             Environment::Development => {
                 Cors::permissive()
             },
             Environment::Production => {
+                // By default, all origins and all methods are allowed.
+                // This is done for compatibility with 3rd party web clients.
+                // Cookies are not used, so the default configuration should be safe.
+                // ***
                 // Mastodon: https://github.com/mastodon/mastodon/blob/v4.4.5/config/initializers/cors.rb
                 let mut cors_config = Cors::default();
-                // TODO: allow all origins if `http_cors_allowlist` is not set
-                if !config.http_cors_allow_all {
+                if config.http_cors_allowlist.is_some() {
                     // Strict mode
                     let allowlist = config.http_cors_allowlist
                         .clone()
@@ -77,24 +81,7 @@ pub async fn run_server(
                         cors_config = cors_config.allowed_origin(&origin);
                     };
                     cors_config = cors_config
-                        .allowed_origin(config.instance().uri_str())
-                        // TODO: don't accept GET requests from disallowed origins
-                        // TODO: don't automatically allow localhost in strict mode
-                        .allowed_origin_fn(|origin, req_head| {
-                            if req_head.method == Method::GET {
-                                // Allow all GET requests
-                                return true;
-                            };
-                            let maybe_hostname = origin.to_str().ok()
-                                .and_then(|origin| get_hostname(origin).ok());
-                            match maybe_hostname {
-                                Some(hostname) => {
-                                    hostname == "localhost" ||
-                                    hostname == "127.0.0.1"
-                                },
-                                None => false,
-                            }
-                        });
+                        .allowed_origin(config.instance().uri_str());
                 } else {
                     cors_config = cors_config.allow_any_origin();
                 };
@@ -147,8 +134,11 @@ pub async fn run_server(
             .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(db_pool.clone()))
             .app_data(web::Data::clone(&app_state))
-            .service(oauth_api_scope())
-            .service(mastodon_api_scope(payload_size_limit))
+            .service(oauth_api_scope(ratelimit_configs.clone()))
+            .service(mastodon_api_scope(
+                payload_size_limit,
+                ratelimit_configs.clone(),
+            ))
             .service(metrics_api_scope(config.metrics.is_some()))
             .service(webfinger::webfinger_view)
             .service(activitypub::actor_scope())
@@ -159,7 +149,10 @@ pub async fn run_server(
             .service(activitypub::tag_view)
             .service(activitypub::conversation_view)
             .service(activitypub::activity_view)
-            .service(activitypub::gateway_scope(config.federation.fep_ef61_gateway_enabled))
+            .service(activitypub::gateway_scope(
+                config.federation.fep_ef61_gateway_enabled,
+                ratelimit_configs.clone(),
+            ))
             .service(activitypub::media_gateway_scope(config.federation.fep_ef61_gateway_enabled))
             .service(atom_scope())
             .service(nodeinfo::get_nodeinfo_jrd)

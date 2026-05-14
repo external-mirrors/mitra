@@ -38,6 +38,14 @@ use super::checks::{
     check_public_keys,
 };
 
+pub const ANONYMOUS: &str = "anonymous";
+
+#[derive(Clone, Copy)]
+pub enum Origin {
+    Local,
+    Remote,
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum MentionPolicy {
     #[default]
@@ -300,7 +308,6 @@ pub struct PaymentLink {
 pub struct MoneroSubscription {
     pub chain_id: ChainId,
     pub price: NonZeroU64, // piconeros per second
-    pub payout_address: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -310,8 +317,6 @@ pub struct RemoteMoneroSubscription {
     // Legacy profiles may not have minimum amount info
     pub amount_min: Option<u64>, // piconeros per second
     pub object_id: String,
-    #[serde(default)]
-    pub fep_0837_enabled: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -358,12 +363,10 @@ impl PaymentOption {
     pub fn monero_subscription(
         chain_id: ChainId,
         price: NonZeroU64,
-        payout_address: String,
     ) -> Self {
         Self::MoneroSubscription(MoneroSubscription {
             chain_id,
             price,
-            payout_address,
         })
     }
 
@@ -378,7 +381,6 @@ impl PaymentOption {
             price,
             amount_min: Some(amount_min),
             object_id,
-            fep_0837_enabled: true,
         })
     }
 
@@ -638,10 +640,12 @@ impl DbActor {
 pub struct DbActorProfile {
     pub id: Uuid,
     pub(crate) user_id: Option<Uuid>,
+    pub(crate) automated_account_id: Option<Uuid>,
     pub(crate) portable_user_id: Option<Uuid>,
     pub username: String,
     pub(crate) hostname: Option<String>,
-    pub acct: Option<String>, // unique acct string
+    pub(crate) webfinger_hostname: Option<String>,
+    pub(crate) acct: Option<String>, // unique acct string
     pub display_name: Option<String>,
     pub bio: Option<String>, // html
     pub bio_source: Option<String>, // plaintext or markdown
@@ -673,7 +677,7 @@ pub struct DbActorProfile {
 // Profile identifiers:
 // id (local profile UUID): never changes
 // actor_id of remote actor: must not change
-// acct (webfinger): may change if actor ID remains the same
+// webfinger address (and 'acct'): may change if actor ID remains the same
 // actor RSA key: can be updated at any time by the instance admin
 // identity proofs: TBD (likely will do "Trust on first use" (TOFU))
 
@@ -706,29 +710,48 @@ pub(crate) fn get_identity_key(secret_key: Ed25519SecretKey) -> String {
 
 impl DbActorProfile {
     pub(crate) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
-        if self.user_id.is_some() && self.portable_user_id.is_some() {
-            return Err(DatabaseTypeError);
+        if self.user_id.is_some() {
+            if self.automated_account_id.is_some() || self.portable_user_id.is_some() {
+                return Err(DatabaseTypeError);
+            };
+            if self.actor_json.is_some() {
+                // NOTE: no CHECK constraint because
+                // it can not be deferred
+                return Err(DatabaseTypeError);
+            };
         };
-        if self.user_id.is_some() != self.actor_json.is_none() {
-            // NOTE: no CHECK constraint because
-            // it can not be deferred
-            return Err(DatabaseTypeError);
+        if self.automated_account_id.is_some() {
+            if self.user_id.is_some() || self.portable_user_id.is_some() {
+                return Err(DatabaseTypeError);
+            };
+            if self.actor_json.is_some() {
+                return Err(DatabaseTypeError);
+            };
         };
-        if self.portable_user_id.is_some() && self.actor_json.is_none() {
-            return Err(DatabaseTypeError);
+        if self.portable_user_id.is_some() {
+            if self.user_id.is_some() || self.automated_account_id.is_some() {
+                return Err(DatabaseTypeError);
+            };
+            if self.actor_json.is_none() || !self.is_portable() {
+                return Err(DatabaseTypeError);
+            };
         };
-        match self.hostname() {
+        match self.webfinger_hostname() {
             WebfingerHostname::Local => {
                 if self.acct.as_ref() != Some(&self.username) {
                     return Err(DatabaseTypeError);
                 };
             },
             WebfingerHostname::Remote(hostname) => {
-                // Acct can be empty if there's a conflict
-                if let Some(ref acct) = self.acct {
-                    if acct != &format!("{}@{}", self.username, hostname) {
-                        return Err(DatabaseTypeError);
-                    };
+                let acct = self.acct.as_ref().ok_or(DatabaseTypeError)?;
+                if acct != &format!("{}@{}", self.username, hostname) {
+                    return Err(DatabaseTypeError);
+                };
+            },
+            WebfingerHostname::Unknown if self.is_local() => {
+                // Creating local account
+                if self.acct.is_some() {
+                    return Err(DatabaseTypeError);
                 };
             },
             WebfingerHostname::Unknown => {
@@ -737,9 +760,16 @@ impl DbActorProfile {
                 };
             },
         };
-        if let Some(ref actor_data) = self.actor_json {
+        let origin = if let Some(ref actor_data) = self.actor_json {
             actor_data.check_consistency()?;
+            Origin::Remote
+        } else {
+            Origin::Local
         };
+
+        check_public_keys(self.public_keys.inner(), origin)?;
+        check_identity_proofs(self.identity_proofs.inner())?;
+        check_payment_options(self.payment_options.inner(), origin)?;
         if self.is_local() {
             // Related media must be stored locally
             if let Some(ref avatar) = self.avatar {
@@ -765,23 +795,31 @@ impl DbActorProfile {
         Ok(())
     }
 
-    pub fn hostname(&self) -> WebfingerHostname {
-        if let Some(ref hostname) = self.hostname {
+    pub fn webfinger_hostname(&self) -> WebfingerHostname {
+        if let Some(ref hostname) = self.webfinger_hostname {
+            // `webfinger_hostname` has higher priority than `has_account`
+            // because an actor with a portable account
+            // might have different primary gateway
             WebfingerHostname::Remote(hostname.clone())
-        } else if self.actor_json.is_none() || self.portable_user_id.is_some() {
+        } else if self.has_account() {
             WebfingerHostname::Local
         } else {
             WebfingerHostname::Unknown
         }
     }
 
-    /// Has local account?
-    pub fn has_account(&self) -> bool {
-        self.user_id.is_some() || self.portable_user_id.is_some()
+    pub fn has_user_account(&self) -> bool {
+        self.user_id.is_some()
     }
 
     pub fn has_portable_account(&self) -> bool {
         self.portable_user_id.is_some()
+    }
+
+    pub fn has_account(&self) -> bool {
+        self.has_user_account()
+            || self.automated_account_id.is_some()
+            || self.has_portable_account()
     }
 
     /// Is actor local (managed)?
@@ -803,6 +841,10 @@ impl DbActorProfile {
         } else {
             false
         }
+    }
+
+    pub fn is_anonymous(&self) -> bool {
+        self.automated_account_id.is_some() && self.username == ANONYMOUS
     }
 
     pub fn expect_actor_data(&self) -> &DbActor {
@@ -860,9 +902,11 @@ impl Default for DbActorProfile {
         Self {
             id: Uuid::new_v4(),
             user_id: None,
+            automated_account_id: None,
             portable_user_id: None,
             username: "test".to_string(),
             hostname: None,
+            webfinger_hostname: None,
             acct: Some("test".to_string()),
             display_name: None,
             bio: None,
@@ -895,7 +939,8 @@ impl Default for DbActorProfile {
 #[cfg_attr(any(test, feature = "test-utils"), derive(Default))]
 pub struct ProfileCreateData {
     pub username: String,
-    pub hostname: WebfingerHostname,
+    pub hostname: Option<String>,
+    pub webfinger_hostname: WebfingerHostname,
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub avatar: Option<MediaInfo>,
@@ -914,16 +959,31 @@ pub struct ProfileCreateData {
 
 impl ProfileCreateData {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
-        let is_remote = self.actor_json.as_ref()
-            .map(|actor| actor.check_consistency())
-            .transpose()?
-            .is_some();
-        if self.hostname.as_str().is_some() && !is_remote {
-            return Err(DatabaseTypeError);
+        let origin = if let Some(actor_data) = self.actor_json.as_ref() {
+            actor_data.check_consistency()?;
+            if !actor_data.is_portable() && self.hostname.is_none() {
+                // Non-portable remote profiles should always have server hostname.
+                // Portable profiles may have local accounts.
+                return Err(DatabaseTypeError);
+            };
+            if !actor_data.is_portable() && self.webfinger_hostname.as_str().is_none() {
+                // Non-portable remote profiles should always have webfinger hostname.
+                // Portable profiles may have local accounts.
+                return Err(DatabaseTypeError);
+            };
+            Origin::Remote
+        } else {
+            if self.hostname.is_some() {
+                return Err(DatabaseTypeError);
+            };
+            if self.webfinger_hostname.as_str().is_some() {
+                return Err(DatabaseTypeError);
+            };
+            Origin::Local
         };
-        check_public_keys(&self.public_keys, is_remote)?;
+        check_public_keys(&self.public_keys, origin)?;
         check_identity_proofs(&self.identity_proofs)?;
-        check_payment_options(&self.payment_options, is_remote)?;
+        check_payment_options(&self.payment_options, origin)?;
         // Aliases are not checked.
         // The list may contain duplicates or self-references.
         Ok(())
@@ -932,7 +992,8 @@ impl ProfileCreateData {
 
 pub struct ProfileUpdateData {
     pub username: String,
-    pub hostname: WebfingerHostname,
+    pub hostname: Option<String>,
+    pub webfinger_hostname: WebfingerHostname,
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub bio_source: Option<String>,
@@ -952,16 +1013,31 @@ pub struct ProfileUpdateData {
 
 impl ProfileUpdateData {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
-        let is_remote = self.actor_json.as_ref()
-            .map(|actor| actor.check_consistency())
-            .transpose()?
-            .is_some();
-        if self.hostname.as_str().is_some() && !is_remote {
-            return Err(DatabaseTypeError);
+        let origin = if let Some(actor_data) = self.actor_json.as_ref() {
+            actor_data.check_consistency()?;
+            if !actor_data.is_portable() && self.hostname.is_none() {
+                // Non-portable remote profiles should always have server hostname.
+                // Portable profiles may have local accounts.
+                return Err(DatabaseTypeError);
+            };
+            if !actor_data.is_portable() && self.webfinger_hostname.as_str().is_none() {
+                // Non-portable remote profiles should always have webfinger hostname.
+                // Portable profiles may have local accounts.
+                return Err(DatabaseTypeError);
+            };
+            Origin::Remote
+        } else {
+            if self.hostname.is_some() {
+                return Err(DatabaseTypeError);
+            };
+            if self.webfinger_hostname.as_str().is_some() {
+                return Err(DatabaseTypeError);
+            };
+            Origin::Local
         };
-        check_public_keys(&self.public_keys, is_remote)?;
+        check_public_keys(&self.public_keys, origin)?;
         check_identity_proofs(&self.identity_proofs)?;
-        check_payment_options(&self.payment_options, is_remote)?;
+        check_payment_options(&self.payment_options, origin)?;
         Ok(())
     }
 
@@ -970,6 +1046,10 @@ impl ProfileUpdateData {
     pub fn add_identity_proof(&mut self, proof: IdentityProof) -> () {
         self.identity_proofs.retain(|item| item.issuer != proof.issuer);
         self.identity_proofs.push(proof);
+    }
+
+    pub fn remove_identity_proof(&mut self, issuer: &Did) -> () {
+        self.identity_proofs.retain(|item| &item.issuer != issuer);
     }
 
     /// Adds new payment option
@@ -985,10 +1065,11 @@ impl ProfileUpdateData {
 impl From<&DbActorProfile> for ProfileUpdateData {
     fn from(profile: &DbActorProfile) -> Self {
         let profile = profile.clone();
-        let hostname = profile.hostname();
+        let webfinger_hostname = profile.webfinger_hostname();
         Self {
             username: profile.username,
-            hostname: hostname,
+            hostname: profile.hostname,
+            webfinger_hostname: webfinger_hostname,
             display_name: profile.display_name,
             bio: profile.bio,
             bio_source: profile.bio_source,
@@ -1056,21 +1137,20 @@ mod tests {
 
     #[test]
     fn test_payment_option_monero_subscription_serialization() {
-        let json_data = r#"{"payment_type":3,"chain_id":"monero:418015bb9ae982a1975da7d79277c270","price":41387,"payout_address":"xxx"}"#;
+        let json_data = r#"{"payment_type":3,"chain_id":"monero:418015bb9ae982a1975da7d79277c270","price":41387}"#;
         let payment_option: PaymentOption = serde_json::from_str(json_data).unwrap();
         let PaymentOption::MoneroSubscription(payment_info) = &payment_option else {
             panic!("unexpected option");
         };
         assert_eq!(payment_info.chain_id, ChainId::monero_mainnet());
         assert_eq!(payment_info.price.get(), 41387);
-        assert_eq!(payment_info.payout_address, "xxx");
         let serialized = serde_json::to_string(&payment_option).unwrap();
         assert_eq!(serialized, json_data);
     }
 
     #[test]
     fn test_payment_option_remote_monero_subscription_serialization() {
-        let json_data = r#"{"payment_type":4,"chain_id":"monero:418015bb9ae982a1975da7d79277c270","price":41387,"amount_min":null,"object_id":"https://social.example/test","fep_0837_enabled":true}"#;
+        let json_data = r#"{"payment_type":4,"chain_id":"monero:418015bb9ae982a1975da7d79277c270","price":41387,"amount_min":null,"object_id":"https://social.example/test"}"#;
         let payment_option: PaymentOption = serde_json::from_str(json_data).unwrap();
         let PaymentOption::RemoteMoneroSubscription(ref payment_info) = payment_option
         else {
@@ -1080,7 +1160,6 @@ mod tests {
         assert_eq!(payment_info.price.get(), 41387);
         assert_eq!(payment_info.amount_min, None);
         assert_eq!(payment_info.object_id, "https://social.example/test");
-        assert_eq!(payment_info.fep_0837_enabled, true);
         let serialized = serde_json::to_string(&payment_option).unwrap();
         assert_eq!(serialized, json_data);
     }

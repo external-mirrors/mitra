@@ -124,21 +124,14 @@ mod tests {
     use serial_test::serial;
     use crate::database::test_utils::create_test_database;
     use crate::media::types::PartialMediaInfo;
-    use crate::profiles::{
-        queries::create_profile,
-        types::ProfileCreateData,
-    };
+    use crate::profiles::test_utils::create_test_local_profile;
     use super::*;
 
     #[tokio::test]
     #[serial]
     async fn test_create_attachment() {
         let db_client = &mut create_test_database().await;
-        let profile_data = ProfileCreateData {
-            username: "test".to_string(),
-            ..Default::default()
-        };
-        let profile = create_profile(db_client, profile_data).await.unwrap();
+        let profile = create_test_local_profile(db_client, "test").await;
         let image_info = MediaInfo::png_for_test();
         let description = "test";
         let attachment = create_attachment(
@@ -158,18 +151,8 @@ mod tests {
     #[serial]
     async fn test_get_attachment() {
         let db_client = &mut create_test_database().await;
-        let profile_data_1 = ProfileCreateData {
-            username: "test1".to_string(),
-            ..Default::default()
-        };
-        let profile_1 =
-            create_profile(db_client, profile_data_1).await.unwrap();
-        let profile_data_2 = ProfileCreateData {
-            username: "test2".to_string(),
-            ..Default::default()
-        };
-        let profile_2 =
-            create_profile(db_client, profile_data_2).await.unwrap();
+        let profile_1 = create_test_local_profile(db_client, "test1").await;
+        let profile_2 = create_test_local_profile(db_client, "test2").await;
         let image_info = MediaInfo::png_for_test();
         let MediaAttachment { id: attachment_id, .. } = create_attachment(
             db_client,
@@ -197,11 +180,7 @@ mod tests {
     #[serial]
     async fn test_update_attachment_remove_description() {
         let db_client = &mut create_test_database().await;
-        let profile_data = ProfileCreateData {
-            username: "test1".to_string(),
-            ..Default::default()
-        };
-        let profile = create_profile(db_client, profile_data).await.unwrap();
+        let profile = create_test_local_profile(db_client, "test").await;
         let image_info = MediaInfo::png_for_test();
         let description = "test image";
         let attachment = create_attachment(

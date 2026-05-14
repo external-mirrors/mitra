@@ -1,15 +1,15 @@
 use uuid::Uuid;
 
-use super::types::{
-    Conversation,
-    AP_PUBLIC,
-};
+use crate::activitypub::constants::AP_PUBLIC;
+use super::types::Conversation;
 
 impl Conversation {
     pub fn for_test(root_id: Uuid) -> Self {
         Self {
             id: Uuid::new_v4(),
             root_id,
+            is_managed: true,
+            object_id: None,
             audience: Some(AP_PUBLIC.to_owned()),
         }
     }

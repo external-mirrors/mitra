@@ -13,3 +13,5 @@ Supported activities:
 - `Follow(Actor)`
 - `Accept(Follow)`
 - `Undo(Follow)`
+
+Items in portable inboxes and outboxes are removed after 90 days. Activities from non-portable accounts are removed after 5 days (but this time can be changed in configuration).

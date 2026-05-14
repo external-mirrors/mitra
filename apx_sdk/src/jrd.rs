@@ -72,7 +72,7 @@ pub struct JsonResourceDescriptor {
 }
 
 impl JsonResourceDescriptor {
-    pub fn find_actor_id(&self, preferred_type: &str) -> Option<String> {
+    pub fn actor_id_for_type(&self, preferred_type: &str) -> Option<String> {
         let links: Vec<_> = self.links.iter()
             .filter(|link| link.rel == SELF_RELATION_TYPE)
             .filter(|link| link.media_type.iter().any(|media_type| {
@@ -97,6 +97,13 @@ impl JsonResourceDescriptor {
         };
         let actor_id = maybe_actor_link?.href.as_ref()?.clone();
         Some(actor_id)
+    }
+
+    /// Returns ActivityPub actor ID
+    pub fn actor_id(&self) -> Option<String> {
+        // Prefer Group actor if webfinger results are ambiguous
+        const GROUP: &str = "Group";
+        self.actor_id_for_type(GROUP)
     }
 }
 
@@ -139,7 +146,7 @@ mod tests {
     }
 
     #[test]
-    fn test_jrd_find_actor_id() {
+    fn test_jrd_actor_id() {
         let actor_id = "https://social.example/users/test";
         let profile_link = Link {
             rel: "http://webfinger.net/rel/profile-page".to_string(),
@@ -159,11 +166,12 @@ mod tests {
             subject: "acct:test@social.example".to_string(),
             links: vec![profile_link, actor_link],
         };
-        assert_eq!(jrd.find_actor_id("Service").unwrap(), actor_id);
+        assert_eq!(jrd.actor_id_for_type("Service").unwrap(), actor_id);
+        assert_eq!(jrd.actor_id().unwrap(), actor_id);
     }
 
     #[test]
-    fn test_jrd_find_actor_id_lemmy() {
+    fn test_jrd_actor_id_lemmy() {
         let person_id = "https://lemmy.example/u/test";
         let person_link = Link {
             rel: "self".to_string(),
@@ -190,11 +198,13 @@ mod tests {
             subject: "acct:test@social.example".to_string(),
             links: vec![person_link, group_link],
         };
-        assert_eq!(jrd.find_actor_id("Group").unwrap(), group_id);
+        assert_eq!(jrd.actor_id_for_type("Person").unwrap(), person_id);
+        assert_eq!(jrd.actor_id_for_type("Group").unwrap(), group_id);
+        assert_eq!(jrd.actor_id().unwrap(), group_id);
     }
 
     #[test]
-    fn test_jrd_find_actor_id_piefed() {
+    fn test_jrd_actor_id_piefed() {
         let jrd_value = json!({
             "aliases": ["https://piefed.example/u/user"],
             "links": [{
@@ -212,7 +222,7 @@ mod tests {
         let jrd: JsonResourceDescriptor =
             serde_json::from_value(jrd_value).unwrap();
         assert_eq!(
-            jrd.find_actor_id("Group").unwrap(),
+            jrd.actor_id().unwrap(),
             "https://piefed.example/u/user",
         );
     }

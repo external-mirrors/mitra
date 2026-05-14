@@ -1,7 +1,7 @@
 # This compose file is used for development
 services:
   database:
-    image: pgautoupgrade/pgautoupgrade:15-bookworm
+    image: docker.io/pgautoupgrade/pgautoupgrade:15-bookworm
     restart: always
     environment:
       POSTGRES_PASSWORD: mitra
@@ -33,7 +33,7 @@ services:
   monerod:
     profiles:
       - monero
-    image: ghcr.io/sethforprivacy/simple-monerod:v0.18.4.2
+    image: ghcr.io/sethforprivacy/simple-monerod:v0.18.4.4
     ports:
       - "58081:18081"
     command:
@@ -43,6 +43,8 @@ services:
       - --fixed-difficulty=1
       - --rpc-bind-ip=0.0.0.0
       - --confirm-external-bind
+      - --zmq-rpc-bind-ip=0.0.0.0
+      - --zmq-rpc-bind-port=18082
     volumes:
       - monero_blockchain:/home/monero/.bitmonero
 
@@ -50,7 +52,7 @@ services:
   monero-wallet-rpc:
     profiles:
       - monero
-    image: ghcr.io/sethforprivacy/simple-monero-wallet-rpc:v0.18.4.2
+    image: ghcr.io/sethforprivacy/simple-monero-wallet-rpc:v0.18.4.4
     depends_on:
       - "monerod"
     ports:
@@ -64,6 +66,20 @@ services:
       - --wallet-dir=/home/monero/wallet
     volumes:
       - monero_wallets:/home/monero/wallet
+
+  # https://github.com/farcaster-project/containers/tree/main/monero-lws
+  monero-lws:
+    profiles:
+      - monero
+    depends_on:
+      - "monerod"
+    image: ghcr.io/farcaster-project/containers/monero-lws:monerod-0.18.0.0
+    environment:
+      NETWORK: main
+      MONERO_DAEMON_ADDRESS: monerod:18082
+    ports:
+      - 58443:38884
+    restart: on-failure:3
 
 volumes:
   postgres_database:

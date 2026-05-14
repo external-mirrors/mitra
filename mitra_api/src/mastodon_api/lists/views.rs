@@ -5,12 +5,14 @@ use actix_web::{
     post,
     put,
     web,
+    Either,
     HttpResponse,
     Scope,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use serde_json;
 
+use mitra_activitypub::authority::Authority;
 use mitra_config::Config;
 use mitra_models::{
     database::{
@@ -35,12 +37,18 @@ use mitra_validators::custom_feeds::{
 };
 
 use crate::{
-    http::{get_request_base_url, MultiQuery},
+    http::{
+        get_request_base_url,
+        JsonOrForm,
+        JsonOrQsForm,
+        MultiQuery,
+    },
     mastodon_api::{
         accounts::types::Account,
         auth::get_current_user,
         errors::MastodonError,
         media_server::ClientMediaServer,
+        pagination::PageSize,
     },
 };
 
@@ -69,8 +77,9 @@ async fn get_lists(
 async fn create_list(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
-    list_data: web::Json<ListData>,
+    list_data: JsonOrForm<ListData>,
 ) -> Result<HttpResponse, MastodonError> {
+    let list_data = list_data.into_inner();
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let feed_name = clean_custom_feed_name(&list_data.title);
@@ -159,18 +168,23 @@ async fn get_list_accounts(
         *list_id,
         current_user.id,
     ).await?;
+    let limit = if query_params.limit.inner() == 0 {
+        PageSize::MAX
+    } else {
+        query_params.limit.inner()
+    };
     let sources = get_custom_feed_sources(
         db_client,
         feed.id,
         query_params.max_id,
-        query_params.limit.inner(),
+        limit,
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let accounts: Vec<Account> = sources.into_iter()
         .map(|item| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             item,
         ))
@@ -184,8 +198,12 @@ async fn add_accounts_to_list(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
     list_id: web::Path<i32>,
-    accounts_data: web::Json<ListAccountsData>,
+    accounts_data: JsonOrQsForm<ListAccountsData>,
 ) -> Result<HttpResponse, MastodonError> {
+    let accounts_data = match accounts_data {
+        Either::Left(json) => json.into_inner(),
+        Either::Right(form) => form.into_inner(),
+    };
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let feed = get_custom_feed(

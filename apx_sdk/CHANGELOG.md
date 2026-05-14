@@ -6,6 +6,81 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-05-13
+
+### Added
+
+- Added `authority` field to `HttpSignatureData` struct.
+- Added `verify_fetched_object` function.
+- Added `resource_uri` method to `WebfingerAddress`.
+
+### Changed
+
+- Extract authority from request URI when processing `@authority` RFC-9421 component.
+- Do not perform authentication in `fetch_object` function.
+- Do not extract fragment in `fetch_object` function.
+
+### Removed
+
+- Removed `query` parameter from `fetch_json` function.
+
+### Security
+
+- Harden SSRF protection by treating link-local and unspecified addresses as unsafe.
+- Block requests to mapped IPv4 private addresses.
+
+## [0.23.0] - 2026-05-05
+
+### Added
+
+- Added documentation to `apx_sdk::addresses` module.
+- Implemented `Hash` for `WebfingerAddress`.
+- Added `actor_id` method to `JsonResourceDescriptor` type.
+- Added `is_subdomain_of` function to `hostname` module.
+- Implemented `Debug` for `CanonicalUri` type.
+
+### Changed
+
+- Renamed `WebfingerAddress::acct` to `short_address`.
+- Renamed `find_actor_id` method on `JsonResourceDescriptor` to `actor_id_for_type`.
+- Add `alg` parameter to RFC-9421 signatures.
+
+### Fixed
+
+- Authenticate fetched object before extracting fragment.
+
+## [0.22.0] - 2026-03-27
+
+### Added
+
+- Added `ed25519_public_key_to_pkcs8_pem` function.
+
+### Changed
+
+- Add response URL to `FetchError::JsonParseError`.
+- Don't strip query parameters when converting key ID to actor ID.
+- Return detailed error when decoding Ed25519 key from PEM.
+- Improved error message when signed header has invalid value.
+- Changed MSRV to 1.77.0.
+
+### Deprecated
+
+- Marked `verify_rsa_json_signature` as deprecated.
+
+## [0.21.0] - 2026-01-27
+
+### Added
+
+- Support `wasm32-unknown-unknown` compilation target in `apx_sdk`.
+- Added `scheme()` and `base()` methods to `ApUri` type.
+- Added support for `ap` URIs to `parse_object_id` function.
+
+### Fixed
+
+- Bumped `rsa` dependency version to remove compilation warning.
+- Fixed JSON signature generation on `wasm32-unknown-unknown` target.
+- Fixed compilation warning in `ecdsa` module.
+
 ## [0.20.0] - 2025-11-05
 
 ### Added

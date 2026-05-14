@@ -14,6 +14,7 @@ pub mod markers;
 pub mod media;
 pub mod notifications;
 pub mod oauth;
+pub mod payment_methods;
 pub mod polls;
 pub mod posts;
 pub mod profiles;

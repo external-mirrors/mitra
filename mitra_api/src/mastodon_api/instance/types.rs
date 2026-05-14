@@ -1,6 +1,7 @@
 use apx_sdk::core::crypto::hashes::sha256;
 use serde::Serialize;
 
+use mitra_activitypub::authority::Authority;
 use mitra_adapters::{
     dynamic_config::DynamicConfig,
     payments::subscriptions::MONERO_PAYMENT_AMOUNT_MIN,
@@ -11,10 +12,9 @@ use mitra_config::{
     Config,
     DefaultRole,
     MoneroConfig,
+    MoneroLightConfig,
     RegistrationType,
-    SOFTWARE_NAME,
-    SOFTWARE_REPOSITORY,
-    SOFTWARE_VERSION,
+    SoftwareMetadata,
 };
 use mitra_models::users::types::User;
 use mitra_utils::markdown::markdown_to_html;
@@ -51,6 +51,23 @@ struct Stats {
 }
 
 #[derive(Serialize)]
+struct AccountLimits {
+    max_profile_fields: usize,
+    profile_field_name_limit: usize,
+    profile_field_value_limit: usize,
+}
+
+impl AccountLimits {
+    fn new() -> Self {
+        Self {
+            max_profile_fields: FIELD_LOCAL_LIMIT,
+            profile_field_name_limit: FIELD_NAME_LENGTH_MAX,
+            profile_field_value_limit: FIELD_VALUE_LENGTH_MAX,
+        }
+    }
+}
+
+#[derive(Serialize)]
 struct StatusLimits {
     max_characters: usize,
     max_media_attachments: usize,
@@ -84,9 +101,19 @@ impl PollLimits {
 
 #[derive(Serialize)]
 struct Configuration {
+    accounts: AccountLimits,
     statuses: StatusLimits,
     media_attachments: MediaLimits,
     polls: PollLimits,
+}
+
+fn map_authentication_method(method: &AuthenticationMethod) -> String {
+    let value = match method {
+        AuthenticationMethod::Password => AUTHENTICATION_METHOD_PASSWORD,
+        AuthenticationMethod::Eip4361 => AUTHENTICATION_METHOD_EIP4361,
+        AuthenticationMethod::Caip122Monero => AUTHENTICATION_METHOD_CAIP122_MONERO,
+    };
+    value.to_string()
 }
 
 #[derive(Serialize)]
@@ -98,6 +125,7 @@ struct AllowUnauthenticated {
 #[serde(untagged)]
 enum BlockchainMetadata {
     Monero {
+        is_forwarding_required: bool,
         description: Option<String>,
         payment_amount_min: u64,
     },
@@ -109,9 +137,24 @@ impl From<&MoneroConfig> for BlockchainMetadata {
             .chain_metadata.clone()
             .unwrap_or_default();
         Self::Monero {
+            is_forwarding_required: true,
             description: metadata.description.as_ref()
                 .map(|text| markdown_to_html(text)),
             payment_amount_min: MONERO_PAYMENT_AMOUNT_MIN,
+        }
+    }
+}
+
+impl From<&MoneroLightConfig> for BlockchainMetadata {
+    fn from(monero_config: &MoneroLightConfig) -> Self {
+        let metadata = monero_config
+            .chain_metadata.clone()
+            .unwrap_or_default();
+        Self::Monero {
+            is_forwarding_required: false,
+            description: metadata.description.as_ref()
+                .map(|text| markdown_to_html(text)),
+            payment_amount_min: 0,
         }
     }
 }
@@ -126,6 +169,35 @@ struct BlockchainInfo {
     chain_id: String,
     chain_metadata: BlockchainMetadata,
     features: BlockchainFeatures,
+}
+
+impl From<&BlockchainConfig> for BlockchainInfo {
+    fn from(config: &BlockchainConfig) -> Self {
+        match config {
+            BlockchainConfig::Monero(monero_config) => {
+                let features = BlockchainFeatures {
+                    subscriptions: true,
+                };
+                let chain_metadata = BlockchainMetadata::from(monero_config);
+                BlockchainInfo {
+                    chain_id: monero_config.chain_id.to_string(),
+                    chain_metadata: chain_metadata,
+                    features: features,
+                }
+            },
+            BlockchainConfig::MoneroLight(monero_config) => {
+                let features = BlockchainFeatures {
+                    subscriptions: true,
+                };
+                let chain_metadata = BlockchainMetadata::from(monero_config);
+                BlockchainInfo {
+                    chain_id: monero_config.chain_id.to_string(),
+                    chain_metadata: chain_metadata,
+                    features: features,
+                }
+            },
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -170,7 +242,7 @@ struct PleromaInfo {
     metadata: PleromaMetadata,
 }
 
-/// https://docs.joinmastodon.org/entities/V1_Instance/
+// https://docs.joinmastodon.org/entities/V1_Instance/
 #[derive(Serialize)]
 pub struct InstanceInfo {
     uri: String,
@@ -198,12 +270,12 @@ pub struct InstanceInfo {
     pleroma: PleromaInfo,
 }
 
-fn get_full_api_version(version: &str) -> String {
+fn get_full_api_version(software: SoftwareMetadata) -> String {
     format!(
         "{api_version} (compatible; {name} {version})",
         api_version=MASTODON_API_VERSION,
-        name=SOFTWARE_NAME,
-        version=version,
+        name=software.name,
+        version=software.version,
     )
 }
 
@@ -218,25 +290,12 @@ impl InstanceInfo {
         post_count: i64,
         peer_count: i64,
     ) -> Self {
-        let blockchains = config.blockchains().iter().map(|item| match item {
-            BlockchainConfig::Monero(monero_config) => {
-                let features = BlockchainFeatures {
-                    subscriptions: true,
-                };
-                let chain_metadata = BlockchainMetadata::from(monero_config);
-                BlockchainInfo {
-                    chain_id: monero_config.chain_id.to_string(),
-                    chain_metadata: chain_metadata,
-                    features: features,
-                }
-            },
-        }).collect();
         Self {
-            uri: config.instance().hostname(),
+            uri: config.instance().webfinger_hostname(),
             title: config.instance_title.clone(),
             short_description: config.instance_short_description.clone(),
             description: markdown_to_html(&config.instance_description),
-            version: get_full_api_version(SOFTWARE_VERSION),
+            version: get_full_api_version(config.software),
             registrations:
                 config.registration.registration_type !=
                 RegistrationType::Invite,
@@ -250,6 +309,7 @@ impl InstanceInfo {
                 domain_count: peer_count,
             },
             configuration: Configuration {
+                accounts: AccountLimits::new(),
                 statuses: StatusLimits {
                     max_characters: config.limits.posts.character_limit,
                     max_media_attachments: config.limits.posts.attachment_local_limit,
@@ -263,19 +323,12 @@ impl InstanceInfo {
                 polls: PollLimits::new(),
             },
             contact_account: maybe_admin.map(|user| Account::from_profile(
-                config.instance().uri_str(),
+                &Authority::from(&config.instance()),
                 media_server,
                 user.profile,
             )),
             authentication_methods: config.authentication_methods.iter()
-                .map(|method| {
-                    let value = match method {
-                        AuthenticationMethod::Password => AUTHENTICATION_METHOD_PASSWORD,
-                        AuthenticationMethod::Eip4361 => AUTHENTICATION_METHOD_EIP4361,
-                        AuthenticationMethod::Caip122Monero => AUTHENTICATION_METHOD_CAIP122_MONERO,
-                    };
-                    value.to_string()
-                })
+                .map(map_authentication_method)
                 .collect(),
             login_message: config.login_message.clone(),
             new_accounts_read_only:
@@ -284,7 +337,9 @@ impl InstanceInfo {
                 timeline_local: config.instance_timeline_public,
             },
             federated_timeline_restricted: dynamic_config.federated_timeline_restricted,
-            blockchains: blockchains,
+            blockchains: config.blockchains().iter()
+                .map(BlockchainInfo::from)
+                .collect(),
             ipfs_gateway_url: config.ipfs_gateway_url.clone(),
             pleroma: PleromaInfo {
                 metadata: PleromaMetadata::new(),
@@ -305,9 +360,11 @@ struct Usage {
 
 #[derive(Serialize)]
 struct ConfigurationV2 {
+    accounts: AccountLimits,
     statuses: StatusLimits,
     media_attachments: MediaLimits,
     polls: PollLimits,
+    timelines_access: TimelinesAccess,
 }
 
 #[derive(Serialize)]
@@ -323,12 +380,26 @@ struct Contact {
     account: Option<Account>,
 }
 
-/// https://docs.joinmastodon.org/entities/Instance/
+#[derive(Serialize)]
+struct TimelineAccess {
+    local: String,
+    remote: String,
+}
+
+#[derive(Serialize)]
+struct TimelinesAccess {
+    live_feeds: TimelineAccess,
+    hashtag_feeds: TimelineAccess,
+    trending_link_feeds: TimelineAccess,
+}
+
+// https://docs.joinmastodon.org/entities/Instance/
 #[derive(Serialize)]
 pub struct InstanceInfoV2 {
     domain: String,
     title: String,
     description: String,
+    extended_description: String,
     version: String,
     source_url: String,
     usage: Usage,
@@ -336,28 +407,39 @@ pub struct InstanceInfoV2 {
     registrations: Registrations,
     contact: Contact,
 
+    authentication_methods: Vec<String>,
+    login_message: String,
+    new_accounts_read_only: bool,
+    like_emoji: String,
+    favorite_emojis: Vec<String>,
+    blockchains: Vec<BlockchainInfo>,
+    ipfs_gateway_url: Option<String>,
+
     pleroma: PleromaInfo,
 }
 
 impl InstanceInfoV2 {
     pub fn create(
         config: &Config,
+        dynamic_config: DynamicConfig,
         media_server: &ClientMediaServer,
         maybe_admin: Option<User>,
         user_count_active_month: i64,
     ) -> Self {
         Self {
-            domain: config.instance().hostname(),
+            domain: config.instance().webfinger_hostname(),
             title: config.instance_title.clone(),
             description: config.instance_short_description.clone(),
-            version: get_full_api_version(SOFTWARE_VERSION),
-            source_url: SOFTWARE_REPOSITORY.to_string(),
+            extended_description: markdown_to_html(&config.instance_description),
+            version: get_full_api_version(config.software),
+            source_url: config.software.repository.to_owned(),
             usage: Usage {
                 users: UsageUsers {
                     active_month: user_count_active_month,
                 },
             },
             configuration: ConfigurationV2 {
+                accounts: AccountLimits::new(),
                 statuses: StatusLimits {
                     max_characters: config.limits.posts.character_limit,
                     max_media_attachments: config.limits.posts.attachment_local_limit,
@@ -369,6 +451,30 @@ impl InstanceInfoV2 {
                     image_size_limit: config.limits.media.file_size_limit,
                 },
                 polls: PollLimits::new(),
+                timelines_access: TimelinesAccess {
+                    live_feeds: TimelineAccess {
+                        local:
+                            if config.instance_timeline_public {
+                                "public".to_string()
+                            } else {
+                                "authenticated".to_string()
+                            },
+                        remote:
+                            if dynamic_config.federated_timeline_restricted {
+                                "restricted".to_string()
+                            } else {
+                                "authenticated".to_string()
+                            },
+                    },
+                    hashtag_feeds: TimelineAccess {
+                        local: "public".to_string(),
+                        remote: "public".to_string(),
+                    },
+                    trending_link_feeds: TimelineAccess {
+                        local: "disabled".to_string(),
+                        remote: "disabled".to_string(),
+                    },
+                },
             },
             registrations: Registrations {
                 enabled:
@@ -380,11 +486,23 @@ impl InstanceInfoV2 {
             contact: Contact {
                 email: "".to_string(),
                 account: maybe_admin.map(|user| Account::from_profile(
-                    config.instance().uri_str(),
+                    &Authority::from(&config.instance()),
                     media_server,
                     user.profile,
                 )),
             },
+            authentication_methods: config.authentication_methods.iter()
+                .map(map_authentication_method)
+                .collect(),
+            login_message: config.login_message.clone(),
+            new_accounts_read_only:
+                matches!(config.registration.default_role, DefaultRole::ReadOnlyUser),
+            like_emoji: dynamic_config.like_emoji,
+            favorite_emojis: dynamic_config.favorite_emojis,
+            blockchains: config.blockchains().iter()
+                .map(BlockchainInfo::from)
+                .collect(),
+            ipfs_gateway_url: config.ipfs_gateway_url.clone(),
             pleroma: PleromaInfo {
                 metadata: PleromaMetadata::new(),
             },
@@ -434,6 +552,7 @@ mod tests {
         let metadata = BlockchainMetadata::from(&monero_config);
         let metadata_json = serde_json::to_value(metadata).unwrap();
         let expected_metadata_json = json!({
+            "is_forwarding_required": true,
             "description": null,
             "payment_amount_min": 1000000000,
         });
@@ -442,7 +561,12 @@ mod tests {
 
     #[test]
     fn test_get_full_api_version() {
-        let full_version = get_full_api_version("2.0.0");
+        let software = SoftwareMetadata {
+            name: "Mitra",
+            version: "2.0.0",
+            ..Default::default()
+        };
+        let full_version = get_full_api_version(software);
         assert_eq!(full_version, "4.0.0 (compatible; Mitra 2.0.0)");
     }
 }

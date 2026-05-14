@@ -16,6 +16,7 @@ use crate::{
 // 'ap' URI must have path
 // authority: DID regexp plus percent sign (see also: DID_RE in apx_core::did)
 const AP_URI_RE: &str = r"^ap://(?P<did>did(:|%3A)[[:alpha:]]+(:|%3A)[A-Za-z0-9._:%-]+)(?P<path>/.+)$";
+const AP_URI_SCHEME: &str = "ap";
 const AP_URI_PREFIX: &str = "ap://";
 
 pub fn is_ap_uri(uri: &str) -> bool {
@@ -72,8 +73,22 @@ impl ApUri {
         Ok(ap_uri)
     }
 
+    /// Returns URI scheme
+    pub fn scheme(&self) -> &str {
+        AP_URI_SCHEME
+    }
+
     pub fn authority(&self) -> &Did {
         &self.authority
+    }
+
+    /// Returns base URI (scheme and authority)
+    pub fn base(&self) -> String {
+        format!(
+            "{}://{}",
+            self.scheme(),
+            self.authority(),
+        )
     }
 
     pub fn relative_uri(&self) -> String {
@@ -113,8 +128,8 @@ impl fmt::Display for ApUri {
         write!(
             formatter,
             "{}{}",
-            AP_URI_PREFIX,
-            self.to_did_url(),
+            self.base(),
+            self.relative_uri(),
         )
     }
 }
@@ -135,9 +150,11 @@ mod tests {
     fn test_parse() {
         let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/123";
         let ap_uri = ApUri::parse(url).unwrap();
+        assert_eq!(ap_uri.scheme(), "ap");
         assert_eq!(ap_uri.authority().to_string(), "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
         assert_eq!(ap_uri.location.authority_str(), None);
         assert_eq!(ap_uri.location.path_str(), "/objects/123");
+        assert_eq!(ap_uri.base(), "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
         assert_eq!(ap_uri.relative_uri(), "/objects/123");
         assert_eq!(ap_uri.to_string(), url);
     }

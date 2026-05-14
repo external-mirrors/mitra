@@ -11,6 +11,7 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    authority::Authority,
     builders::{
         add_context_activity::sync_conversation,
         like::prepare_like,
@@ -34,7 +35,7 @@ use mitra_models::{
         queries::{
             create_reaction,
             delete_reaction,
-            get_reactions,
+            get_post_reactions_detailed,
         },
         types::{ReactionData, ReactionDetailed},
     },
@@ -138,10 +139,11 @@ async fn create_reaction_view(
     ).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         Some(&current_user),
         post,
@@ -199,10 +201,11 @@ async fn delete_reaction_view(
     ).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         Some(&current_user),
         post,
@@ -211,7 +214,7 @@ async fn delete_reaction_view(
 }
 
 #[get("/{status_id}/reactions")]
-async fn get_reactions_view(
+async fn get_post_reactions_view(
     auth: BearerAuth,
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
@@ -225,7 +228,7 @@ async fn get_reactions_view(
         Some(&current_user.profile),
         *status_id,
     ).await?;
-    let reactions = get_reactions(
+    let reactions = get_post_reactions_detailed(
         db_client,
         post.id,
         Some(current_user.id),
@@ -233,6 +236,7 @@ async fn get_reactions_view(
         None, // get all reactions
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let mut pleroma_reactions: Vec<PleromaEmojiReaction> = vec![];
     for reaction in reactions {
@@ -246,7 +250,7 @@ async fn get_reactions_view(
             .map(|emoji| emoji.shortcode.clone())
             .unwrap_or(content);
         let account = Account::from_profile(
-            config.instance().uri_str(),
+            &authority,
             &media_server,
             reaction.author.clone(),
         );
@@ -278,5 +282,5 @@ pub fn reaction_api_scope() -> Scope {
     web::scope("/v1/pleroma/statuses")
         .service(create_reaction_view)
         .service(delete_reaction_view)
-        .service(get_reactions_view)
+        .service(get_post_reactions_view)
 }

@@ -8,6 +8,7 @@ use actix_web::{
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 
+use mitra_activitypub::authority::Authority;
 use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
@@ -41,12 +42,12 @@ async fn profile_directory(
         query_params.limit.inner(),
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let accounts: Vec<Account> = profiles
         .into_iter()
         .map(|profile| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             profile,
         ))

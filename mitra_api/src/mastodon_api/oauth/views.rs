@@ -47,7 +47,6 @@ use mitra_validators::errors::ValidationError;
 use crate::{
     http::{
         log_response_error,
-        ratelimit_config,
         ContentSecurityPolicy,
         JsonOrForm,
     },
@@ -55,6 +54,7 @@ use crate::{
         auth::get_current_user,
         errors::MastodonError,
     },
+    ratelimit::RatelimitConfigs,
 };
 
 use super::types::{
@@ -163,6 +163,24 @@ async fn token_view(
         Either::Right(form) => form.into_inner().into(),
     };
     let db_client = &**get_database_client(&db_pool).await?;
+    let maybe_oauth_app = if let Some(client_id) = request_data.client_id {
+        let oauth_app = match get_oauth_app_by_client_id(db_client, client_id).await {
+            Ok(app) => app,
+            Err(DatabaseError::NotFound(_)) =>
+                return Err(MastodonError::AuthError("invalid client credentials")),
+            Err(other_error) => return Err(other_error.into()),
+        };
+        if let Some(client_secret) = request_data.client_secret {
+            if client_secret != oauth_app.client_secret {
+                log::warn!("incorrect client secret");
+            };
+        } else {
+            log::warn!("client secret is not provided");
+        };
+        Some(oauth_app)
+    } else {
+        None
+    };
     let user = match request_data.grant_type.as_str() {
         "authorization_code" => {
             // https://www.rfc-editor.org/rfc/rfc6749#section-4.1.3
@@ -170,11 +188,6 @@ async fn token_view(
                 .ok_or(ValidationError("authorization code is required"))?;
             let client_id = request_data.client_id
                 .ok_or(ValidationError("client ID is required"))?;
-            log::info!(
-                "authorization code grant: client_id {}, redirect_uri {:?}",
-                client_id,
-                request_data.redirect_uri,
-            );
             get_user_by_authorization_code(
                 db_client,
                 client_id,
@@ -208,7 +221,7 @@ async fn token_view(
             let session_data = verify_eip4361_signature(
                 message,
                 signature,
-                &config.instance().hostname(),
+                config.instance().uri(),
                 &config.login_message,
             ).map_err(|err| MastodonError::ValidationError(err.to_string()))?;
             if !is_valid_caip122_nonce(
@@ -232,7 +245,7 @@ async fn token_view(
                 .ok_or(MastodonError::NotSupported)?;
             let session_data = verify_monero_caip122_signature(
                 monero_config,
-                &config.instance().hostname(),
+                config.instance().uri(),
                 &config.login_message,
                 message,
                 signature,
@@ -260,11 +273,16 @@ async fn token_view(
     save_oauth_token(
         db_client,
         user.id,
+        maybe_oauth_app.as_ref().map(|app| app.id),
         &access_token,
         created_at,
         expires_at,
     ).await?;
-    log::warn!("created auth token for user {}", user);
+    log::warn!(
+        "created auth token for user {} (client: {:?})",
+        user,
+        maybe_oauth_app.map(|app| app.app_name),
+    );
     let token_data = TokenResponse::new(
         access_token,
         created_at.timestamp(),
@@ -298,18 +316,19 @@ async fn revoke_token_view(
     Ok(HttpResponse::Ok().json(empty))
 }
 
-pub fn oauth_api_scope() -> ActixScope<impl ServiceFactory<
+pub fn oauth_api_scope(
+    ratelimit_configs: RatelimitConfigs,
+) -> ActixScope<impl ServiceFactory<
     ServiceRequest,
     Config = (),
     Response = ServiceResponse<EitherBody<BoxBody>>,
     Error = ActixError,
     InitError = (),
 >> {
-    let token_limit = ratelimit_config(5, 120, false);
     let token_view_limited = web::resource("/token").route(
         web::post()
             .to(token_view)
-            .wrap(Governor::new(&token_limit)));
+            .wrap(Governor::new(&ratelimit_configs.login)));
     web::scope("/oauth")
         .wrap(ErrorHandlers::new()
             .default_handler_client(|response| {

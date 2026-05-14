@@ -9,7 +9,6 @@ use apx_core::{
         rsa::{
             deserialize_rsa_public_key,
             rsa_public_key_from_pkcs1_der,
-            RsaPublicKey,
             RsaSerializationError,
         },
     },
@@ -31,23 +30,22 @@ use apx_core::{
         verify::{
             get_json_signature,
             verify_eddsa_json_signature,
-            verify_rsa_json_signature,
             JsonSignatureVerificationError as JsonSignatureError,
             VerificationMethod,
         },
     },
+    url::canonical::CanonicalUri,
 };
 use apx_sdk::{
     authentication::{
         verify_portable_object,
         AuthenticationError as PortableObjectAuthenticationError,
     },
-    deserialization::object_to_id,
-    utils::key_id_to_actor_id,
+    utils::{key_id_to_actor_id, CoreType},
 };
 use serde_json::{Value as JsonValue};
+use thiserror::Error;
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         db_client_await,
@@ -67,27 +65,27 @@ use crate::{
     errors::HandlerError,
     identifiers::canonicalize_id,
     importers::{ActorIdResolver, ApClient},
-    ownership::{get_object_id, is_same_origin},
+    ownership::{get_object_id, get_owner, is_same_origin},
 };
 
 const AUTHENTICATION_FETCHER_TIMEOUT: u64 = 10;
 
-#[derive(thiserror::Error, Debug)]
+#[derive(Debug, Error)]
 pub enum AuthenticationError {
-    #[error(transparent)]
+    #[error("invalid HTTP signature: {0}")]
     HttpSignatureError(#[from] HttpSignatureError),
 
     #[error("no HTTP signature")]
     NoHttpSignature,
 
-    #[error(transparent)]
+    #[error("invalid JSON signature: {0}")]
     JsonSignatureError(#[from] JsonSignatureError),
 
     #[error("no JSON signature")]
     NoJsonSignature,
 
     #[error("invalid JSON signature type")]
-    InvalidJsonSignatureType,
+    UnsupportedSignatureAlgorithm,
 
     #[error("unsupported verification method")]
     UnsupportedVerificationMethod,
@@ -98,14 +96,18 @@ pub enum AuthenticationError {
     #[error(transparent)]
     ValidationError(#[from] ValidationError),
 
+    #[error("signer not found in cache: {0}")]
+    ActorNotFound(String),
+
     #[error("{0}")]
     ImportError(String),
 
-    #[error("{0}")]
-    ActorError(&'static str),
+    #[error("key not found in cache: {0}")]
+    KeyNotFound(CanonicalUri),
 
-    #[error("can't retrieve key")]
-    KeyRetrievalError(&'static str),
+    // Not used with HTTP signatures because APx doesn't return sig algorithm
+    #[error("unexpected key type")]
+    UnexpectedKeyType,
 
     #[error("invalid RSA public key")]
     InvalidRsaPublicKey(#[from] RsaSerializationError),
@@ -113,21 +115,18 @@ pub enum AuthenticationError {
     #[error("invalid Ed25519 public key")]
     InvalidEd25519PublicKey(#[from] Ed25519SerializationError),
 
-    #[error("actor and request signer do not match")]
-    UnexpectedRequestSigner,
-
     #[error("actor and object signer do not match")]
     UnexpectedObjectSigner,
 
     #[error("object ID and verification method have different origins")]
     UnexpectedKeyOrigin,
 
-    #[error("invalid portable activity: {0}")]
-    InvalidPortableActivity(#[from] PortableObjectAuthenticationError),
+    #[error("invalid portable object: {0}")]
+    InvalidPortableObject(#[from] PortableObjectAuthenticationError),
 }
 
 async fn get_signer(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     signer_id: &str,
     no_fetch: bool,
@@ -136,12 +135,18 @@ async fn get_signer(
         // Avoid fetching (e.g. if signer was deleted)
         let canonical_signer_id = canonicalize_id(signer_id)
             .map_err(|_| ValidationError("invalid actor ID"))?;
-        get_remote_profile_by_actor_id(
+        match get_remote_profile_by_actor_id(
             db_client_await!(db_pool),
             &canonical_signer_id.to_string(),
-        ).await?
+        ).await {
+            Ok(profile) => profile,
+            Err(DatabaseError::NotFound(_)) => {
+                return Err(AuthenticationError::ActorNotFound(signer_id.to_string()));
+            },
+            Err(other_error) => return Err(other_error.into()),
+        }
     } else {
-        let mut ap_client = ApClient::new_with_pool(config, db_pool).await?;
+        let mut ap_client = ap_client.clone();
         ap_client.instance.federation.fetcher_timeout = AUTHENTICATION_FETCHER_TIMEOUT;
         match ActorIdResolver::default().only_remote().resolve(
             &ap_client,
@@ -150,8 +155,7 @@ async fn get_signer(
         ).await {
             Ok(profile) => profile,
             Err(HandlerError::DatabaseError(DatabaseError::NotFound(_))) => {
-                let error_message = "signer not found in cache";
-                return Err(AuthenticationError::ImportError(error_message.to_string()));
+                return Err(AuthenticationError::ActorNotFound(signer_id.to_string()));
             },
             Err(HandlerError::DatabaseError(error)) => return Err(error.into()),
             Err(other_error) => {
@@ -197,7 +201,7 @@ fn get_signer_key(
             .expect("should be signed by remote actor")
             .public_key.as_ref()
             .filter(|public_key| public_key.id == key_id)
-            .ok_or(AuthenticationError::ActorError("key not found"))?;
+            .ok_or(AuthenticationError::KeyNotFound(canonical_key_id))?;
         let public_key =
             deserialize_rsa_public_key(&public_key.public_key_pem)?;
         PublicKey::Rsa(public_key)
@@ -211,25 +215,14 @@ fn get_signer_ed25519_key(
 ) -> Result<Ed25519PublicKey, AuthenticationError> {
     let public_key = get_signer_key(profile, key_id)?;
     let PublicKey::Ed25519(ed25519_public_key) = public_key else {
-        return Err(AuthenticationError::ActorError("unexpected key type"));
+        return Err(AuthenticationError::UnexpectedKeyType);
     };
     Ok(ed25519_public_key)
 }
 
-fn get_signer_rsa_key(
-    profile: &DbActorProfile,
-    key_id: &str,
-) -> Result<RsaPublicKey, AuthenticationError> {
-    let public_key = get_signer_key(profile, key_id)?;
-    let PublicKey::Rsa(rsa_public_key) = public_key else {
-        return Err(AuthenticationError::ActorError("unexpected key type"));
-    };
-    Ok(rsa_public_key)
-}
-
 /// Verifies HTTP signature and returns signer
 pub async fn verify_signed_request(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     request_method: Method,
     request_uri: Uri,
@@ -251,9 +244,12 @@ pub async fn verify_signed_request(
     if signature_data.is_rfc9421 {
         log::info!("RFC-9421 signature found");
     };
-    // Reciprocal claim on actor is required
-    // https://codeberg.org/fediverse/fep/src/branch/main/fep/fe34/fep-fe34.md#signatures
+    if signature_data.authority != ap_client.instance.uri().authority() {
+        log::warn!("unexpected target authority: {}", signature_data.authority);
+    };
+    // Try to guess the key owner ID from the key ID.
     let signer_id = match signature_data.key_id {
+        // NOTE: portable key IDs in compatible form are parsed as HTTP URIs
         VerificationMethod::HttpUri(ref key_id) => {
             key_id_to_actor_id(key_id.as_str())
                 .map_err(|_| ValidationError("invalid key ID"))?
@@ -264,8 +260,9 @@ pub async fn verify_signed_request(
         },
         _ => return Err(AuthenticationError::UnsupportedVerificationMethod),
     };
-    let signer = get_signer(config, db_pool, &signer_id, no_fetch).await?;
+    let signer = get_signer(ap_client, db_pool, &signer_id, no_fetch).await?;
     let key_id = signature_data.key_id.to_string();
+    // Check reciprocal claim
     let public_key = get_signer_key(
         &signer,
         key_id.as_str(),
@@ -283,28 +280,23 @@ pub async fn verify_signed_request(
     Ok((signature_data.key_id, signer))
 }
 
-/// Verifies JSON signature on activity and returns actor
-pub async fn verify_signed_activity(
-    config: &Config,
+/// Verifies JSON signature on the object and returns signer
+pub async fn verify_signed_object(
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
-    activity: &JsonValue,
+    object: &JsonValue,
+    object_core_type: CoreType,
     no_fetch: bool,
 ) -> Result<DbActorProfile, AuthenticationError> {
-    match verify_portable_object(activity) {
-        Ok(canonical_activity_id) => {
-            // Using actor-based verification because
-            // an actor profile needs to be returned
-            let actor_id = object_to_id(&activity["actor"])
-                .map_err(|_| ValidationError("unknown actor"))?;
-            let actor_profile = get_signer(config, db_pool, &actor_id, no_fetch).await?;
-            let canonical_actor_id =
-                canonicalize_id(actor_profile.expect_remote_actor_id())?;
-            if canonical_activity_id.origin() != canonical_actor_id.origin() {
-                return Err(AuthenticationError::UnexpectedObjectSigner);
-            };
-            return Ok(actor_profile);
+    match verify_portable_object(object) {
+        Ok(_) => {
+            // Owner is not relevant if the object is portable,
+            // but it is resolved because its profile needs to be returned
+            let owner_id = get_owner(object, object_core_type)?;
+            let owner = get_signer(ap_client, db_pool, &owner_id, no_fetch).await?;
+            return Ok(owner);
         },
-        // Continue verification if activity is not portable
+        // Continue verification if object is not portable
         Err(PortableObjectAuthenticationError::NotPortable) => (),
         Err(PortableObjectAuthenticationError::InvalidObjectID(message)) => {
             return Err(ValidationError(message).into());
@@ -312,47 +304,31 @@ pub async fn verify_signed_activity(
         Err(other_error) => return Err(other_error.into()),
     };
 
-    let activity_id = get_object_id(activity)?;
-    let signature_data = match get_json_signature(activity) {
+    let object_id = get_object_id(object)?;
+    let signature_data = match get_json_signature(object) {
         Ok(signature_data) => signature_data,
         Err(JsonSignatureError::NoProof) => {
             return Err(AuthenticationError::NoJsonSignature);
         },
         Err(other_error) => return Err(other_error.into()),
     };
-    let actor_id = object_to_id(&activity["actor"])
-        .map_err(|_| ValidationError("unknown actor"))?;
-    let actor_profile = get_signer(config, db_pool, &actor_id, no_fetch).await?;
 
-    match signature_data.verification_method {
+    let signer = match signature_data.verification_method {
         VerificationMethod::HttpUri(key_id) => {
-            // Can this activity be signed with this key?
-            if !is_same_origin(activity_id, key_id.as_str())? {
+            // Can this object be signed with this key?
+            if !is_same_origin(object_id, key_id.as_str())? {
                 return Err(AuthenticationError::UnexpectedKeyOrigin);
             };
-            // Can this actor perform this activity?
+            // Try to guess the key owner ID from the key ID.
             let signer_id = key_id_to_actor_id(key_id.as_str())
                 .map_err(|_| ValidationError("invalid key ID"))?;
-            if signer_id != actor_id {
-                return Err(AuthenticationError::UnexpectedObjectSigner);
-            };
+            let signer = get_signer(ap_client, db_pool, &signer_id, no_fetch).await?;
             match signature_data.proof_type {
                 #[allow(deprecated)]
-                ProofType::JcsRsaSignature => {
-                    let signer_key = get_signer_rsa_key(
-                        &actor_profile,
-                        key_id.as_str(),
-                    )?;
-                    verify_rsa_json_signature(
-                        &signer_key,
-                        &signature_data.object,
-                        &signature_data.signature,
-                    )?;
-                },
-                #[allow(deprecated)]
                 ProofType::JcsEddsaSignature | ProofType::EddsaJcsSignature => {
+                    // Check reciprocal claim
                     let signer_key = get_signer_ed25519_key(
-                        &actor_profile,
+                        &signer,
                         key_id.as_str(),
                     )?;
                     verify_eddsa_json_signature(
@@ -362,18 +338,23 @@ pub async fn verify_signed_activity(
                         &signature_data.signature,
                     )?;
                 },
-                _ => return Err(AuthenticationError::InvalidJsonSignatureType),
+                _ => return Err(AuthenticationError::UnsupportedSignatureAlgorithm),
             };
+            signer
         },
         VerificationMethod::ApUri(ap_uri) => {
-            log::warn!("activity signed by {}", ap_uri);
+            log::warn!("object signed by {}", ap_uri);
             return Err(AuthenticationError::UnsupportedVerificationMethod);
         },
         VerificationMethod::DidUrl(did_url) => {
-            log::warn!("activity signed by {}", did_url.did());
+            log::warn!("object signed by {}", did_url.did());
             return Err(AuthenticationError::UnsupportedVerificationMethod);
         },
     };
-    // Signer is actor
-    Ok(actor_profile)
+    // Object owner and key owner must be the same actor.
+    let owner_id = get_owner(object, object_core_type)?;
+    if signer.expect_remote_actor_id() != owner_id {
+        return Err(AuthenticationError::UnexpectedObjectSigner);
+    };
+    Ok(signer)
 }

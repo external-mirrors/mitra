@@ -17,11 +17,13 @@ use mitra_models::{
         DatabaseError,
     },
     filter_rules::types::FilterAction,
+    profiles::queries::get_remote_profiles_by_actor_ids,
     relationships::queries::is_local_or_followed,
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    authority::Authority,
     builders::add_context_activity::sync_conversation,
     identifiers::{
         canonicalize_id,
@@ -50,25 +52,42 @@ use super::{
 
 async fn check_unsolicited_message(
     db_client: &impl DatabaseClient,
-    instance_uri: &str,
+    authority: &Authority,
     object: &AttributedObject,
     sender_id: &str,
 ) -> Result<(), HandlerError> {
     let canonical_sender_id = canonicalize_id(sender_id)?.to_string();
+    let audience = get_audience(object)?;
+    if !audience.iter().any(is_public) {
+        return Ok(());
+    };
+    let has_local_recipients = audience.iter().any(|actor_id| {
+        parse_local_actor_id(authority, actor_id).is_ok()
+    });
+    if has_local_recipients {
+        return Ok(());
+    };
+    let has_portable_local_recipients =
+        get_remote_profiles_by_actor_ids(db_client, &audience)
+            .await?
+            .into_iter()
+            .any(|profile| profile.has_portable_account());
+    if has_portable_local_recipients {
+        return Ok(());
+    };
     // is_local_or_followed returns true if actor has local account
+    // Possible cause: a failure to process Undo(Follow)
     let sender_has_followers =
         is_local_or_followed(db_client, &canonical_sender_id).await?;
-    let audience = get_audience(object)?;
-    // TODO: FEP-EF61: find portable local recipients
-    let has_local_recipients = audience.iter().any(|actor_id| {
-        parse_local_actor_id(instance_uri, actor_id).is_ok()
-    });
+    if sender_has_followers {
+        return Ok(());
+    };
     // Is it a reply to a known post?
     let is_disconnected = if let Some(ref in_reply_to_id) = object.in_reply_to {
         let canonical_in_reply_to_id = canonicalize_id(in_reply_to_id)?;
         match get_post_by_object_id(
             db_client,
-            instance_uri,
+            authority,
             &canonical_in_reply_to_id,
         ).await {
             Ok(_) => false,
@@ -78,18 +97,12 @@ async fn check_unsolicited_message(
     } else {
         true
     };
-    let is_unsolicited =
-        is_disconnected &&
-        audience.iter().any(is_public) &&
-        !has_local_recipients &&
-        // Possible cause: a failure to process Undo(Follow)
-        !sender_has_followers;
-    if is_unsolicited {
-        let error_message =
-            format!("unsolicited message from {canonical_sender_id}");
-        return Err(HandlerError::Filtered(error_message));
+    if !is_disconnected {
+        return Ok(());
     };
-    Ok(())
+    let error_message =
+        format!("unsolicited message from {canonical_sender_id}");
+    Err(HandlerError::Filtered(error_message))
 }
 
 #[derive(Deserialize)]
@@ -101,6 +114,7 @@ struct CreateNote {
 
 pub async fn handle_create(
     config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
     maybe_sender_id: Option<&str>,
@@ -111,7 +125,6 @@ pub async fn handle_create(
         mut object,
     } = serde_json::from_value(activity.clone())?;
 
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     // Authentication
     let is_not_embedded = object.as_str().is_some();
     if is_not_embedded || !is_authenticated {
@@ -140,14 +153,15 @@ pub async fn handle_create(
     verify_object_owner(&object)?;
 
     if is_question_vote(&object) {
-        return handle_question_vote(config, db_pool, object).await;
+        return handle_question_vote(config, ap_client, db_pool, object).await;
     };
     let object: AttributedObjectJson = serde_json::from_value(object)?;
     if let Some(sender_id) = maybe_sender_id {
         let db_client = &**get_database_client(db_pool).await?;
+        let authority = Authority::from(&ap_client.instance);
         check_unsolicited_message(
             db_client,
-            config.instance().uri_str(),
+            &authority,
             &object.inner,
             sender_id,
         ).await?;
@@ -174,7 +188,7 @@ pub async fn handle_create(
     let object_id = object.id().to_owned();
     let object_type = object.inner.object_type.clone();
     let post = import_post(
-        &ap_client,
+        ap_client,
         db_pool,
         object_id,
         Some(object),

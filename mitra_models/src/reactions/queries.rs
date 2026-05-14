@@ -4,14 +4,16 @@ use mitra_utils::id::generate_ulid;
 
 use crate::{
     database::{
+        query_macro::query,
         DatabaseClient,
         DatabaseError,
     },
     notifications::helpers::create_reaction_notification,
     posts::{
         queries::{
-            update_reaction_count,
             get_post_author,
+            post_subqueries,
+            update_reaction_count,
         },
         types::Visibility,
     },
@@ -22,6 +24,7 @@ use super::types::{
     ReactionData,
     ReactionDeleted,
     ReactionDetailed,
+    ReactionPost,
 };
 
 pub async fn create_reaction(
@@ -66,7 +69,7 @@ pub async fn create_reaction(
     let reaction: Reaction = row.try_get("post_reaction")?;
     update_reaction_count(&transaction, reaction.post_id, 1).await?;
     let post_author = get_post_author(&transaction, reaction.post_id).await?;
-    if post_author.is_local() && post_author.id != reaction.author_id {
+    if post_author.has_user_account() && post_author.id != reaction.author_id {
         create_reaction_notification(
             &transaction,
             reaction.author_id,
@@ -126,7 +129,7 @@ pub async fn delete_reaction(
     Ok(reaction_deleted)
 }
 
-pub async fn get_reactions(
+pub async fn get_post_reactions_detailed(
     db_client: &impl DatabaseClient,
     post_id: Uuid,
     current_user_id: Option<Uuid>,
@@ -147,6 +150,7 @@ pub async fn get_reactions(
             post_reaction.post_id = $1
             AND (
                 post_reaction.visibility = {visibility_public}
+                OR post_reaction.author_id = $2
                 OR post.author_id = $2
             )
             AND ($3::uuid IS NULL OR post_reaction.id < $3)
@@ -192,6 +196,53 @@ pub(crate) async fn find_reacted_by_user(
         })
         .collect::<Result<Vec<_>, DatabaseError>>()?;
     Ok(reactions)
+}
+
+pub async fn get_reactions(
+    db_client: &impl DatabaseClient,
+    author_id: Uuid,
+    only_likes: bool,
+    max_reaction_id: Option<Uuid>,
+    limit: u16,
+) -> Result<Vec<ReactionPost>, DatabaseError> {
+    let where_content =
+        if only_likes { "AND post_reaction.content IS NULL" }
+        else { "" };
+    let statement = format!(
+        "
+        SELECT
+            post_reaction.id,
+            post,
+            actor_profile AS post_author,
+            {post_subqueries}
+        FROM post
+        JOIN actor_profile ON post.author_id = actor_profile.id
+        JOIN post_reaction ON post_reaction.post_id = post.id
+        WHERE
+            post_reaction.author_id = $author_id
+            {where_content}
+            AND (
+                $max_reaction_id::uuid IS NULL
+                OR post_reaction.id < $max_reaction_id
+            )
+        ORDER BY post_reaction.id DESC
+        LIMIT $limit
+        ",
+        post_subqueries=post_subqueries(),
+        where_content=where_content,
+    );
+    let limit = i64::from(limit);
+    let query = query!(
+        &statement,
+        author_id=author_id,
+        max_reaction_id=max_reaction_id,
+        limit=limit,
+    )?;
+    let rows = db_client.query(query.sql(), query.parameters()).await?;
+    let liked_posts = rows.iter()
+        .map(ReactionPost::try_from)
+        .collect::<Result<_, _>>()?;
+    Ok(liked_posts)
 }
 
 #[cfg(test)]
@@ -306,7 +357,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_get_reactions() {
+    async fn test_get_post_reactions_detailed() {
         let db_client = &mut create_test_database().await;
         let user_1 = create_test_user(db_client, "test1").await;
         let user_2 = create_test_user(db_client, "test2").await;
@@ -334,7 +385,7 @@ mod tests {
             activity_id: None,
         };
         let reaction_2 = create_reaction(db_client, reaction_data_2).await.unwrap();
-        let reactions = get_reactions(
+        let reactions = get_post_reactions_detailed(
             db_client,
             post.id,
             None, // guest
@@ -343,5 +394,36 @@ mod tests {
         ).await.unwrap();
         assert_eq!(reactions.len(), 1);
         assert_eq!(reactions[0].id, reaction_2.id);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_reactions() {
+        let db_client = &mut create_test_database().await;
+        let user_1 = create_test_user(db_client, "test1").await;
+        let user_2 = create_test_user(db_client, "test2").await;
+        let post_data = PostCreateData {
+            content: "my post".to_string(),
+            ..Default::default()
+        };
+        let post = create_post(db_client, user_2.id, post_data).await.unwrap();
+        let reaction_data = ReactionData {
+            author_id: user_1.id,
+            post_id: post.id,
+            content: None,
+            emoji_id: None,
+            visibility: Visibility::Direct,
+            activity_id: None,
+        };
+        let reaction = create_reaction(db_client, reaction_data).await.unwrap();
+        let reactions = get_reactions(
+            db_client,
+            user_1.id,
+            true, // only likes
+            None,
+            20,
+        ).await.unwrap();
+        assert_eq!(reactions.len(), 1);
+        assert_eq!(reactions[0].reaction_id, reaction.id);
     }
 }

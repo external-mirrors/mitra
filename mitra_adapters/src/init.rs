@@ -1,3 +1,6 @@
+use std::os::unix::fs::MetadataExt;
+use std::path::Path;
+
 use apx_core::{
     crypto::{
         eddsa::{
@@ -18,8 +21,7 @@ use log::Level;
 use mitra_config::{
     parse_config,
     Config,
-    SOFTWARE_NAME,
-    SOFTWARE_VERSION,
+    SoftwareMetadata,
 };
 use mitra_models::{
     database::{
@@ -46,15 +48,16 @@ use mitra_services::media::MediaStorage;
 use crate::logger::configure_logger;
 
 pub fn initialize_app(
+    with_metadata: SoftwareMetadata,
     override_log_level: Option<Level>,
 ) -> Config {
-    let (config, config_warnings) = parse_config();
+    let (config, config_warnings) = parse_config(with_metadata);
     let log_level = override_log_level.unwrap_or(config.log_level);
     configure_logger(log_level);
     log::info!(
         "{} v{}, environment = '{:?}'",
-        SOFTWARE_NAME,
-        SOFTWARE_VERSION,
+        config.software.name,
+        config.software.version,
         config.environment,
     );
     log::info!("config loaded from {}", config.config_path);
@@ -62,6 +65,40 @@ pub fn initialize_app(
         log::warn!("{}", warning);
     };
     config
+}
+
+extern "C" {
+    fn geteuid() -> u32;
+}
+
+fn check_directory_owner(path: &Path) -> () {
+    let metadata = std::fs::metadata(path)
+        .expect("can't read file metadata");
+    let owner_uid = metadata.uid();
+    let current_uid = unsafe { geteuid() };
+    if owner_uid != current_uid {
+        panic!(
+            "{} owner ({}) is different from the current user ({})",
+            path.display(),
+            owner_uid,
+            current_uid,
+        );
+    };
+}
+
+pub fn check_app_directories(config: &Config) -> () {
+    if !config.storage_dir.exists() {
+        panic!("storage directory does not exist");
+    };
+    check_directory_owner(&config.storage_dir);
+    if let Some(ref web_client_dir) = config.web_client_dir {
+        if !web_client_dir.exists() {
+            panic!(
+                "web client directory does not exist: {}",
+                web_client_dir.display(),
+            );
+        };
+    };
 }
 
 // Panics on errors

@@ -1,6 +1,6 @@
 use apx_sdk::{
     deserialization::deserialize_into_object_id,
-    utils::is_activity,
+    utils::{is_activity, CoreType},
 };
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
@@ -25,14 +25,14 @@ use mitra_models::{
     },
     profiles::queries::get_remote_profile_by_actor_id,
     relationships::queries::subscribe_opt,
-    users::queries::get_user_by_name,
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    authentication::{verify_signed_activity, AuthenticationError},
-    identifiers::parse_local_actor_id,
-    importers::ApClient,
+    authentication::{verify_signed_object, AuthenticationError},
+    authority::Authority,
+    identifiers::canonicalize_id,
+    importers::{get_user_by_actor_id, ApClient},
     ownership::{is_local_origin, is_same_origin, get_object_id, verify_activity_owner},
     vocabulary::{CREATE, DELETE, DISLIKE, EMOJI_REACT, LIKE, UPDATE},
 };
@@ -74,6 +74,7 @@ struct ConversationAdd {
 // https://fediversity.site/help/develop/en/Containers
 async fn handle_fep_171b_add(
     config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     add: JsonValue,
 ) -> HandlerResult {
@@ -83,21 +84,21 @@ async fn handle_fep_171b_add(
         target,
     } = serde_json::from_value(add)?;
     let activity_id = get_object_id(&activity)?;
-    if is_local_origin(&config.instance(), activity_id) {
+    if is_local_origin(&ap_client.instance, activity_id) {
         // Ignore local activities
         return Ok(None);
     };
     // Authentication
-    match verify_signed_activity(
-        config,
+    match verify_signed_object(
+        ap_client,
         db_pool,
         &activity,
+        CoreType::Activity,
         false, // fetch signer
     ).await {
         Ok(_) => (),
         Err(AuthenticationError::NoJsonSignature) => {
             // Verify activity by fetching it from origin
-            let ap_client = ApClient::new_with_pool(config, db_pool).await?;
             match ap_client.fetch_object(activity_id).await {
                 Ok(activity_fetched) => {
                     log::info!("fetched activity {}", activity_id);
@@ -136,6 +137,7 @@ async fn handle_fep_171b_add(
         CREATE => {
             handle_create(
                 config,
+                ap_client,
                 db_pool,
                 activity,
                 None, // no sender (spam check will not be performed)
@@ -145,7 +147,7 @@ async fn handle_fep_171b_add(
         },
         DELETE => {
             let maybe_type = handle_delete(
-                config,
+                ap_client,
                 db_pool,
                 activity,
             ).await?;
@@ -153,7 +155,7 @@ async fn handle_fep_171b_add(
         },
         UPDATE => {
             let maybe_type = handle_update(
-                config,
+                ap_client,
                 db_pool,
                 activity,
                 true, // authenticated
@@ -161,7 +163,7 @@ async fn handle_fep_171b_add(
             Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
         },
         LIKE | DISLIKE | EMOJI_REACT => {
-            let maybe_type = handle_like(config, db_pool, activity).await?;
+            let maybe_type = handle_like(ap_client, db_pool, activity).await?;
             Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
         },
         _ => {
@@ -173,11 +175,12 @@ async fn handle_fep_171b_add(
 
 pub async fn handle_add(
     config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     if is_activity(&activity["object"]) {
-        return handle_fep_171b_add(config, db_pool, activity).await;
+        return handle_fep_171b_add(config, ap_client, db_pool, activity).await;
     };
     let add: Add = serde_json::from_value(activity)?;
     let db_client = &mut **get_database_client(db_pool).await?;
@@ -189,11 +192,13 @@ pub async fn handle_add(
         .expect("actor data should be present");
     if Some(add.target.clone()) == actor.subscribers {
         // Adding to subscribers
-        let username = parse_local_actor_id(
-            config.instance().uri_str(),
-            &add.object,
-        )?;
-        let sender = get_user_by_name(db_client, &username).await?;
+        let canonical_object_id = canonicalize_id(&add.object)?;
+        let authority = Authority::from(&ap_client.instance);
+        let sender = get_user_by_actor_id(
+            db_client,
+            &authority,
+            &canonical_object_id,
+        ).await?;
         let recipient = actor_profile;
         subscribe_opt(db_client, sender.id, recipient.id).await?;
 

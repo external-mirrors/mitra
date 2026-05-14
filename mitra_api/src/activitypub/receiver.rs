@@ -7,17 +7,22 @@ use apx_core::{
     http_types::{header_map_adapter, method_adapter, uri_adapter},
     url::http_url_whatwg::get_hostname,
 };
-use apx_sdk::deserialization::object_to_id;
+use apx_sdk::{
+    deserialization::object_to_id,
+    utils::CoreType,
+};
 use serde_json::{Value as JsonValue};
+use thiserror::Error;
 
 use mitra_activitypub::{
     authentication::{
-        verify_signed_activity,
+        verify_signed_object,
         verify_signed_request,
         AuthenticationError,
     },
-    filter::{get_moderation_domain, FederationFilter},
+    filter::get_moderation_domain,
     identifiers::canonicalize_id,
+    importers::ApClient,
     ownership::is_local_origin,
     queues::IncomingActivityJobData,
     vocabulary::DELETE,
@@ -38,19 +43,19 @@ use crate::{
     errors::HttpError,
 };
 
-#[derive(thiserror::Error, Debug)]
-pub enum InboxError {
+#[derive(Debug, Error)]
+pub enum EndpointError {
     #[error(transparent)]
     ValidationError(#[from] ValidationError),
 
     #[error(transparent)]
     DatabaseError(#[from] DatabaseError),
 
-    #[error("{0}")]
+    #[error("authentication error: {0}")]
     AuthError(#[source] AuthenticationError),
 }
 
-impl From<AuthenticationError> for InboxError {
+impl From<AuthenticationError> for EndpointError {
     fn from(error: AuthenticationError) -> Self {
         match error {
             AuthenticationError::ValidationError(inner) => inner.into(),
@@ -60,12 +65,12 @@ impl From<AuthenticationError> for InboxError {
     }
 }
 
-impl From<InboxError> for HttpError {
-    fn from(error: InboxError) -> Self {
+impl From<EndpointError> for HttpError {
+    fn from(error: EndpointError) -> Self {
         match error {
-            InboxError::ValidationError(error) => error.into(),
-            InboxError::DatabaseError(error) => error.into(),
-            InboxError::AuthError(_) => {
+            EndpointError::ValidationError(error) => error.into(),
+            EndpointError::DatabaseError(error) => error.into(),
+            EndpointError::AuthError(_) => {
                 HttpError::AuthError("invalid signature")
             },
         }
@@ -80,7 +85,7 @@ pub async fn receive_activity(
     activity: &JsonValue,
     activity_digest: ContentDigest,
     recipient_id: &str,
-) -> Result<(), InboxError> {
+) -> Result<(), EndpointError> {
     let activity_id = activity["id"].as_str()
         .ok_or(ValidationError("'id' property is missing"))?;
     let activity_type = activity["type"].as_str()
@@ -88,12 +93,14 @@ pub async fn receive_activity(
     let activity_actor = object_to_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid 'actor' property"))?;
 
-    let actor_hostname = get_hostname(&activity_actor)
-        .map_err(|_| ValidationError("invalid actor ID"))?;
-    let filter = FederationFilter::init_with_pool(config, db_pool).await?;
-    if filter.is_incoming_blocked(&actor_hostname) {
-        log::info!("ignoring activity from blocked instance {actor_hostname}");
-        return Ok(());
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
+    let filter = &ap_client.filter;
+    if let Ok(possible_actor_hostname) = get_hostname(&activity_actor) {
+        // This only works for HTTP URIs
+        if filter.is_incoming_blocked(&possible_actor_hostname) {
+            log::info!("ignoring activity from blocked instance {possible_actor_hostname}");
+            return Ok(());
+        };
     };
     // Validates URIs; should be performed after filtering
     let _canonical_activity_id = canonicalize_id(activity_id)?;
@@ -116,7 +123,7 @@ pub async fn receive_activity(
 
     // HTTP signature is required
     let mut signer = match verify_signed_request(
-        config,
+        &ap_client,
         db_pool,
         method_adapter(request.method()),
         uri_adapter(request_full_uri),
@@ -134,23 +141,23 @@ pub async fn receive_activity(
             if is_self_delete && matches!(
                 error,
                 AuthenticationError::NoHttpSignature |
-                AuthenticationError::DatabaseError(DatabaseError::NotFound(_))
+                AuthenticationError::ActorNotFound(_)
             ) {
                 // Ignore Delete(Person) activities without HTTP signatures
                 // or if signer is not found in local database
                 return Ok(());
             };
-            log::warn!("invalid HTTP signature: {}", error);
             return Err(error.into());
         },
     };
 
     // JSON signature is optional
     // (unless the activity is portable)
-    match verify_signed_activity(
-        config,
+    match verify_signed_object(
+        &ap_client,
         db_pool,
         activity,
+        CoreType::Activity,
         // Don't fetch actor if this is Delete(Person) activity
         is_self_delete,
     ).await {
@@ -171,7 +178,6 @@ pub async fn receive_activity(
         },
         Err(AuthenticationError::NoJsonSignature) => (), // ignore
         Err(other_error) => {
-            log::warn!("invalid JSON signature: {}", other_error);
             return Err(other_error.into());
         },
     };
@@ -185,10 +191,13 @@ pub async fn receive_activity(
     let signer_id = signer.expect_remote_actor_id();
     let is_authenticated = canonical_actor_id.to_string() == signer_id;
     if !is_authenticated {
+        // Activity owner and key owner are different.
+        // This may occur only when activity doesn't have an integrity proof.
         if is_self_delete {
             // Ignore forwarded Delete(Person) activities from Mastodon
             return Ok(());
         };
+        // Activity will be fetched
         log::info!("processing forwarded {activity_type} from {signer_id}");
     };
 

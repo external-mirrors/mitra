@@ -20,7 +20,7 @@ use crate::{
 #[derive(Serialize)]
 struct DeletePerson {
     #[serde(rename = "@context")]
-    context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
     activity_type: String,
@@ -39,7 +39,7 @@ fn build_delete_person(
     let actor_id = local_actor_id(instance_uri, &user.profile.username);
     let activity_id = local_activity_id(instance_uri, DELETE, user.id);
     DeletePerson {
-        context: build_default_context(),
+        _context: build_default_context(),
         activity_type: DELETE.to_string(),
         id: activity_id,
         actor: actor_id.clone(),
@@ -55,7 +55,7 @@ async fn get_delete_person_recipients(
     let followers = get_followers(db_client, user_id).await?;
     let following = get_following(db_client, user_id).await?;
     let mut recipients = vec![];
-    for profile in followers.into_iter().chain(following.into_iter()) {
+    for profile in followers.into_iter().chain(following) {
         if let Some(remote_actor) = profile.actor_json {
             recipients.extend(Recipient::for_inbox(&remote_actor));
         };

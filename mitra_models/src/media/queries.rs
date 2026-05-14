@@ -26,7 +26,8 @@ impl DeletionQueue {
             JobType::MediaCleanup,
             &job_data,
             scheduled_for,
-        ).await
+        ).await?;
+        Ok(())
     }
 
     /// Find and remove non-orphaned objects
@@ -121,12 +122,14 @@ pub async fn get_local_files(
         FROM actor_profile
         WHERE
             user_id IS NOT NULL
+            OR automated_account_id IS NOT NULL
             OR portable_user_id IS NOT NULL
         UNION
         SELECT media ->> 'file_name' FROM media_attachment
         JOIN actor_profile ON (media_attachment.owner_id = actor_profile.id)
         WHERE
             actor_profile.user_id IS NOT NULL
+            OR actor_profile.automated_account_id IS NOT NULL
             OR actor_profile.portable_user_id IS NOT NULL
         UNION
         SELECT image ->> 'file_name' AS file_name

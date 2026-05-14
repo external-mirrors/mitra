@@ -1,12 +1,12 @@
 use mitra_models::{
     posts::types::Visibility,
+    profiles::types::Origin::Remote,
     reactions::types::ReactionData,
 };
 use mitra_utils::unicode::is_single_character;
 
 use super::{
     activitypub::validate_any_object_id,
-    common::Origin::Remote,
     emojis::{
         parse_emoji_shortcode,
         validate_emoji_name,

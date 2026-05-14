@@ -1,12 +1,14 @@
 use apx_core::caip2::ChainId;
-use chrono::{DateTime, TimeDelta, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use mitra_adapters::payments::monero::MONERO_INVOICE_TIMEOUT;
+use mitra_adapters::payments::{
+    common::REMOTE_INVOICE_TIMEOUT,
+    monero::MONERO_INVOICE_TIMEOUT,
+};
 use mitra_models::{
     invoices::types::{Invoice as DbInvoice, InvoiceStatus},
-    profiles::types::PaymentOption,
     subscriptions::types::{Subscription as DbSubscription},
 };
 
@@ -54,9 +56,16 @@ impl From<DbInvoice> for Invoice {
             InvoiceStatus::Failed => "failed",
             InvoiceStatus::Requested => "requested",
         };
-        let expires_at = if value.chain_id.inner().is_monero() {
-            value.created_at + TimeDelta::seconds(MONERO_INVOICE_TIMEOUT)
+        let expires_at = if value.object_id.is_some() {
+            // TODO: remote servers should specify payment window
+            value.expires_at(REMOTE_INVOICE_TIMEOUT)
+        } else if value.chain_id.inner().is_monero() {
+            // Supported chain
+            // Invoice will be displayed as active
+            // even if integration is disabled.
+            value.expires_at(MONERO_INVOICE_TIMEOUT)
         } else {
+            // Unsupported chain
             // Epoch 0
             Default::default()
         };
@@ -82,21 +91,12 @@ pub enum SubscriptionOption {
         price: u64,
         payout_address: String,
     },
-}
-
-impl SubscriptionOption {
-    pub fn from_payment_option(payment_option: PaymentOption) -> Option<Self> {
-        let settings = match payment_option {
-            PaymentOption::Link(_) => return None,
-            PaymentOption::MoneroSubscription(payment_info) => Self::Monero {
-                chain_id: payment_info.chain_id,
-                price: payment_info.price.into(),
-                payout_address: payment_info.payout_address,
-            },
-            PaymentOption::RemoteMoneroSubscription(_) => return None,
-        };
-        Some(settings)
-    }
+    MoneroLight {
+        chain_id: ChainId,
+        price: u64,
+        payout_address: String,
+        view_key: String,
+    },
 }
 
 #[derive(Deserialize)]

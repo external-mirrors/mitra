@@ -19,6 +19,7 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::{
+    authority::Authority,
     contexts::{build_default_context, Context},
     identifiers::{
         local_activity_id,
@@ -26,7 +27,7 @@ use crate::{
         local_conversation_history_collection,
     },
     queues::OutgoingActivityJobData,
-    vocabulary::{ADD, ORDERED_COLLECTION},
+    vocabulary::{ADD, DELETE, ORDERED_COLLECTION},
 };
 
 use super::note::get_note_recipients;
@@ -43,7 +44,7 @@ struct Target {
 #[derive(Serialize)]
 struct AddContextActivity {
     #[serde(rename = "@context")]
-    context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
     activity_type: String,
@@ -63,14 +64,15 @@ fn build_add_context_activity(
     conversation_audience: &str,
     activity: JsonValue,
 ) -> AddContextActivity {
+    let authority = Authority::server_unchecked(instance_uri);
     let actor_id = local_actor_id(instance_uri, sender_username);
     let activity_id = local_activity_id(instance_uri, ADD, generate_ulid());
     let target_id = local_conversation_history_collection(
-        instance_uri,
+        &authority,
         conversation_id,
     );
     AddContextActivity {
-        context: build_default_context(),
+        _context: build_default_context(),
         activity_type: ADD.to_string(),
         actor: actor_id.clone(),
         id: activity_id,
@@ -120,7 +122,16 @@ pub async fn sync_conversation(
     activity: JsonValue,
     activity_visibility: Visibility,
 ) -> Result<(), DatabaseError> {
-    let root = get_post_by_id(db_client, conversation.root_id).await?;
+    let root = match get_post_by_id(db_client, conversation.root_id).await {
+        Ok(root) => root,
+        Err(DatabaseError::NotFound(_))
+            if activity["type"].as_str() == Some(DELETE) =>
+        {
+            // Root has been deleted; nothing to do
+            return Ok(());
+        },
+        Err(other_error) => return Err(other_error),
+    };
     if !root.is_local() {
         // Conversation owner is remote
         return Ok(());
@@ -139,6 +150,8 @@ pub async fn sync_conversation(
     } else {
         // Replies that don't conform to FEP-171b are not synced.
         // DMs are not synced.
+        // WARNING: activities with narrower visibility than the conversation
+        // should not be synced (to protect privacy).
         return Ok(());
     };
     if let Some(ref conversation_audience) = conversation.audience {

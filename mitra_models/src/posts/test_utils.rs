@@ -1,3 +1,4 @@
+use chrono::Utc;
 use uuid::Uuid;
 
 use crate::{
@@ -11,6 +12,15 @@ use super::{
     types::{PostContext, PostCreateData, PostDetailed},
 };
 
+impl PostCreateData {
+    pub fn for_test() -> Self {
+        Self {
+            created_at: Utc::now(), // Default is timestamp 0
+            ..Default::default()
+        }
+    }
+}
+
 pub async fn create_test_local_post(
     db_client: &mut impl DatabaseClient,
     author_id: Uuid,
@@ -19,7 +29,7 @@ pub async fn create_test_local_post(
     let post_data = PostCreateData {
         content: content.to_string(),
         content_source: Some(content.to_string()),
-        ..Default::default()
+        ..PostCreateData::for_test()
     };
     create_post(db_client, author_id, post_data).await.unwrap()
 }
@@ -33,7 +43,7 @@ pub async fn create_test_remote_post(
     let post_data = PostCreateData {
         content: content.to_string(),
         object_id: Some(object_id.to_string()),
-        ..Default::default()
+        ..PostCreateData::for_test()
     };
     create_post(db_client, author_id, post_data).await.unwrap()
 }

@@ -50,13 +50,15 @@ use mitra_models::{
             Visibility,
         },
     },
-    profiles::types::DbActorProfile,
+    profiles::types::{
+        DbActorProfile,
+        Origin::Remote,
+    },
 };
 use mitra_utils::{
     languages::{parse_language_tag, Language},
 };
 use mitra_validators::{
-    common::Origin::Remote,
     errors::ValidationError,
     media::{validate_media_description, validate_media_url},
     polls::{clean_poll_option_name, validate_poll_data},
@@ -77,13 +79,14 @@ use mitra_validators::{
 };
 
 use crate::{
+    authority::Authority,
     builders::note::LinkTag,
     filter::get_moderation_domain,
     identifiers::{
         canonicalize_id,
     },
     importers::{
-        get_or_import_profile_by_webfinger_address,
+        get_or_import_actor_by_webfinger_address,
         get_post_by_object_id,
         get_profile_by_actor_id,
         is_actor_importer_error,
@@ -246,6 +249,8 @@ pub struct AttributedObject {
     #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
     pub in_reply_to: Option<String>,
 
+    context: Option<String>,
+
     #[serde(default, deserialize_with = "deserialize_into_id_array")]
     to: Vec<String>,
     #[serde(default, deserialize_with = "deserialize_into_id_array")]
@@ -303,7 +308,14 @@ impl AttributedObject {
     }
 
     fn quote(&self) -> Option<&String> {
-        self.quote.as_ref().or(self.quote_url.as_ref())
+        self.quote.as_ref()
+            // Ignore Bookwyrm quotes
+            // https://github.com/bookwyrm-social/bookwyrm/issues/3731
+            .filter(|_| {
+                self.object_type == QUOTATION ||
+                !self.id.contains("/quotation/")
+            })
+            .or(self.quote_url.as_ref())
     }
 }
 
@@ -348,7 +360,7 @@ fn get_object_url(
         Some(value) => {
             let urls = parse_into_href_array(value)
                 .map_err(|_| ValidationError("invalid object URL"))?;
-            // TODO: select URL with text/html media type
+            // TODO: select URL with media type that corresponds to object type
             urls.into_iter().next()
         },
         None => None,
@@ -428,6 +440,18 @@ async fn get_object_attachments(
     );
 
     let mut values = object.attachment.clone();
+    if object.object_type == IMAGE {
+        if let Some(url) = get_object_url(object)? {
+            let attachment = MediaAttachment {
+                attachment_type: object.object_type.clone(),
+                name: object.name.clone(),
+                summary: object.summary.clone(),
+                media_type: object.media_type.clone(),
+                url: url,
+            };
+            values.push(Attachment::Media(attachment));
+        };
+    };
     if object.object_type == VIDEO {
         // PeerTube video thumbnails
         let thumbnails = object.icon.iter().cloned().map(Attachment::Media);
@@ -576,6 +600,7 @@ async fn get_object_tags(
     redirects: &HashMap<String, String>,
 ) -> Result<(Vec<Uuid>, Vec<String>, Vec<Uuid>, Vec<Uuid>), HandlerError> {
     let instance = &ap_client.instance;
+    let authority = Authority::from(instance);
     let moderation_domain = get_moderation_domain(author.expect_actor_data())?;
 
     let mut hashtag_count = 0;
@@ -658,7 +683,7 @@ async fn get_object_tags(
                 },
             };
             if let Ok(webfinger_address) = WebfingerAddress::from_handle(&tag_name) {
-                let profile = match get_or_import_profile_by_webfinger_address(
+                let profile = match get_or_import_actor_by_webfinger_address(
                     ap_client,
                     db_pool,
                     &webfinger_address,
@@ -705,7 +730,7 @@ async fn get_object_tags(
             let canonical_linked_id = canonicalize_id(href)?;
             let linked = get_post_by_object_id(
                 db_client_await!(db_pool),
-                instance.uri_str(),
+                &authority,
                 &canonical_linked_id,
             ).await?;
             if !can_link_post(&linked) {
@@ -749,10 +774,11 @@ async fn get_object_tags(
             log::warn!("not adding targets to mention list");
             break;
         };
+        let canonical_target_id = canonicalize_id(&target_id)?;
         match get_profile_by_actor_id(
             db_client,
-            instance.uri_str(),
-            &target_id,
+            &authority,
+            &canonical_target_id,
         ).await {
             Ok(profile) => {
                 if !mentions.contains(&profile.id) {
@@ -771,7 +797,7 @@ async fn get_object_tags(
         let canonical_object_id = canonicalize_id(object_id)?;
         let linked = get_post_by_object_id(
             db_client,
-            instance.uri_str(),
+            &authority,
             &canonical_object_id,
         ).await?;
         if can_link_post(&linked) {
@@ -798,7 +824,7 @@ async fn get_object_tags(
     Ok((mentions, hashtags, links, emojis))
 }
 
-pub fn normalize_audience(
+pub(super) fn normalize_audience(
     audience: &[impl AsRef<str>],
 ) -> Result<Vec<CanonicalUri>, ValidationError> {
     let mut normalized_audience = audience.iter()
@@ -829,6 +855,7 @@ pub(super) fn get_audience(
 
 fn get_object_visibility(
     author: &DbActorProfile,
+    context_id: Option<&CanonicalUri>,
     audience: &[String],
     maybe_in_reply_to: Option<&PostDetailed>,
 ) -> (Visibility, PostContext) {
@@ -886,6 +913,7 @@ fn get_object_visibility(
             Visibility::Direct
         };
         let context = PostContext::Top {
+            object_id: context_id.map(|id| id.to_string()),
             audience: conversation_audience,
         };
         (visibility, context)
@@ -977,9 +1005,10 @@ pub async fn create_remote_post(
         Some(ref object_id) => {
             let object_id = redirects.get(object_id).unwrap_or(object_id);
             let canonical_object_id = canonicalize_id(object_id)?;
+            let authority = Authority::from(&ap_client.instance);
             let in_reply_to = get_post_by_object_id(
                 db_client_await!(db_pool),
-                ap_client.instance.uri_str(),
+                &authority,
                 &canonical_object_id,
             ).await?;
             Some(in_reply_to)
@@ -1033,8 +1062,16 @@ pub async fn create_remote_post(
     ).await?;
 
     let audience = get_audience(&object)?;
+    let maybe_canonical_context_id = object.context
+        .as_ref()
+        // Honk uses data URIs in `context`
+        // Old Mastodon versions use tag: URIs
+        .filter(|id| !id.starts_with("data:") && !id.starts_with("tag:"))
+        .map(|id| canonicalize_id(id))
+        .transpose()?;
     let (visibility, context) = get_object_visibility(
         &author,
+        maybe_canonical_context_id.as_ref(),
         &audience,
         maybe_in_reply_to.as_ref(),
     );
@@ -1109,9 +1146,10 @@ pub async fn update_remote_post(
     let maybe_in_reply_to = match object.in_reply_to {
         Some(ref object_id) => {
             let canonical_object_id = canonicalize_id(object_id)?;
+            let authority = Authority::from(&ap_client.instance);
             let in_reply_to = get_post_by_object_id(
                 db_client_await!(db_pool),
-                ap_client.instance.uri_str(),
+                &authority,
                 &canonical_object_id,
             ).await?;
             Some(in_reply_to)
@@ -1360,14 +1398,18 @@ mod tests {
     fn test_get_object_visibility_public() {
         let author =
             DbActorProfile::remote_for_test("test", "https://social.example");
+        let context_id = "https://social.example/context";
+        let canonical_context_id = CanonicalUri::parse(context_id).unwrap();
         let audience = vec![AP_PUBLIC.to_string()];
         let (visibility, context) = get_object_visibility(
             &author,
+            Some(&canonical_context_id),
             &audience,
             None,
         );
         assert_eq!(visibility, Visibility::Public);
-        let PostContext::Top { audience } = context else { unreachable!() };
+        let PostContext::Top { object_id, audience } = context else { unreachable!() };
+        assert_eq!(object_id.unwrap(), context_id);
         assert_eq!(audience.unwrap(), AP_PUBLIC);
     }
 
@@ -1380,6 +1422,7 @@ mod tests {
         let audience = vec![AP_PUBLIC.to_string()];
         let (visibility, context) = get_object_visibility(
             &author,
+            None,
             &audience,
             Some(&in_reply_to),
         );
@@ -1402,11 +1445,13 @@ mod tests {
         let audience = vec![author_followers.to_string()];
         let (visibility, context) = get_object_visibility(
             &author,
+            None,
             &audience,
             None,
         );
         assert_eq!(visibility, Visibility::Followers);
-        let PostContext::Top { audience } = context else { unreachable!() };
+        let PostContext::Top { object_id, audience } = context else { unreachable!() };
+        assert_eq!(object_id, None);
         assert_eq!(audience.unwrap(), author_followers);
     }
 
@@ -1427,6 +1472,7 @@ mod tests {
         let audience = vec![in_reply_to_followers.to_string()];
         let (visibility, context) = get_object_visibility(
             &author,
+            None,
             &audience,
             Some(&in_reply_to),
         );
@@ -1454,6 +1500,7 @@ mod tests {
         let audience = vec![author_followers];
         let (visibility, context) = get_object_visibility(
             &author,
+            None,
             &audience,
             Some(&in_reply_to),
         );
@@ -1478,11 +1525,13 @@ mod tests {
         let audience = vec![author_subscribers.to_string()];
         let (visibility, context) = get_object_visibility(
             &author,
+            None,
             &audience,
             None,
         );
         assert_eq!(visibility, Visibility::Subscribers);
-        let PostContext::Top { audience } = context else { unreachable!() };
+        let PostContext::Top { object_id, audience } = context else { unreachable!() };
+        assert_eq!(object_id, None);
         assert_eq!(audience.unwrap(), author_subscribers);
     }
 
@@ -1492,11 +1541,13 @@ mod tests {
         let audience = vec!["https://example.com/users/1".to_string()];
         let (visibility, context) = get_object_visibility(
             &author,
+            None,
             &audience,
             None,
         );
         assert_eq!(visibility, Visibility::Direct);
-        let PostContext::Top { audience } = context else { unreachable!() };
+        let PostContext::Top { object_id, audience } = context else { unreachable!() };
+        assert_eq!(object_id, None);
         assert!(audience.is_none());
     }
 }

@@ -1,5 +1,6 @@
 //! Retrieving objects or media.
 
+#[cfg(not(target_arch = "wasm32"))]
 use http_body_util::{
     combinators::MapErr,
     BodyDataStream,
@@ -8,28 +9,25 @@ use http_body_util::{
 };
 use reqwest::{
     header,
-    Body,
     Client,
     Method,
     StatusCode,
     Url,
 };
+#[cfg(not(target_arch = "wasm32"))]
+use reqwest::Body;
 use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
 use apx_core::{
     http_signatures::create::HttpSignatureError,
     media_type::sniff_media_type,
-    url::{
-        canonical::is_same_origin,
-        http_uri::is_same_http_origin,
-    },
+    url::canonical::is_same_origin,
 };
 
 use super::{
     agent::FederationAgent,
     authentication::{
-        verify_portable_object,
         AuthenticationError,
     },
     constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
@@ -64,12 +62,15 @@ pub enum FetchError {
     #[error("{}", describe_request_error(.0))]
     RequestError(#[from] reqwest::Error),
 
+    // 0: error description
     #[error("stream error: {0}")]
     StreamError(String),
 
+    // 0: current url
     #[error("access denied: {0}")]
     Forbidden(String),
 
+    // 0: current url
     #[error("resource not found: {0}")]
     NotFound(String),
 
@@ -79,18 +80,23 @@ pub enum FetchError {
     #[error("response size exceeds limit")]
     ResponseTooLarge,
 
+    // 0: current url
     #[error("json parse error: {0}")]
-    JsonParseError(#[from] serde_json::Error),
+    JsonParseError(String),
 
+    // 0: content type
     #[error("unexpected content type: {0}")]
     UnexpectedContentType(String),
 
+    // 0: current url
     #[error("object without ID at {0}")]
     NoObjectId(String),
 
+    // 0: current url
     #[error("unexpected object ID at {0}")]
     UnexpectedObjectId(String),
 
+    // 0: error description
     #[error("invalid integrity proof: {0}")]
     InvalidProof(AuthenticationError),
 
@@ -165,28 +171,63 @@ fn extract_fragment(
 /// Options for `fetch_object`
 #[derive(Default)]
 pub struct FetchObjectOptions {
-    /// Skip origin and content type checks?
-    pub skip_verification: bool,
-    /// List of trusted origins for a FEP-ef61 collection
-    pub fep_ef61_trusted_origins: Vec<String>,
+    /// Skip content type check?
+    pub skip_content_type_verification: bool,
 }
 
-/// Sends GET request to fetch ActivityPub object. Supports fragment resolution.
+/// Return type of the `fetch_object` function
+pub struct FetchedObject {
+    pub value: JsonValue,
+    pub location: Url,
+}
+
+impl FetchedObject {
+    /// Verifies the origin of this object
+    pub fn verify_origin(&self) -> Result<(), FetchError> {
+        let object_id = self.value["id"].as_str()
+            .ok_or(FetchError::NoObjectId(self.location.to_string()))?;
+        let is_trusted = is_same_origin(self.location.as_str(), object_id)
+            .unwrap_or(false);
+        if !is_trusted {
+            return Err(FetchError::UnexpectedObjectId(self.location.to_string()));
+        };
+        Ok(())
+    }
+
+    /// Extracts the fragment if location URL contains a fragment ID
+    pub fn extract_fragment(&self) -> Result<JsonValue, FetchError> {
+        let object_id = self.value["id"].as_str()
+            .ok_or(FetchError::NoObjectId(self.location.to_string()))?;
+        if let Some(fragment_id) = self.location.fragment() {
+            // Resolve fragment
+            // https://www.w3.org/TR/cid/#fragment-resolution
+            let fully_qualified_fragment_id = format!("{object_id}#{fragment_id}");
+            let fragment = extract_fragment(&self.value, &fully_qualified_fragment_id)
+                .ok_or(FetchError::NotFound(self.location.to_string()))?;
+            Ok(fragment)
+        } else {
+            Ok(self.value.clone())
+        }
+    }
+}
+
+/// Sends a GET request to fetch an ActivityPub object.  
+/// Does not perform authentication.
 pub async fn fetch_object(
     agent: &FederationAgent,
-    object_id: &str,
+    object_url: &str,
     options: FetchObjectOptions,
-) -> Result<JsonValue, FetchError> {
+) -> Result<FetchedObject, FetchError> {
     // Don't follow redirects automatically,
     // because request needs to be signed again after every redirect
     let client = create_fetcher_client(
         agent,
-        object_id,
+        object_url,
         RedirectAction::None,
     )?;
 
     let mut redirect_count = 0;
-    let mut target_url = object_id.to_owned();
+    let mut target_url = object_url.to_owned();
     let response = loop {
         let mut request_builder =
             build_http_request(agent, &client, Method::GET, &target_url)?
@@ -229,66 +270,23 @@ pub async fn fetch_object(
         .and_then(extract_media_type)
         .unwrap_or_default();
 
-    let object_bytes = limited_response(response, agent.response_size_limit)
-        .await
-        .ok_or(FetchError::ResponseTooLarge)?;
-    let object_json: JsonValue = serde_json::from_slice(&object_bytes)?;
-    let object_id = object_json["id"].as_str()
-        .ok_or(FetchError::NoObjectId(object_location.to_string()))?
-        .to_string();
-    let object_json = if let Some(fragment_id) = object_location.fragment() {
-        // Resolve fragment
-        // https://www.w3.org/TR/cid/#fragment-resolution
-        let fully_qualified_fragment_id = format!("{object_id}#{fragment_id}");
-        extract_fragment(&object_json, &fully_qualified_fragment_id)
-            .ok_or(FetchError::NotFound(object_location.to_string()))?
-    } else {
-        object_json
-    };
-
-    if options.skip_verification {
-        return Ok(object_json);
-    };
-
-    // Perform authentication
-    match verify_portable_object(&object_json) {
-        Ok(_) => (),
-        Err(AuthenticationError::InvalidObjectID(_)) => {
-            return Err(FetchError::UrlError);
-        },
-        Err(AuthenticationError::NotPortable) => {
-            // Verify authority if object is not portable
-            let is_trusted = is_same_origin(object_location.as_str(), &object_id)
-                .unwrap_or(false);
-            if !is_trusted {
-                return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
-            };
-        },
-        Err(AuthenticationError::NoProof) => {
-            let is_trusted = options.fep_ef61_trusted_origins
-                .iter()
-                .any(|origin| {
-                    is_same_http_origin(object_location.as_str(), origin)
-                        .unwrap_or(false)
-                });
-            if !is_trusted {
-                return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
-            };
-        },
-        Err(other_error) => return Err(FetchError::InvalidProof(other_error)),
-    };
-
     // Verify object is not a malicious upload
     const ALLOWED_TYPES: [&str; 3] = [
         AP_MEDIA_TYPE,
         AS_MEDIA_TYPE,
         "application/ld+json",
     ];
-    if !ALLOWED_TYPES.contains(&content_type.as_str()) {
+    if !options.skip_content_type_verification && !ALLOWED_TYPES.contains(&content_type.as_str()) {
         return Err(FetchError::UnexpectedContentType(content_type));
     };
 
-    Ok(object_json)
+    let object_bytes = limited_response(response, agent.response_size_limit)
+        .await
+        .ok_or(FetchError::ResponseTooLarge)?;
+    let object_json: JsonValue = serde_json::from_slice(&object_bytes)
+        .map_err(|_| FetchError::JsonParseError(object_location.to_string()))?;
+    let object = FetchedObject { value: object_json, location: object_location };
+    Ok(object)
 }
 
 fn get_media_type(
@@ -346,6 +344,7 @@ pub async fn fetch_media(
     Ok((media_data.into(), media_type))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[allow(impl_trait_overcaptures)]
 pub async fn stream_media(
     agent: &FederationAgent,
@@ -387,7 +386,6 @@ pub async fn stream_media(
 pub async fn fetch_json(
     agent: &FederationAgent,
     url: &str,
-    query: &[(&str, &str)],
     accept: Option<&str>,
 ) -> Result<JsonValue, FetchError> {
     const APPLICATION_JSON: &str = "application/json";
@@ -400,15 +398,16 @@ pub async fn fetch_json(
     let request_builder =
         build_http_request(agent, &client, Method::GET, url)?;
     let response = request_builder
-        .query(query)
         .header(header::ACCEPT, accept.unwrap_or(APPLICATION_JSON))
         .send()
         .await?
         .error_for_status()?;
+    let response_url = response.url().to_string();
     let data = limited_response(response, agent.response_size_limit)
         .await
         .ok_or(FetchError::ResponseTooLarge)?;
-    let object_json = serde_json::from_slice(&data)?;
+    let object_json = serde_json::from_slice(&data)
+        .map_err(|_| FetchError::JsonParseError(response_url))?;
     Ok(object_json)
 }
 

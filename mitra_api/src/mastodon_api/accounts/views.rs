@@ -3,6 +3,7 @@ use std::time::Duration;
 use actix_governor::{Governor, GovernorExtractor};
 use actix_multipart::form::MultipartForm;
 use actix_web::{
+    delete,
     dev::ConnectionInfo,
     get,
     http::{
@@ -46,6 +47,7 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    authority::Authority,
     builders::{
         follow::follow_or_create_request,
         reject_follow::prepare_reject_follow,
@@ -102,6 +104,7 @@ use mitra_models::{
         create_user,
         get_user_by_did,
         is_valid_invite_code,
+        set_shared_client_config,
     },
     users::types::{Permission, UserCreateData},
 };
@@ -120,20 +123,22 @@ use mitra_validators::{
     users::validate_local_username,
 };
 
-use crate::http::{
-    get_request_base_url,
-    ratelimit_config,
-    JsonOrForm,
-    MultiQuery,
-};
-use crate::mastodon_api::{
-    auth::get_current_user,
-    errors::MastodonError,
-    lists::types::List,
-    media_server::ClientMediaServer,
-    pagination::{get_last_item, get_paginated_response},
-    search::helpers::search_profiles_only,
-    statuses::helpers::get_paginated_status_list,
+use crate::{
+    http::{
+        get_request_base_url,
+        JsonOrForm,
+        MultiQuery,
+    },
+    mastodon_api::{
+        auth::get_current_user,
+        errors::MastodonError,
+        lists::types::List,
+        media_server::ClientMediaServer,
+        pagination::{get_last_item, get_paginated_response},
+        search::helpers::search_profiles_only,
+        statuses::helpers::get_paginated_status_list,
+    },
+    ratelimit::RatelimitConfigs,
 };
 
 use super::helpers::{
@@ -156,6 +161,7 @@ use super::types::{
     IdentityClaim,
     IdentityClaimQueryParams,
     IdentityProofData,
+    IdentityProofDeletionRequest,
     LoadActivitiesParams,
     LookupAcctQueryParams,
     RelationshipQueryParams,
@@ -175,12 +181,16 @@ pub async fn create_account(
     let db_client = &mut **get_database_client(&db_pool).await?;
     let instance = config.instance();
     // Validate
-    if config.registration.registration_type == RegistrationType::Invite {
-        let invite_code = account_data.invite_code.as_ref()
-            .ok_or(ValidationError("invite code is required"))?;
-        if !is_valid_invite_code(db_client, invite_code).await? {
-            return Err(ValidationError("invalid invite code").into());
-        };
+    let maybe_invite_code = match config.registration.registration_type {
+        RegistrationType::Open => None,
+        RegistrationType::Invite => {
+            let invite_code = account_data.invite_code.as_ref()
+                .ok_or(ValidationError("invite code is required"))?;
+            if !is_valid_invite_code(db_client, invite_code).await? {
+                return Err(ValidationError("invalid invite code").into());
+            };
+            Some(invite_code.to_owned())
+        },
     };
 
     validate_local_username(&account_data.username)?;
@@ -213,7 +223,7 @@ pub async fn create_account(
         let session_data = verify_eip4361_signature(
             message,
             signature,
-            &instance.hostname(),
+            instance.uri(),
             &config.login_message,
         ).map_err(|err| MastodonError::ValidationError(err.to_string()))?;
         // Don't remember nonce to avoid extra signature requests
@@ -231,7 +241,7 @@ pub async fn create_account(
             .ok_or(MastodonError::NotSupported)?;
         let session_data = verify_monero_caip122_signature(
             monero_config,
-            &instance.hostname(),
+            instance.uri(),
             &config.login_message,
             message,
             signature,
@@ -251,17 +261,15 @@ pub async fn create_account(
         .map_err(MastodonError::from_internal)?;
     let ed25519_secret_key = generate_ed25519_key();
 
-    let AccountCreateData { username, invite_code, .. } =
-        account_data.into_inner();
     let role = from_default_role(&config.registration.default_role);
     let user_data = UserCreateData {
-        username,
+        username: account_data.username.clone(),
         password_digest: maybe_password_digest,
         login_address_ethereum: maybe_ethereum_address,
         login_address_monero: maybe_monero_address,
         rsa_secret_key: rsa_secret_key_pem,
         ed25519_secret_key: ed25519_secret_key,
-        invite_code,
+        invite_code: maybe_invite_code,
         role,
     };
     let user = match create_user(db_client, user_data).await {
@@ -273,9 +281,10 @@ pub async fn create_account(
     create_signup_notifications(db_client, user.id).await?;
     log::warn!("created user {}", user);
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&instance);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        instance.uri_str(),
+        &authority,
         &media_server,
         user,
     );
@@ -293,9 +302,10 @@ async fn verify_credentials(
     let db_client = &**get_database_client(&db_pool).await?;
     let user = get_current_user(db_client, auth.token()).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         user,
     );
@@ -316,25 +326,27 @@ async fn update_credentials(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let mut current_user = get_current_user(db_client, auth.token()).await?;
-    let media_storage = MediaStorage::new(&config);
-    let mut profile_data = match account_data {
-        Either::Left(form) => {
-            form.into_inner().into_profile_data(
-                &current_user.profile,
-                &config.limits.media,
-                &media_storage,
-            )?
-        },
-        Either::Right(data) => {
-            data.into_inner().into_profile_data(
-                &current_user.profile,
-                &config.limits.media,
-                &media_storage,
-            )?
-        },
+    let account_data = match account_data {
+        Either::Left(form) => form.into_inner().into(),
+        Either::Right(data) => data.into_inner(),
     };
+    let maybe_client_config = if let Some(ref source) = account_data.source {
+        let client_config = source
+            .update_shared_client_config(&current_user.shared_client_config)?;
+        Some(client_config)
+    } else {
+        None
+    };
+    let media_storage = MediaStorage::new(&config);
+    let mut profile_data = account_data.into_profile_data(
+        &current_user.profile,
+        &config.limits.media,
+        &media_storage,
+    )?;
     parse_microsyntaxes(db_client, &mut profile_data).await?;
     clean_profile_update_data(&mut profile_data)?;
+
+    // Update profile
     let (updated_profile, deletion_queue) = update_profile(
         db_client,
         current_user.id,
@@ -343,6 +355,15 @@ async fn update_credentials(
     current_user.profile = updated_profile;
     // Delete orphaned images after update
     deletion_queue.into_job(db_client).await?;
+
+    // Update account
+    if let Some(client_config) = maybe_client_config {
+        current_user.shared_client_config = set_shared_client_config(
+            db_client,
+            current_user.id,
+            client_config,
+        ).await?;
+    };
 
     // Federate
     let media_server = MediaServer::new(&config);
@@ -354,16 +375,17 @@ async fn update_credentials(
     ).await?.save_and_enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         current_user,
     );
     Ok(HttpResponse::Ok().json(account))
 }
 
-#[get("/identity_proof")]
+#[get("/identity_claim")]
 async fn get_identity_claim(
     auth: BearerAuth,
     config: web::Data<Config>,
@@ -548,9 +570,51 @@ async fn create_identity_proof(
     ).await?.save_and_enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        config.instance().uri_str(),
+        &authority,
+        &media_server,
+        current_user,
+    );
+    Ok(HttpResponse::Ok().json(account))
+}
+
+#[delete("/identity_proof")]
+async fn delete_identity_proof(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    proof_data: web::Json<IdentityProofDeletionRequest>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let mut current_user = get_current_user(db_client, auth.token()).await?;
+    let mut profile_data = ProfileUpdateData::from(&current_user.profile);
+    profile_data.remove_identity_proof(&proof_data.did);
+    validate_identity_proofs(&profile_data.identity_proofs)?;
+    // Only identity proofs are updated, media cleanup is not needed
+    let (updated_profile, _) = update_profile(
+        db_client,
+        current_user.id,
+        profile_data,
+    ).await?;
+    current_user.profile = updated_profile;
+
+    // Federate
+    let media_server = MediaServer::new(&config);
+    prepare_update_person(
+        db_client,
+        &config.instance(),
+        &media_server,
+        &current_user,
+    ).await?.save_and_enqueue(db_client).await?;
+
+    let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
+    let media_server = ClientMediaServer::new(&config, &base_url);
+    let account = Account::from_user(
+        &authority,
         &media_server,
         current_user,
     );
@@ -582,7 +646,7 @@ async fn lookup_acct(
     query_params: web::Query<LookupAcctQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let local_hostname = config.instance().hostname();
+    let local_hostname = config.instance().webfinger_hostname();
     let address =  if query_params.acct.contains('@') {
         query_params.acct.clone()
     } else {
@@ -590,12 +654,13 @@ async fn lookup_acct(
     };
     let acct = WebfingerAddress::parse(&address)
         .map_err(|error| ValidationError(error.message()))?
-        .acct(&local_hostname);
+        .short_address(&local_hostname);
     let profile = get_profile_by_acct(db_client, &acct).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_profile(
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         profile,
     );
@@ -644,11 +709,11 @@ async fn search_by_acct(
         query_params.offset,
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let accounts: Vec<Account> = profiles.into_iter()
         .map(|profile| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             profile,
         ))
@@ -668,11 +733,11 @@ async fn search_by_did(
         .map_err(|_| ValidationError("invalid DID"))?;
     let profiles = search_profiles_by_did(db_client, &did, false).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let accounts: Vec<Account> = profiles.into_iter()
         .map(|profile| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             profile,
         ))
@@ -706,9 +771,10 @@ async fn get_account(
     let db_client = &**get_database_client(&db_pool).await?;
     let profile = get_profile_by_id(db_client, *account_id).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_profile(
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         profile,
     );
@@ -916,12 +982,12 @@ async fn get_account_statuses(
         query_params.limit.inner(),
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let response = get_paginated_status_list(
         db_client,
         &base_url,
-        instance.uri_str(),
+        &authority,
         &media_server,
         &request_uri,
         maybe_current_user.as_ref(),
@@ -958,11 +1024,11 @@ async fn get_account_followers(
     let maybe_last_id = get_last_item(&followers, &query_params.limit)
         .map(|item| item.related_id);
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let accounts: Vec<Account> = followers.into_iter()
         .map(|item| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             item.profile,
         ))
@@ -1003,11 +1069,11 @@ async fn get_account_following(
     let maybe_last_id = get_last_item(&following, &query_params.limit)
         .map(|item| item.related_id);
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let accounts: Vec<Account> = following.into_iter()
         .map(|item| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             item.profile,
         ))
@@ -1039,8 +1105,8 @@ async fn get_account_subscribers(
         return Ok(HttpResponse::Ok().json(subscriptions));
     };
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let subscriptions: Vec<Subscription> = get_incoming_subscriptions(
         db_client,
         profile.id,
@@ -1051,7 +1117,7 @@ async fn get_account_subscribers(
         .await?
         .into_iter()
         .map(|subscription| Subscription::from_db(
-            instance.uri_str(),
+            &authority,
             &media_server,
             subscription,
         ))
@@ -1087,11 +1153,11 @@ async fn get_account_aliases(
     let db_client = &**get_database_client(&db_pool).await?;
     let profile = get_profile_by_id(db_client, *account_id).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let aliases = get_aliases(
         db_client,
-        instance.uri_str(),
+        &authority,
         &media_server,
         &profile,
     ).await?;
@@ -1124,16 +1190,16 @@ async fn load_activities(
     Ok(HttpResponse::NoContent().finish())
 }
 
-pub fn account_api_scope() -> Scope {
+pub fn account_api_scope(
+    ratelimit_configs: RatelimitConfigs,
+) -> Scope {
     // Two requests per 30 seconds; to be used with extractor
-    let search_limit = ratelimit_config(2, 30, true);
     let search_by_acct_limited = web::resource("/search")
         .get(search_by_acct)
-        .wrap(Governor::new(&search_limit));
-    let registration_limit = ratelimit_config(2, 300, false);
+        .wrap(Governor::new(&ratelimit_configs.search));
     let create_account_limited = web::resource("")
         .post(create_account)
-        .wrap(Governor::new(&registration_limit));
+        .wrap(Governor::new(&ratelimit_configs.registration));
     web::scope("/v1/accounts")
         // Routes without account ID
         .service(create_account_limited)
@@ -1141,6 +1207,7 @@ pub fn account_api_scope() -> Scope {
         .service(update_credentials)
         .service(get_identity_claim)
         .service(create_identity_proof)
+        .service(delete_identity_proof)
         .service(get_relationships_view)
         .service(lookup_acct)
         .service(search_by_acct_limited)

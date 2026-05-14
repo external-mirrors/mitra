@@ -14,14 +14,18 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use mitra_activitypub::identifiers::{
-    profile_actor_id,
-    profile_actor_url,
+use mitra_activitypub::{
+    authority::Authority,
+    identifiers::{
+        profile_actor_id,
+        profile_actor_url,
+    },
 };
 use mitra_adapters::payments::subscriptions::MONERO_PAYMENT_AMOUNT_MIN;
 use mitra_config::MediaLimits;
 use mitra_models::{
     media::types::{MediaInfo, PartialMediaInfo},
+    posts::types::{DbLanguage, Visibility},
     profiles::types::{
         DbActorProfile,
         ExtraField,
@@ -33,7 +37,8 @@ use mitra_models::{
     users::types::{
         ClientConfig,
         Permission,
-        Role,
+        Role as DbRole,
+        SharedClientConfig,
         User,
     },
 };
@@ -59,6 +64,10 @@ use crate::mastodon_api::{
         deserialize_boolean,
         serialize_datetime,
         serialize_datetime_opt,
+    },
+    statuses::{
+        types::{visibility_from_str, visibility_to_str},
+        utils::parse_language_code,
     },
     uploads::{save_b64_file, UploadError},
 };
@@ -92,29 +101,30 @@ pub enum AccountPaymentOption {
 
 // https://docs.joinmastodon.org/entities/Account/#source
 #[derive(Serialize)]
-pub struct Source {
+pub struct AccountSource {
     pub note: Option<String>,
     pub fields: Vec<AccountField>,
-    privacy: String,
+    privacy: &'static str,
     sensitive: bool,
+    language: Option<String>,
 }
 
-/// https://docs.joinmastodon.org/entities/Role/
+// https://docs.joinmastodon.org/entities/Role/
 #[derive(Serialize)]
-pub struct ApiRole {
+pub struct Role {
     pub id: i32,
     pub name: String,
     pub permissions: String,
     pub permissions_names: Vec<String>,
 }
 
-impl ApiRole {
-    fn from_db(role: Role) -> Self {
+impl Role {
+    fn from_db(role: DbRole) -> Self {
         let role_name = match role {
-            Role::Guest => unimplemented!(),
-            Role::NormalUser => "user",
-            Role::Admin => "admin",
-            Role::ReadOnlyUser => "read_only_user",
+            DbRole::Guest => unimplemented!(),
+            DbRole::NormalUser => "user",
+            DbRole::Admin => "admin",
+            DbRole::ReadOnlyUser => "read_only_user",
         };
         let mut permissions = vec![];
         // Mastodon uses bitmask
@@ -183,20 +193,20 @@ pub struct Account {
     pub statuses_count: i32,
 
     // CredentialAccount attributes
-    pub source: Option<Source>,
-    pub role: Option<ApiRole>,
+    pub source: Option<AccountSource>,
+    pub role: Option<Role>,
     pub authentication_methods: Option<Vec<String>>,
     pub client_config: Option<ClientConfig>,
 }
 
 impl Account {
     pub fn from_profile(
-        instance_uri: &str,
+        authority: &Authority,
         media_server: &ClientMediaServer,
         profile: DbActorProfile,
     ) -> Self {
-        let actor_id = profile_actor_id(instance_uri, &profile);
-        let profile_url = profile_actor_url(instance_uri, &profile);
+        let actor_id = profile_actor_id(authority, &profile);
+        let profile_url = profile_actor_url(authority, &profile);
         let preferred_handle = profile.preferred_handle().to_owned();
         let mention_policy = mention_policy_to_str(profile.mention_policy);
 
@@ -313,7 +323,7 @@ impl Account {
     }
 
     pub fn from_user(
-        instance_uri: &str,
+        authority: &Authority,
         media_server: &ClientMediaServer,
         user: User,
     ) -> Self {
@@ -326,13 +336,16 @@ impl Account {
                 is_legacy_proof: false,
             })
             .collect();
-        let source = Source {
+        let source = AccountSource {
             note: user.profile.bio_source.clone(),
             fields: fields_sources,
-            privacy: "public".to_string(),
+            privacy: visibility_to_str(user.shared_client_config.default_post_visibility),
             sensitive: false,
+            language: user.shared_client_config.default_post_language
+                .and_then(|language| language.inner().to_639_1())
+                .map(|code| code.to_owned()),
         };
-        let role = ApiRole::from_db(user.role);
+        let role = Role::from_db(user.role);
         let mut authentication_methods = vec![];
         if user.password_digest.is_some() {
             authentication_methods.push(AUTHENTICATION_METHOD_PASSWORD.to_string());
@@ -344,7 +357,7 @@ impl Account {
             authentication_methods.push(AUTHENTICATION_METHOD_CAIP122_MONERO.to_string());
         };
         let mut account = Self::from_profile(
-            instance_uri,
+            authority,
             media_server,
             user.profile,
         );
@@ -381,6 +394,37 @@ struct AccountFieldSource {
 
 // Supports partial updates
 #[derive(Deserialize)]
+pub struct AccountSourceData {
+    privacy: Option<String>,
+    language: Option<String>,
+}
+
+impl AccountSourceData {
+    pub fn update_shared_client_config(
+        &self,
+        client_config: &SharedClientConfig,
+    ) -> Result<SharedClientConfig, ValidationError> {
+        let mut client_config = client_config.clone();
+        if let Some(ref privacy) = self.privacy {
+            let visibility = visibility_from_str(privacy)?;
+            if !matches!(
+                visibility,
+                Visibility::Public | Visibility::Followers | Visibility::Subscribers,
+            ) {
+                return Err(ValidationError("invalid default visibility"));
+            };
+            client_config.default_post_visibility = visibility;
+        };
+        if let Some(ref language_code) = self.language {
+            let language = parse_language_code(language_code)?;
+            client_config.default_post_language = Some(DbLanguage::new(language));
+        };
+        Ok(client_config)
+    }
+}
+
+// Supports partial updates
+#[derive(Deserialize)]
 pub struct AccountUpdateData {
     display_name: Option<String>,
     note: Option<String>,
@@ -391,6 +435,7 @@ pub struct AccountUpdateData {
     bot: Option<bool>,
     locked: Option<bool>,
     fields_attributes: Option<Vec<AccountFieldSource>>,
+    pub source: Option<AccountSourceData>,
 
     // Not supported by Mastodon API clients
     mention_policy: Option<String>,
@@ -436,7 +481,7 @@ impl AccountUpdateData {
         media_limits: &MediaLimits,
         media_storage: &MediaStorage,
     ) -> Result<ProfileUpdateData, MastodonError> {
-        assert!(profile.is_local());
+        assert!(profile.has_user_account());
         let mut profile_data = ProfileUpdateData::from(profile);
         if let Some(display_name) = self.display_name {
             profile_data.display_name = Some(display_name);
@@ -524,6 +569,11 @@ pub struct AccountUpdateMultipartForm {
     fields_attributes_3_name: Option<Text<String>>,
     #[multipart(rename = "fields_attributes[3][value]")]
     fields_attributes_3_value: Option<Text<String>>,
+
+    #[multipart(rename = "source[privacy]")]
+    source_privacy: Option<Text<String>>,
+    #[multipart(rename = "source[language]")]
+    source_language: Option<Text<String>>,
 }
 
 impl From<AccountUpdateMultipartForm> for AccountUpdateData {
@@ -548,6 +598,10 @@ impl From<AccountUpdateMultipartForm> for AccountUpdateData {
                 }
             })
             .collect();
+        let source_data = AccountSourceData {
+            privacy: form.source_privacy.map(|value| value.into_inner()),
+            language: form.source_language.map(|value| value.into_inner()),
+        };
         Self {
             display_name: form.display_name
                 .map(|value| value.into_inner()),
@@ -573,27 +627,9 @@ impl From<AccountUpdateMultipartForm> for AccountUpdateData {
                 .is_empty()
                 .not()
                 .then_some(fields_attributes),
+            source: Some(source_data),
             mention_policy: None,
         }
-    }
-}
-
-impl AccountUpdateMultipartForm {
-    pub fn into_profile_data(
-        self,
-        profile: &DbActorProfile,
-        media_limits: &MediaLimits,
-        media_storage: &MediaStorage,
-    ) -> Result<ProfileUpdateData, MastodonError> {
-        let mut account_data = AccountUpdateData::from(self);
-        // Preserve mention policy
-        let mention_policy = mention_policy_to_str(profile.mention_policy);
-        account_data.mention_policy = Some(mention_policy.to_string());
-        account_data.into_profile_data(
-            profile,
-            media_limits,
-            media_storage,
-        )
     }
 }
 
@@ -616,6 +652,11 @@ pub struct IdentityProofData {
     pub did: String,
     pub signature: String,
     pub created_at: DateTime<Utc>,
+}
+
+#[derive(Deserialize)]
+pub struct IdentityProofDeletionRequest {
+    pub did: Did,
 }
 
 #[derive(Deserialize)]
@@ -796,12 +837,12 @@ pub struct Subscription {
 
 impl Subscription {
     pub fn from_db(
-        instance_uri: &str,
+        authority: &Authority,
         media_server: &ClientMediaServer,
         subscription: DbSubscriptionDetailed,
     ) -> Self {
         let sender = Account::from_profile(
-            instance_uri,
+            authority,
             media_server,
             subscription.sender,
         );
@@ -847,11 +888,12 @@ mod tests {
 
     #[test]
     fn test_create_account_from_profile() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let media_server = ClientMediaServer::for_test(INSTANCE_URI);
         let mut profile = DbActorProfile::local_for_test("test");
         profile.avatar = Some(PartialMediaInfo::from(MediaInfo::png_for_test()));
         let account = Account::from_profile(
-            INSTANCE_URI,
+            &authority,
             &media_server,
             profile,
         );
@@ -865,6 +907,7 @@ mod tests {
 
     #[test]
     fn test_create_account_from_user() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let media_server = ClientMediaServer::for_test(INSTANCE_URI);
         let bio_source = "test";
         let login_address = "0x1234";
@@ -876,7 +919,7 @@ mod tests {
             ..Default::default()
         };
         let account = Account::from_user(
-            INSTANCE_URI,
+            &authority,
             &media_server,
             user,
         );

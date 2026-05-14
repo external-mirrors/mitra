@@ -20,11 +20,11 @@ use mitra_models::{
         },
     },
     media::types::{MediaInfo, PartialMediaInfo},
+    profiles::types::Origin::Local,
 };
 use mitra_services::media::MediaStorage;
 use mitra_utils::files::FileSize;
 use mitra_validators::{
-    common::Origin::Local,
     emojis::{
         clean_emoji_name,
         validate_emoji_name,

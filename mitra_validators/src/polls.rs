@@ -4,8 +4,9 @@ use mitra_utils::html::clean_html_all;
 use super::errors::ValidationError;
 
 const POLL_OPTION_COUNT_MIN: usize = 2;
-// https://github.com/mastodon/mastodon/blob/v4.3.8/app/validators/poll_options_validator.rb
-pub const POLL_OPTION_COUNT_MAX: usize = 15;
+// Mastodon accepts up to 500 poll options
+// https://github.com/mastodon/mastodon/blob/v4.5.9/FEDERATION.md#size-limits
+pub const POLL_OPTION_COUNT_MAX: usize = 20;
 pub const POLL_OPTION_NAME_LENGTH_MAX: usize = 1000;
 
 pub fn clean_poll_option_name(name: &str) -> String {

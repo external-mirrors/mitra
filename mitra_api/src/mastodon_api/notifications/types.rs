@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use mitra_activitypub::authority::Authority;
 use mitra_models::{
     notifications::types::{
         EventType,
@@ -21,9 +22,10 @@ use crate::mastodon_api::{
 
 fn default_page_size() -> PageSize { PageSize::new(20) }
 
-/// https://docs.joinmastodon.org/methods/notifications/
+// https://docs.joinmastodon.org/methods/notifications/
 #[derive(Deserialize)]
 pub struct NotificationQueryParams {
+    pub min_id: Option<i32>,
     pub max_id: Option<i32>,
 
     #[serde(default = "default_page_size")]
@@ -36,7 +38,7 @@ pub struct EmojiReaction {
     emoji: Option<CustomEmoji>,
 }
 
-/// https://docs.joinmastodon.org/entities/notification/
+// https://docs.joinmastodon.org/entities/notification/
 #[derive(Serialize)]
 pub struct Notification {
     pub id: String,
@@ -53,23 +55,25 @@ pub struct Notification {
     emoji: Option<String>,
     emoji_url: Option<String>,
 
+    payment_amount: Option<i64>,
+
     #[serde(serialize_with = "serialize_datetime")]
     created_at: DateTime<Utc>,
 }
 
 impl Notification {
     pub fn from_db(
-        instance_uri: &str,
+        authority: &Authority,
         media_server: &ClientMediaServer,
         notification: DbNotificationDetailed,
     ) -> Self {
         let account = Account::from_profile(
-            instance_uri,
+            authority,
             media_server,
-            notification.sender,
+            notification.sender.clone(),
         );
         let status = notification.post.map(|post| {
-            Status::from_post(instance_uri, media_server, post)
+            Status::from_post(authority, media_server, post)
         });
         let mut maybe_event_subtype = None;
         let event_type_mastodon = match notification.event_type {
@@ -84,6 +88,7 @@ impl Notification {
             EventType::Reaction => "pleroma:emoji_reaction",
             EventType::Mention => "mention",
             EventType::Repost => "reblog",
+            EventType::SubscriberPayment if notification.sender.is_anonymous() => "payment_anonymous",
             EventType::SubscriberPayment => "subscription",
             EventType::SubscriptionStart => "", // not supported
             EventType::SubscriptionExpiration => "subscription_expiration",
@@ -116,6 +121,7 @@ impl Notification {
             reaction: maybe_reaction,
             emoji: maybe_emoji_content,
             emoji_url: maybe_emoji_url,
+            payment_amount: notification.payment_amount,
             created_at: notification.created_at,
         }
     }

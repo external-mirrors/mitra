@@ -20,6 +20,7 @@ use mitra_services::media::MediaServer;
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    authority::Authority,
     builders::update_note::prepare_update_note,
     identifiers::parse_local_object_id,
     importers::{
@@ -59,20 +60,26 @@ pub fn is_question_vote(object: &JsonValue) -> bool {
 
 pub async fn handle_question_vote(
     config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     object: JsonValue,
 ) -> HandlerResult {
     verify_object_owner(&object)?;
     let vote: QuestionVote = serde_json::from_value(object)?;
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let instance = &ap_client.instance;
-    let media_server = MediaServer::new(config);
+    let authority = Authority::from(instance);
     let voter = ActorIdResolver::default().only_remote().resolve(
-        &ap_client,
+        ap_client,
         db_pool,
         &vote.attributed_to,
     ).await?;
-    let post_id = parse_local_object_id(instance.uri_str(), &vote.in_reply_to)?;
+    let Ok(post_id) = parse_local_object_id(
+        &authority,
+        &vote.in_reply_to,
+    ) else {
+        log::warn!("vote for a remote poll");
+        return Ok(None);
+    };
     let db_client = &mut **get_database_client(db_pool).await?;
     let mut post = get_local_post_by_id(db_client, post_id).await?;
     if !can_view_post(db_client, Some(&voter), &post).await? {
@@ -101,6 +108,7 @@ pub async fn handle_question_vote(
     post.poll = Some(poll_updated);
     add_related_posts(db_client, vec![&mut post]).await?;
     let post_author = get_user_by_id(db_client, post.author.id).await?;
+    let media_server = MediaServer::new(config);
     prepare_update_note(
         db_client,
         instance,

@@ -6,6 +6,7 @@ use apx_sdk::fetch::FetchError;
 use chrono::{TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
+use uuid::Uuid;
 
 use mitra_config::Config;
 use mitra_models::{
@@ -31,6 +32,7 @@ use mitra_models::{
     },
     filter_rules::types::FilterAction,
     profiles::queries::{
+        delete_profile,
         get_remote_profile_by_actor_id,
         set_reachability_status,
     },
@@ -55,6 +57,7 @@ use crate::{
         import_from_outbox,
         import_replies,
         is_actor_importer_error,
+        ApClient,
     },
     utils::{db_url_to_http_url, parse_http_url_from_db},
 };
@@ -100,7 +103,8 @@ impl IncomingActivityJobData {
             JobType::IncomingActivity,
             &job_data,
             scheduled_for,
-        ).await
+        ).await?;
+        Ok(())
     }
 }
 
@@ -121,6 +125,7 @@ pub async fn process_queued_incoming_activities(
         config.federation.inbox_queue_batch_size,
         JOB_TIMEOUT,
     ).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     for job in batch {
         let mut job_data: IncomingActivityJobData =
             serde_json::from_value(job.job_data)
@@ -129,6 +134,7 @@ pub async fn process_queued_incoming_activities(
             Duration::from_secs((JOB_TIMEOUT / 6).into());
         let handler_future = handle_activity(
             config,
+            &ap_client,
             db_pool,
             &job_data.activity,
             job_data.is_authenticated,
@@ -314,7 +320,7 @@ impl OutgoingActivityJobData {
                     db_client,
                     &recipient.id,
                 ).await?;
-                if profile.has_account() {
+                if profile.has_portable_account() {
                     add_object_to_collection(
                         db_client,
                         profile.id,
@@ -335,26 +341,25 @@ impl OutgoingActivityJobData {
         self,
         db_client: &impl DatabaseClient,
         delay: u32,
-    ) -> Result<(), DatabaseError> {
-        if self.recipients.is_empty() {
-            return Ok(());
-        };
+    ) -> Result<Uuid, DatabaseError> {
         let job_data = serde_json::to_value(self)
             .expect("activity should be serializable");
         let scheduled_for = Utc::now() + TimeDelta::seconds(delay.into());
-        enqueue_job(
+        let job_id = enqueue_job(
             db_client,
             JobType::OutgoingActivity,
             &job_data,
             scheduled_for,
-        ).await
+        ).await?;
+        Ok(job_id)
     }
 
     pub async fn enqueue(
         self,
         db_client: &impl DatabaseClient,
     ) -> Result<(), DatabaseError> {
-        self.into_job(db_client, 0).await
+        self.into_job(db_client, 0).await?;
+        Ok(())
     }
 
     pub async fn save_and_enqueue(
@@ -376,6 +381,35 @@ pub fn outgoing_queue_backoff(failure_count: u32) -> u32 {
     30 * (10_u32.pow(failure_count) + 10)
 }
 
+async fn delete_gone_actors(
+    db_client: &mut impl DatabaseClient,
+    gone_actors: &[String],
+) -> Result<(), DatabaseError> {
+    // The number of gone actors is expected to be small
+    for actor_id in gone_actors {
+        match get_remote_profile_by_actor_id(
+            db_client,
+            actor_id,
+        ).await {
+            Ok(profile) => {
+                if profile.has_account() {
+                    // Do not delete if actor has a local account
+                    continue;
+                };
+                let deletion_queue = delete_profile(db_client, profile.id).await?;
+                deletion_queue.into_job(db_client).await?;
+                log::warn!("deleted profile {profile} (410 Gone)");
+            },
+            Err(DatabaseError::NotFound(_)) => {
+                // Profile was deleted while the delivery was being processed
+                continue;
+            },
+            Err(other_error) => return Err(other_error),
+        };
+    };
+    Ok(())
+}
+
 pub async fn process_queued_outgoing_activities(
     config: &Config,
     db_pool: &DatabaseConnectionPool,
@@ -393,6 +427,12 @@ pub async fn process_queued_outgoing_activities(
             serde_json::from_value(job.job_data)
                 .map_err(|_| DatabaseTypeError)?;
         let mut recipients = job_data.recipients;
+        if recipients.is_empty() {
+            log::warn!("delivery has no remote recipients");
+            let db_client = &**get_database_client(db_pool).await?;
+            delete_job_from_queue(db_client, job.id).await?;
+            continue;
+        };
         if !instance.federation.enabled {
             log::info!(
                 "(private mode) not delivering activity to {} inboxes: {}",
@@ -404,8 +444,9 @@ pub async fn process_queued_outgoing_activities(
             continue;
         };
         log::info!(
-            "delivering activity to {} inboxes: {}",
+            "delivering activity to {} inboxes (attempt #{}): {}",
             recipients.len(),
+            job_data.failure_count + 1,
             job_data.activity,
         );
 
@@ -432,7 +473,7 @@ pub async fn process_queued_outgoing_activities(
             &mut recipients,
         ).await;
 
-        let db_client = &**get_database_client(db_pool).await?;
+        let db_client = &mut **get_database_client(db_pool).await?;
         match worker_result {
             Ok(_) => (),
             Err(error) => {
@@ -443,7 +484,8 @@ pub async fn process_queued_outgoing_activities(
             },
         };
         log::info!(
-            "delivery job: {:.2?}, {} delivered, {} errors, {} skipped (attempt #{})",
+            "delivery job (attempt #{}): {:.2?}, {} delivered, {} errors, {} skipped",
+            job_data.failure_count + 1,
             start_time.elapsed(),
             recipients.iter().filter(|item| item.is_delivered).count(),
             recipients.iter()
@@ -452,7 +494,6 @@ pub async fn process_queued_outgoing_activities(
             recipients.iter()
                 .filter(|item| !item.is_delivered && item.is_unreachable)
                 .count(),
-            job_data.failure_count + 1,
         );
         if job_data.failure_count == 0 {
             // Mark unreachable recipients after first attempt
@@ -493,12 +534,13 @@ pub async fn process_queued_outgoing_activities(
             // Re-queue if some deliveries are not successful
             job_data.recipients = recipients;
             let retry_after = outgoing_queue_backoff(job_data.failure_count);
-            job_data.into_job(db_client, retry_after).await?;
-            log::info!("delivery job re-queued");
+            let job_id = job_data.into_job(db_client, retry_after).await?;
+            log::info!("delivery job re-queued (ID: {job_id})");
         } else {
             // Update reachability statuses if all deliveries are successful
             // or if retry limit is reached
             // TODO: track reachability status of servers, not actors
+            let mut gone = vec![];
             let statuses = recipients
                 .into_iter()
                 // Group by actor ID (could have many inboxes)
@@ -509,10 +551,8 @@ pub async fn process_queued_outgoing_activities(
                 })
                 .into_iter()
                 .inspect(|(actor_id, inboxes)| {
-                    // Log "gone" actors
-                    // TODO: delete
                     if inboxes.iter().all(|inbox| inbox.is_gone) {
-                        log::warn!("actor is gone: {actor_id}");
+                        gone.push(actor_id.clone());
                     };
                 })
                 .map(|(actor_id, inboxes)| {
@@ -524,6 +564,7 @@ pub async fn process_queued_outgoing_activities(
                 .collect();
             set_reachability_status(db_client, statuses).await?;
             log::info!("reachability statuses updated");
+            delete_gone_actors(db_client, &gone).await?;
         };
         delete_job_from_queue(db_client, job.id).await?;
     };
@@ -551,7 +592,8 @@ impl FetcherJobData {
             JobType::Fetcher,
             &job_data,
             scheduled_for,
-        ).await
+        ).await?;
+        Ok(())
     }
 }
 

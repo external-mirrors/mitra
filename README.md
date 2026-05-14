@@ -39,16 +39,18 @@ Demo instance: https://public.mitra.social/ ([invite-only](https://public.mitra.
 - [mitra-web](https://codeberg.org/silverpill/mitra-web) (Web)
 - [Bloat](https://git.freesoftwareextremist.com/bloat/about/) (Web, NoJS)
 - [Phanpy](https://github.com/cheeaun/phanpy) (Web)
-- [pl-fe](https://github.com/mkljczk/pl-fe) (Web)
+- [Nicolium](https://codeberg.org/mkljczk/nicolium) (Web)
 - [Husky](https://github.com/captainepoch/husky) (Android)
 - [Fedilab](https://codeberg.org/tom79/Fedilab) (Android)
 - [Fedicat](https://codeberg.org/technicat/fedicat) (iOS)
+- [Tuba](https://tuba.geopjr.dev/) (Desktop)
 - [toot](https://github.com/ihabunek/toot) (CLI)
+- [mastodon.el](https://codeberg.org/martianh/mastodon.el) (Emacs)
 
 ## Requirements
 
 - PostgreSQL 15+
-- Rust 1.75+ (when building from source)
+- Rust 1.85+ (when building from source)
 - SSL certificates (i.e. `ca-certificates` package).
 
 Minimum system requirements:
@@ -93,9 +95,11 @@ An HTTP server will be needed to handle HTTPS requests. See examples of [Nginx](
 
 ### Building from source
 
+Install `cargo`.
+
 Clone the git repository or download the source archive from the [Releases](https://codeberg.org/silverpill/mitra/releases) page.
 
-Install `cargo`. Then run:
+Navigate to the repository directory. Then run:
 
 ```shell
 cargo build --release --features production
@@ -110,7 +114,7 @@ CREATE USER mitra WITH PASSWORD 'mitra';
 CREATE DATABASE mitra OWNER mitra ENCODING 'UTF8';
 ```
 
-Create configuration file by copying [`config.example.yaml`](./config.example.yaml) and configure the instance. Default config file path is `config.yaml`, but it can be changed using `CONFIG_PATH` environment variable.
+Create configuration file by copying [`config.example.yaml`](./config.example.yaml) or [`config.example.toml`](./config.example.toml), and configure the instance. Default config file path is `config.yaml`, but it can be changed using `CONFIG_PATH` environment variable.
 
 Create data and web client directories at locations specified in the configuration file (`storage_dir` and `web_client_dir` parameters).
 
@@ -136,9 +140,10 @@ To run Mitra as a systemd service, check out the [systemd unit file example](./c
 
 These images and packages are maintained by the community.
 
-#### Docker image
+#### Docker images
 
-https://hub.docker.com/r/bleakfuture0/mitra
+- https://hub.docker.com/r/bleakfuture0/mitra
+- https://hub.docker.com/r/fjox/mitra
 
 #### Alpine Linux
 
@@ -188,6 +193,11 @@ systemctl start mitra
 
 ## Configuration
 
+### Examples
+
+- [YAML configuration file](./config.example.yaml)
+- [TOML configuration file](./config.example.toml)
+
 ### Environment variables
 
 See [defaults](./.env).
@@ -200,15 +210,20 @@ See [Tor guide](./docs/onion.md) and [I2P guide](./docs/i2p.md).
 
 - [Monero](./docs/monero.md)
 
+*Subscriptions can be used without enabling Monero integration.*
+
 ### IPFS integration (experimental)
 
 See [guide](./docs/ipfs.md).
+
+*IPFS integration is not actively maintained and may be removed in the future.*
 
 ## Administration
 
 - [Backup and restore](./docs/backup_and_restore.md)
 - [Cache management](./docs/cache_management.md)
 - [Filter](./docs/filter.md)
+- [Split-domain setup](./docs/split_domain.md)
 - [Relays](./docs/relays.md)
 - [Custom themes](./docs/custom_themes.md)
 - [Debugging](./docs/debugging.md)
@@ -223,7 +238,7 @@ CLI is stable and breaking changes don't happen in minor releases.
 
 The majority of endpoints imitate [Mastodon API](https://docs.joinmastodon.org/client/intro/). Some [Pleroma](https://docs.pleroma.social/backend/development/API/differences_in_mastoapi_responses/) extensions are supported as well. A number of additional endpoints exist for features that are unique to Mitra.
 
-Client API is not stable and may change in minor releases.
+Client API is stable and breaking changes don't happen in minor releases.
 
 [OpenAPI spec](./docs/openapi.yaml)
 
