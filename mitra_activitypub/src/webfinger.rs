@@ -40,7 +40,7 @@ pub(super) async fn perform_webfinger_query(
 
 // Discover preferred webfinger hostname
 // https://correct.webfinger-canary.fietkau.software
-pub(super) async fn peform_reverse_webfinger_query(
+pub(super) async fn perform_reverse_webfinger_query(
     agent: &FederationAgent,
     username: &str,
     actor_id: &HttpUri,

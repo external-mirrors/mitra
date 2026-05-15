@@ -37,7 +37,7 @@ pub fn check_identity_proofs(
         .map(|proof| proof.issuer.to_string())
         .all(|identity| identities.insert(identity));
     if !is_unique {
-        // Identities must be unqiue
+        // Identities must be unique
         return Err(DatabaseTypeError);
     };
     Ok(())

@@ -83,6 +83,23 @@ significant_drop_in_scrutinee = "warn"
 unused_async = "warn"
 unwrap_used = "warn"
 
+[workspace.metadata.typos.default]
+extend-ignore-re = [
+    "-{5}BEGIN RSA PUBLIC KEY-{5}($|[^-]+-{5}END)",
+    "did:key:\\w+",
+    # Multiformats
+    "zQm\\w+",
+    "z2H\\w+",
+]
+extend-ignore-identifiers-re = [
+    "^inport$",
+    # OAuth tokens
+    "^Vx88sC",
+    # Monero addresses
+    "^888tNk",
+    "^9uyhAg",
+]
+
 [profile.dev]
 # This fixes stack overflow error in incoming_activity_queue_executor
 # It occurs when incoming Create activity contains a mention:

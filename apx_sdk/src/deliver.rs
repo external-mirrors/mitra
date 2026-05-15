@@ -50,7 +50,7 @@ pub enum DelivererError {
     #[error("object serialization error")]
     SerializationError(#[from] serde_json::Error),
 
-    #[error("inavlid URL")]
+    #[error("invalid URL")]
     UrlError(#[from] UrlError),
 
     #[error(transparent)]

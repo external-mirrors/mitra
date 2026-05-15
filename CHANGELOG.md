@@ -143,7 +143,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Don't serve outbox collection if owner is not registered.
-- Fixed query performace regression related to introduction of automated accounts.
+- Fixed query performance regression related to introduction of automated accounts.
 
 ## [4.19.0] - 2026-02-27
 
@@ -236,7 +236,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
-- Send payment notification to remote server when receving a payment for LWS invoice.
+- Send payment notification to remote server when receiving a payment for LWS invoice.
 - Generate better error messages when Monero address is not valid.
 - Optimized extraneous posts query.
 - Write extraneous posts query duration to log.
@@ -421,7 +421,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Changed minimum required PostgreSQL version to 15.
-- Don't include invoice and subscription counts in `instance-report` output if Monero intergration is not enabled.
+- Don't include invoice and subscription counts in `instance-report` output if Monero integration is not enabled.
 - Renamed `instance_uri` configuration parameter to `instance_url` (`instance_uri` is treated as alias).
 - Log CORS errors.
 - Return `413 Payload Too Large` if media uploaded by portable actor is too large.
@@ -861,7 +861,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
-- Fixed internal server error when acessing rate-limited endpoints via unix socket.
+- Fixed internal server error when accessing rate-limited endpoints via unix socket.
 - Fixed incorrect rate limiter IP address check.
 - Fixed incorrect de-duplication of activity recipients.
 - Fixed broken uploads in Bloat-FE.
@@ -1958,8 +1958,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Preserve wrapped database errors when converting from `AuthenticationError` to `InboxError`.
 - Use resolver URLs instead of plain DID URLs in FEP-ef61 representations of objects.
-- Write warning to log if `preferrredUsername` doesn't match cached value.
-- Don't rely on acct comparsion when verifying activity signature.
+- Write warning to log if `preferredUsername` doesn't match cached value.
+- Don't rely on acct comparison when verifying activity signature.
 - Use actor ID instead of webfinger address in logs.
 - Use actor ID as primary identifier instead of webfinger address.
 - Don't publish FEP-ef61 representation if user didn't enable FEP-ef61.

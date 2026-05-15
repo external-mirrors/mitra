@@ -794,7 +794,7 @@ pub async fn get_home_timeline(
                                 AND in_reply_to.author_id = $current_user_id
                         )
                     )
-                    -- exlclude authors that are displayed in custom feeds
+                    -- exclude authors that are displayed in custom feeds
                     AND NOT EXISTS (
                         SELECT 1 FROM custom_feed_source
                         JOIN custom_feed ON custom_feed.id = custom_feed_source.feed_id
