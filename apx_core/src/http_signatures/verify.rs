@@ -104,31 +104,26 @@ pub struct HttpSignatureData {
 }
 
 fn get_content_digest(
-    components: &[&str],
+    method: &Method,
     headers: &HeaderMap,
+    components: &[&str],
 ) -> Result<Option<ContentDigest>, VerificationError> {
-    let maybe_signed_header = components
-        .iter()
-        .copied()
-        .find(|id| *id == HEADER_DIGEST || *id == HEADER_CONTENT_DIGEST);
-    let (header_name, header_value) = match maybe_signed_header {
-        Some(header_name) => {
-            if let Some(header_value) = headers.get(header_name) {
-                (header_name, header_value)
-            } else {
-                // Signed header must be present
-                return Err(VerificationError::NoDigest);
-            }
-        },
-        None => {
-            if let Some(header_value) = headers.get(HEADER_CONTENT_DIGEST) {
-                (HEADER_CONTENT_DIGEST, header_value)
-            } else if let Some(header_value) = headers.get(HEADER_DIGEST) {
-                (HEADER_DIGEST, header_value)
-            } else {
-                return Ok(None);
-            }
-        },
+    let (Method::POST | Method::PUT | Method::PATCH) = *method else {
+        return Ok(None);
+    };
+    // Prefer signed header over unsigned.
+    // Prefer Content-Digest over Digest.
+    let header_name = if components.contains(&HEADER_CONTENT_DIGEST) {
+        HEADER_CONTENT_DIGEST
+    } else if components.contains(&HEADER_DIGEST) {
+        HEADER_DIGEST
+    } else if headers.contains_key(HEADER_CONTENT_DIGEST) {
+        HEADER_CONTENT_DIGEST
+    } else {
+        HEADER_DIGEST
+    };
+    let Some(header_value) = headers.get(header_name) else {
+        return Err(VerificationError::NoDigest);
     };
     let header_value = header_value
         .to_str()
@@ -221,7 +216,11 @@ pub fn parse_http_signature_cavage(
     };
 
     let signed_headers: Vec<_> = headers_parameter.split(' ').collect();
-    let maybe_digest = get_content_digest(&signed_headers, request_headers)?;
+    let maybe_digest = get_content_digest(
+        request_method,
+        request_headers,
+        &signed_headers,
+    )?;
     check_required_components(
         &signed_headers,
         &REQUIRED_COMPONENTS_CAVAGE,
@@ -345,7 +344,11 @@ pub fn parse_http_signature_rfc9421(
         .ok_or(VerificationError::ParseError("incomplete request URI"))?
         .to_string();
 
-    let maybe_digest = get_content_digest(&components, request_headers)?;
+    let maybe_digest = get_content_digest(
+        request_method,
+        request_headers,
+        &components,
+    )?;
     if !ignore_required_components {
         check_required_components(&components, &REQUIRED_COMPONENTS_RFC9421)?;
     };
@@ -586,6 +589,28 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
         assert_eq!(signature_data.is_rfc9421, true);
         assert_eq!(signature_data.base, expected_signature_base);
         assert_eq!(signature_data.content_digest.is_some(), true);
+    }
+
+    #[test]
+    fn test_parse_http_signature_rfc9421_missing_content_digest_header() {
+        let request_method = Method::POST;
+        let request_uri = Uri::from_static("https://verifier.example/inbox");
+        let mut request_headers = HeaderMap::new();
+        request_headers.insert(
+            HeaderName::from_static("signature-input"),
+            HeaderValue::from_static(r#"sig-b26=("@method" "@target-uri" "content-digest");created=1618884473;keyid="https://signer.example/key""#),
+        );
+        request_headers.insert(
+            HeaderName::from_static("signature"),
+            HeaderValue::from_static("sig-b26=:wqcAqbmYJ2ji2glfAMaRy4gruYYnx2nEFN2HN6jrnDnQCK1u02Gb04v9EDgwUPiu4A0w6vuQv5lIp5WPpBKRCw==:"),
+        );
+        let error = parse_http_signature_rfc9421(
+            &request_method,
+            &request_uri,
+            &request_headers,
+            false,
+        ).err().unwrap();
+        assert_eq!(error.to_string(), "missing content digest");
     }
 
     #[test]
