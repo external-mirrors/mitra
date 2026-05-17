@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Changed MSRV to 1.80.0.
 
+### Fixed
+
+- Fixed misleading error message when digest header is not signed.
+
 ## [5.3.0] - 2026-05-13
 
 ### Added

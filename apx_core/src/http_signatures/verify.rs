@@ -103,11 +103,13 @@ pub struct HttpSignatureData {
     pub content_digest: Option<ContentDigest>,
 }
 
+// Returns header name and its parsed value.
+// The header name should be added to the list of required components.
 fn get_content_digest(
     method: &Method,
     headers: &HeaderMap,
     components: &[&str],
-) -> Result<Option<ContentDigest>, VerificationError> {
+) -> Result<Option<(&'static str, ContentDigest)>, VerificationError> {
     let (Method::POST | Method::PUT | Method::PATCH) = *method else {
         return Ok(None);
     };
@@ -138,7 +140,7 @@ fn get_content_digest(
             header_name.to_owned(),
             error,
         ))?;
-    Ok(Some(content_digest))
+    Ok(Some((header_name, content_digest)))
 }
 
 fn check_required_components(
@@ -216,14 +218,19 @@ pub fn parse_http_signature_cavage(
     };
 
     let signed_headers: Vec<_> = headers_parameter.split(' ').collect();
+    let mut required_components = REQUIRED_COMPONENTS_CAVAGE.to_vec();
     let maybe_digest = get_content_digest(
         request_method,
         request_headers,
         &signed_headers,
-    )?;
+    )?
+        .map(|(header_name, content_digest)| {
+            required_components.push(header_name);
+            content_digest
+        });
     check_required_components(
         &signed_headers,
-        &REQUIRED_COMPONENTS_CAVAGE,
+        &required_components,
     )?;
 
     // Recreate signature base
@@ -344,13 +351,18 @@ pub fn parse_http_signature_rfc9421(
         .ok_or(VerificationError::ParseError("incomplete request URI"))?
         .to_string();
 
+    let mut required_components = REQUIRED_COMPONENTS_RFC9421.to_vec();
     let maybe_digest = get_content_digest(
         request_method,
         request_headers,
         &components,
-    )?;
+    )?
+        .map(|(header_name, content_digest)| {
+            required_components.push(header_name);
+            content_digest
+        });
     if !ignore_required_components {
-        check_required_components(&components, &REQUIRED_COMPONENTS_RFC9421)?;
+        check_required_components(&components, &required_components)?;
     };
 
     // Recreate signature base

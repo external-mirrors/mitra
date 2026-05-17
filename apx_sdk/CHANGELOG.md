@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Security
 
 - Return `NoDigest` error if digest header is not present in POST, PUT or PATCH request.
+- Require signed digest header if request method is POST, PUT or PATCH.
 
 ## [0.24.0] - 2026-05-13
 
