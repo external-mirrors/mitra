@@ -381,7 +381,7 @@ dependencies = [
  "sfv",
  "sha2",
  "sha3",
- "thiserror 1.0.50",
+ "thiserror 2.0.18",
  "unsigned-varint",
  "url",
 ]
@@ -401,7 +401,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "thiserror 1.0.50",
+ "thiserror 2.0.18",
  "tokio",
  "tower-service",
 ]
@@ -2034,7 +2034,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serial_test",
- "thiserror 1.0.50",
+ "thiserror 2.0.18",
  "tokio",
  "uuid",
  "wildmatch",
@@ -2058,7 +2058,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serial_test",
- "thiserror 1.0.50",
+ "thiserror 2.0.18",
  "tokio",
  "uuid",
 ]
@@ -2096,7 +2096,7 @@ dependencies = [
  "serde_json",
  "serde_qs",
  "serial_test",
- "thiserror 1.0.50",
+ "thiserror 2.0.18",
  "tokio",
  "url",
  "uuid",
@@ -2137,7 +2137,7 @@ dependencies = [
  "serde",
  "serde_ignored",
  "serde_yaml",
- "thiserror 1.0.50",
+ "thiserror 2.0.18",
  "toml",
 ]
 
@@ -2162,7 +2162,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serial_test",
- "thiserror 1.0.50",
+ "thiserror 2.0.18",
  "tokio",
  "tokio-postgres",
  "tokio-postgres-rustls",
@@ -2190,7 +2190,7 @@ dependencies = [
  "serde",
  "serde_json",
  "siwe",
- "thiserror 1.0.50",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -2211,7 +2211,7 @@ dependencies = [
  "rust-argon2",
  "serde",
  "sysinfo",
- "thiserror 1.0.50",
+ "thiserror 2.0.18",
  "unicode-segmentation",
  "uuid",
 ]
@@ -2225,7 +2225,7 @@ dependencies = [
  "mitra_utils",
  "regex",
  "serde_json",
- "thiserror 1.0.50",
+ "thiserror 2.0.18",
  "uuid",
 ]
 

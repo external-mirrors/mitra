@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Changed MSRV to 1.80.0.
+- Migrated to `thiserror` 2.0.
 
 ## [0.24.0] - 2026-05-13
 

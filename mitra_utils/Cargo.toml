@@ -35,7 +35,7 @@ serde = { version = "1.0.210", features = ["derive"] }
 # Used to gather disk info
 sysinfo = { version = "0.32.1", default-features = false, features = ["disk"] }
 # Used for creating error types
-thiserror = "1.0.37"
+thiserror = "2.0.18"
 # Used to work with Unicode
 unicode-segmentation = "1.10.1"
 # Used to work with UUIDs
