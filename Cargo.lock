@@ -2206,7 +2206,7 @@ dependencies = [
  "html5ever",
  "isolang",
  "mime_guess",
- "rand 0.8.5",
+ "rand 0.9.3",
  "regex",
  "rust-argon2",
  "serde",
