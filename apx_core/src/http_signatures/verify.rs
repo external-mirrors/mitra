@@ -221,11 +221,11 @@ pub fn parse_http_signature_cavage(
     };
 
     let signed_headers: Vec<_> = headers_parameter.split(' ').collect();
+    let maybe_digest = get_content_digest(&signed_headers, request_headers)?;
     check_required_components(
         &signed_headers,
         &REQUIRED_COMPONENTS_CAVAGE,
     )?;
-    let maybe_digest = get_content_digest(&signed_headers, request_headers)?;
 
     // Recreate signature base
     let mut signature_base_entries = IndexMap::new();
@@ -277,7 +277,7 @@ pub fn parse_http_signature_rfc9421(
     request_method: &Method,
     request_uri: &Uri,
     request_headers: &HeaderMap,
-    required_components: &[&'static str],
+    ignore_required_components: bool,
 ) -> Result<HttpSignatureData, VerificationError> {
     // Parse Signature header
     let signature_header = request_headers.get("Signature")
@@ -341,12 +341,14 @@ pub fn parse_http_signature_rfc9421(
             .as_str();
         components.push(component_id);
     };
-
-    check_required_components(&components, required_components)?;
     let target_authority = request_uri.authority()
         .ok_or(VerificationError::ParseError("incomplete request URI"))?
         .to_string();
+
     let maybe_digest = get_content_digest(&components, request_headers)?;
+    if !ignore_required_components {
+        check_required_components(&components, &REQUIRED_COMPONENTS_RFC9421)?;
+    };
 
     // Recreate signature base
     let mut signature_base_entries = IndexMap::new();
@@ -422,7 +424,7 @@ pub fn parse_http_signature(
     if headers.get("Signature-Input").is_some() {
         parse_http_signature_rfc9421(
             method, uri, headers,
-            &REQUIRED_COMPONENTS_RFC9421,
+            false, // check required components
         )
     } else {
         parse_http_signature_cavage(method, uri, headers)
@@ -570,7 +572,7 @@ mod tests {
             &request_method,
             &request_uri,
             &request_headers,
-            &[],
+            true, // ignore required components
         ).unwrap();
 
         let expected_signature_base =
@@ -762,7 +764,7 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
             &request_method,
             &request_uri,
             &request_headers,
-            &REQUIRED_COMPONENTS_RFC9421,
+            false,
         ).unwrap();
         assert_eq!(signature_data.content_digest.is_some(), true);
 
@@ -803,7 +805,7 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
             &request_method,
             &request_uri,
             &request_headers,
-            &REQUIRED_COMPONENTS_RFC9421,
+            false,
         ).unwrap();
         assert_eq!(signature_data.content_digest.is_none(), true);
 
