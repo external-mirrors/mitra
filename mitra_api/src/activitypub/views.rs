@@ -265,11 +265,13 @@ async fn outbox(
     let collection_id = LocalActorCollection::Outbox.of(&actor_id);
     let first_page_id = format!("{}?page=true", collection_id);
     if query_params.page.is_none() {
-        let collection = OrderedCollection::new(
-            collection_id,
-            Some(first_page_id),
-            None,
-        );
+        let collection =
+            OrderedCollection::new(
+                collection_id,
+                Some(first_page_id),
+                None,
+            )
+            .with_attributed_to(&actor_id);
         let response = HttpResponse::Ok()
             .content_type(AP_MEDIA_TYPE)
             .json(collection);
@@ -306,10 +308,12 @@ async fn outbox(
                 .expect("activity should be serializable")
         }
     }).collect();
-    let collection_page = OrderedCollection::new_page(
-        first_page_id,
-        activities,
-    );
+    let collection_page =
+        OrderedCollection::new_page(
+            first_page_id,
+            activities,
+        )
+        .with_attributed_to(&actor_id);
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
         .json(collection_page);
@@ -435,10 +439,9 @@ async fn featured_collection(
         serde_json::to_value(note)
             .expect("note should be serializable")
     }).collect();
-    let collection = OrderedCollection::new_with_items(
-        collection_id,
-        objects,
-    );
+    let collection =
+        OrderedCollection::new_with_items(collection_id, objects)
+            .with_attributed_to(&actor_id);
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
         .json(collection);
