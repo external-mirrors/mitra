@@ -19,6 +19,7 @@ use mitra_activitypub::{
     builders::{
         announce::build_relay_announce,
         bite::build_bite,
+        like::build_like,
     },
     deliverer::{Recipient, Sender},
     identifiers::canonicalize_id,
@@ -43,7 +44,10 @@ use mitra_models::{
         get_database_client,
         DatabaseConnectionPool,
     },
-    posts::queries::get_post_by_id,
+    posts::queries::{
+        get_post_by_id,
+        get_remote_post_by_object_id,
+    },
     profiles::queries::get_remote_profile_by_actor_id,
     users::{
         queries::{
@@ -51,6 +55,8 @@ use mitra_models::{
         },
     },
 };
+use mitra_services::media::MediaServer;
+use mitra_utils::id::generate_ulid;
 
 /// Fetch ActivityPub object and process it
 #[derive(Parser)]
@@ -309,6 +315,13 @@ enum Activity {
         /// Actor ID
         recipient: String,
     },
+    /// Like activity
+    Like {
+        /// Local username
+        sender: String,
+        /// Object ID
+        object: String,
+    },
     /// LitePub relay Announce activity
     RelayAnnounce {
         /// Internal post ID
@@ -345,6 +358,21 @@ impl CreateActivity {
                     target_profile.expect_actor_data(),
                 );
                 serde_json::to_value(bite)?
+            },
+            Activity::Like { sender, object } => {
+                let account = get_user_by_name(db_client, &sender).await?;
+                let post = get_remote_post_by_object_id(db_client, &object).await?;
+                let media_server = MediaServer::new(config);
+                let like = build_like(
+                    &authority,
+                    &media_server,
+                    &account.profile,
+                    &post,
+                    generate_ulid(),
+                    None,
+                    None,
+                );
+                serde_json::to_value(like)?
             },
             Activity::RelayAnnounce { post_id, recipient } => {
                 let post = get_post_by_id(db_client, post_id).await?;

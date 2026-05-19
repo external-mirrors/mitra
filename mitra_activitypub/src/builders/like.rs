@@ -30,7 +30,7 @@ use crate::{
 use super::emoji::{build_emoji, Emoji};
 
 #[derive(Serialize)]
-struct Like {
+pub struct Like {
     #[serde(rename = "@context")]
     _context: Context,
 
@@ -72,7 +72,7 @@ pub(super) fn get_like_audience(
     (primary_audience, secondary_audience)
 }
 
-fn build_like(
+pub fn build_like(
     authority: &Authority,
     media_server: &MediaServer,
     actor_profile: &DbActorProfile,
