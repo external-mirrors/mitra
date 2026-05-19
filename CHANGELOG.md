@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed MSRV to 1.80.0.
 - Disabled pagination of `featured` collection.
 - Add `attributedTo` property to `outbox` and `featured` collections.
+- Allowed `Undo` activities with embedded `actor`.
 
 ### Fixed
 
