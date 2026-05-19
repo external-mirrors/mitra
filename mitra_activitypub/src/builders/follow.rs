@@ -14,12 +14,13 @@ use mitra_models::{
 };
 
 use crate::{
+    authority::Authority,
     contexts::{build_default_context, Context},
     deliverer::Recipient,
     identifiers::{
         compatible_id,
-        local_activity_id,
-        local_actor_id,
+        local_activity_id_unified,
+        local_actor_id_unified,
         local_object_id,
     },
     queues::OutgoingActivityJobData,
@@ -42,7 +43,7 @@ pub(super) struct Follow {
 }
 
 pub(super) fn build_follow(
-    instance_uri: &str,
+    authority: &Authority,
     actor_profile: &DbActorProfile,
     target_actor_id: &str,
     follow_request_id: Uuid,
@@ -50,11 +51,16 @@ pub(super) fn build_follow(
     with_context: bool,
 ) -> Follow {
     let activity_id = if follow_request_has_deprecated_ap_id {
-        local_object_id(instance_uri, follow_request_id)
+        let instance_uri = authority.expect_server_uri();
+        local_object_id(instance_uri.as_str(), follow_request_id)
     } else {
-        local_activity_id(instance_uri, FOLLOW, follow_request_id)
+        local_activity_id_unified(authority, FOLLOW, follow_request_id)
     };
-    let actor_id = local_actor_id(instance_uri, &actor_profile.username);
+    let actor_id = local_actor_id_unified(
+        authority,
+        actor_profile.id,
+        &actor_profile.username,
+    );
     Follow {
         _context: with_context.then(build_default_context),
         activity_type: FOLLOW.to_string(),
@@ -71,9 +77,10 @@ fn prepare_follow(
     target_actor: &DbActor,
     follow_request_id: Uuid,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
+    let authority = Authority::from(instance);
     let target_actor_id = compatible_id(target_actor, &target_actor.id)?;
     let activity = build_follow(
-        instance.uri_str(),
+        &authority,
         &sender.profile,
         &target_actor_id,
         follow_request_id,
@@ -142,11 +149,12 @@ mod tests {
 
     #[test]
     fn test_build_follow() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let follower = DbActorProfile::local_for_test("follower");
         let follow_request_id = generate_ulid();
         let target_actor_id = "https://test.remote/actor/test";
         let activity = build_follow(
-            INSTANCE_URI,
+            &authority,
             &follower,
             target_actor_id,
             follow_request_id,
