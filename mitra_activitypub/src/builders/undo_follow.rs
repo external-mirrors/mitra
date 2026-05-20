@@ -31,7 +31,7 @@ enum FollowOrFollowId {
 }
 
 #[derive(Serialize)]
-struct UndoFollow {
+pub struct UndoFollow {
     #[serde(rename = "@context")]
     _context: Context,
 
@@ -45,7 +45,7 @@ struct UndoFollow {
     to: Vec<String>,
 }
 
-fn build_undo_follow(
+pub fn build_undo_follow(
     authority: &Authority,
     actor_profile: &DbActorProfile,
     target_actor_id: &str,

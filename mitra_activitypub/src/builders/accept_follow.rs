@@ -36,7 +36,7 @@ pub struct AcceptFollow {
     pub to: Vec<String>,
 }
 
-fn build_accept_follow(
+pub fn build_accept_follow(
     authority: &Authority,
     actor_profile: &DbActorProfile,
     source_actor_id: &str,

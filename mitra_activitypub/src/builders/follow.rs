@@ -42,7 +42,7 @@ pub struct Follow {
     pub to: Vec<String>,
 }
 
-pub(super) fn build_follow(
+pub fn build_follow(
     authority: &Authority,
     actor_profile: &DbActorProfile,
     target_actor_id: &str,
