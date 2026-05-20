@@ -320,7 +320,7 @@ pub(super) async fn deliver_activity_worker(
                 .any(|current_hostname| is_onion(current_hostname))
             {
                 // Don't deliver to more than one onion at a time.
-                // Simultanous requests frequently fail.
+                // Simultaneous requests frequently fail.
                 continue;
             };
             // Deliver activities concurrently

@@ -265,11 +265,13 @@ async fn outbox(
     let collection_id = LocalActorCollection::Outbox.of(&actor_id);
     let first_page_id = format!("{}?page=true", collection_id);
     if query_params.page.is_none() {
-        let collection = OrderedCollection::new(
-            collection_id,
-            Some(first_page_id),
-            None,
-        );
+        let collection =
+            OrderedCollection::new(
+                collection_id,
+                Some(first_page_id),
+                None,
+            )
+            .with_attributed_to(&actor_id);
         let response = HttpResponse::Ok()
             .content_type(AP_MEDIA_TYPE)
             .json(collection);
@@ -297,7 +299,7 @@ async fn outbox(
                 .expect("activity should be serializable")
         } else {
             let activity = build_create_note(
-                instance.uri(),
+                &authority,
                 &instance.webfinger_hostname(),
                 &media_server,
                 post,
@@ -306,10 +308,12 @@ async fn outbox(
                 .expect("activity should be serializable")
         }
     }).collect();
-    let collection_page = OrderedCollection::new_page(
-        first_page_id,
-        activities,
-    );
+    let collection_page =
+        OrderedCollection::new_page(
+            first_page_id,
+            activities,
+        )
+        .with_attributed_to(&actor_id);
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
         .json(collection_page);
@@ -404,25 +408,12 @@ async fn featured_collection(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
     username: web::Path<String>,
-    query_params: web::Query<CollectionQueryParams>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let user = get_user_by_name(db_client, &username).await?;
     let instance = config.instance();
     let actor_id = local_actor_id(instance.uri_str(), &username);
     let collection_id = LocalActorCollection::Featured.of(&actor_id);
-    let first_page_id = format!("{}?page=true", collection_id);
-    if query_params.page.is_none() {
-        let collection = OrderedCollection::new(
-            collection_id,
-            Some(first_page_id),
-            None,
-        );
-        let response = HttpResponse::Ok()
-            .content_type(AP_MEDIA_TYPE)
-            .json(collection);
-        return Ok(response);
-    };
     let mut posts = get_posts_by_author(
         db_client,
         user.id,
@@ -448,13 +439,12 @@ async fn featured_collection(
         serde_json::to_value(note)
             .expect("note should be serializable")
     }).collect();
-    let collection_page = OrderedCollection::new_page(
-        first_page_id,
-        objects,
-    );
+    let collection =
+        OrderedCollection::new_with_items(collection_id, objects)
+            .with_attributed_to(&actor_id);
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
-        .json(collection_page);
+        .json(collection);
     Ok(response)
 }
 

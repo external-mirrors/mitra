@@ -998,6 +998,13 @@ paths:
       security:
         - tokenAuth: []
       parameters:
+        - name: all_reactions
+          in: query
+          description: Include emoji reactions
+          required: false
+          schema:
+            type: boolean
+            default: false
         - name: max_id
           in: query
           description: Return results with reaction ID older than this value.
@@ -3525,7 +3532,7 @@ components:
                   type: integer
                   example: 15
             media_attachments:
-              description: Limits realted to uploading attachments.
+              description: Limits related to uploading attachments.
               type: object
               properties:
                 supported_mime_types:
@@ -3650,7 +3657,7 @@ components:
                   type: integer
                   example: 15
             media_attachments:
-              description: Limits realted to uploading attachments.
+              description: Limits related to uploading attachments.
               type: object
               properties:
                 supported_mime_types:
@@ -3751,6 +3758,18 @@ components:
           description: Whether new accounts are in read only mode.
           type: boolean
           example: false
+        like_emoji:
+          description: Which emoji is used to represent the "like" reaction
+          type: string
+          enum:
+            - thumbs_up
+            - heart
+        favorite_emojis:
+          description: Which emojis to show by default in the emoji picker.
+          type: array
+          items:
+            type: string
+            example: "❤️"
         blockchains:
           description: Information about blockchain integrations.
           type: array

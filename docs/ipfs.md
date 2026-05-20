@@ -45,7 +45,7 @@ Documentation: https://github.com/ipfs/kubo/blob/master/docs/config.md
 
 When **kubo** starts, its memory usage is around 100 MB and then it slowly increases, often beyond the Resource Manager's limit. To keep memory usage within reasonable bounds the service needs to be restarted regularly.
 
-This can be achieved by using systemd process supervison features:
+This can be achieved by using systemd process supervision features:
 
 ```
 [Unit]

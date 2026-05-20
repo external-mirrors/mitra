@@ -82,7 +82,7 @@ pub struct Config {
 
     pub http_cors_allowlist: Option<Vec<String>>,
 
-    // If set to `true`, the rate limiter will check `X-Forwared-For` header
+    // If set to `true`, the rate limiter will check `X-Forwarded-For` header
     #[serde(default = "default_http_behind_reverse_proxy")]
     pub http_behind_reverse_proxy: bool,
 

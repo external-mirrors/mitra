@@ -207,7 +207,7 @@ impl ApClient {
         Ok(object_json)
     }
 
-    // Peforms filtering before fetching
+    // Performs filtering before fetching
     pub async fn fetch_object<T: DeserializeOwned>(
         &self,
         object_id: &str,
@@ -1052,7 +1052,7 @@ pub async fn import_replies(
     let (collection_id, item_type) = if use_context {
         if let Some(collection_id) = object.context_history {
             log::info!("reading 'contextHistory' collection");
-            // Converstion container
+            // Conversation container
             (collection_id, CollectionItemType::Activity)
         } else if let Some(collection_id) = object.context {
             log::info!("reading 'context' collection");

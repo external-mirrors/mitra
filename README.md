@@ -45,6 +45,7 @@ Demo instance: https://public.mitra.social/ ([invite-only](https://public.mitra.
 - [Fedicat](https://codeberg.org/technicat/fedicat) (iOS)
 - [Tuba](https://tuba.geopjr.dev/) (Desktop)
 - [toot](https://github.com/ihabunek/toot) (CLI)
+- [mastodon.el](https://codeberg.org/martianh/mastodon.el) (Emacs)
 
 ## Requirements
 

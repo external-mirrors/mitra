@@ -44,7 +44,7 @@ yourdomain.tld {
     # Set HSTS headers to improve security posture 
 	header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
 
-    # Set request body size maximum (This conincides with attachment size. Increase or decrease as you deem necessary)
+    # Set request body size maximum (This coincides with attachment size. Increase or decrease as you deem necessary)
 	request_body {
 		max_size 1MB
 	}

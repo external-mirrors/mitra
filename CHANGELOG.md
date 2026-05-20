@@ -8,9 +8,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Added option to generate `Like` activities to `create-activity` command.
+
+### Changed
+
+- Changed MSRV to 1.80.0.
+- Disabled pagination of `featured` collection.
+- Add `attributedTo` property to `outbox` and `featured` collections.
+- Allowed `Undo` activities with embedded `actor`.
+- Add request URI to GET request verification error message.
+
+### Fixed
+
+- Fixed misleading error message when digest header is not signed.
+
+## [5.3.0] - 2026-05-13
+
+### Added
+
 - Added `send-activity` command.
 - Added `create-activity` command with an option to generate LitePub relay activities.
 - Added option to generate `Bite` activities to `create-activity` command.
+- Added `all_reactions` parameter to `/api/v1/favourites` endpoint.
+- Added `like_emoji` parameter to dynamic configuration.
+- Added `favorite_emojis` parameter to dynamic configuration.
 
 ### Changed
 
@@ -20,6 +41,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't reject remote actors with unsupported key types.
 - Extract authority from request URI when processing `@authority` RFC-9421 component.
 - Improved reporting of authentication errors.
+- Don't set `Poll.voters_count` to `0` if poll has multiple choices.
+- Increased post content limit to 150 kB.
 
 ### Fixed
 
@@ -28,6 +51,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Security
 
 - Write warning to log when target authority of a signed request doesn't match instance hostname.
+- Harden SSRF protection by treating link-local and unspecified addresses as unsafe.
+- Block requests to mapped IPv4 private addresses.
 
 ## [5.2.0] - 2026-04-24
 
@@ -134,7 +159,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Don't serve outbox collection if owner is not registered.
-- Fixed query performace regression related to introduction of automated accounts.
+- Fixed query performance regression related to introduction of automated accounts.
 
 ## [4.19.0] - 2026-02-27
 
@@ -227,7 +252,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
-- Send payment notification to remote server when receving a payment for LWS invoice.
+- Send payment notification to remote server when receiving a payment for LWS invoice.
 - Generate better error messages when Monero address is not valid.
 - Optimized extraneous posts query.
 - Write extraneous posts query duration to log.
@@ -412,7 +437,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Changed minimum required PostgreSQL version to 15.
-- Don't include invoice and subscription counts in `instance-report` output if Monero intergration is not enabled.
+- Don't include invoice and subscription counts in `instance-report` output if Monero integration is not enabled.
 - Renamed `instance_uri` configuration parameter to `instance_url` (`instance_uri` is treated as alias).
 - Log CORS errors.
 - Return `413 Payload Too Large` if media uploaded by portable actor is too large.
@@ -852,7 +877,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
-- Fixed internal server error when acessing rate-limited endpoints via unix socket.
+- Fixed internal server error when accessing rate-limited endpoints via unix socket.
 - Fixed incorrect rate limiter IP address check.
 - Fixed incorrect de-duplication of activity recipients.
 - Fixed broken uploads in Bloat-FE.
@@ -1949,8 +1974,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Preserve wrapped database errors when converting from `AuthenticationError` to `InboxError`.
 - Use resolver URLs instead of plain DID URLs in FEP-ef61 representations of objects.
-- Write warning to log if `preferrredUsername` doesn't match cached value.
-- Don't rely on acct comparsion when verifying activity signature.
+- Write warning to log if `preferredUsername` doesn't match cached value.
+- Don't rely on acct comparison when verifying activity signature.
 - Use actor ID instead of webfinger address in logs.
 - Use actor ID as primary identifier instead of webfinger address.
 - Don't publish FEP-ef61 representation if user didn't enable FEP-ef61.

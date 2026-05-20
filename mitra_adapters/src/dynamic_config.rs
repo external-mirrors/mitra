@@ -4,22 +4,33 @@ use serde_json::{Value as JsonValue};
 use mitra_models::{
     database::{DatabaseClient, DatabaseError, DatabaseTypeError},
     properties::constants::{
+        FAVORITE_EMOJIS,
         FEDERATED_TIMELINE_RESTRICTED,
         FILTER_BLOCKLIST_PUBLIC,
         FILTER_KEYWORDS,
+        LIKE_EMOJI,
     },
     properties::queries::{
         get_internal_properties_json,
     },
 };
 use mitra_validators::errors::ValidationError;
+use mitra_utils::unicode::is_single_character;
 
 // Dynamic configuration parameters
-pub const EDITABLE_PROPERTIES: [&str; 3] = [
+pub const EDITABLE_PROPERTIES: [&str; 5] = [
+    FAVORITE_EMOJIS,
     FEDERATED_TIMELINE_RESTRICTED,
     FILTER_BLOCKLIST_PUBLIC,
     FILTER_KEYWORDS,
+    LIKE_EMOJI,
 ];
+
+const LIKE_EMOJI_VARIANTS: [&str; 2] = [
+    "thumbs_up",
+    "heart",
+];
+const DEFAULT_FAVORITE_EMOJIS: [&str; 8] = ["❤️", "😆", "🤔", "😢", "😡", "🎉", "💯", "👀"];
 
 pub fn validate_editable_parameter(
     name: &str,
@@ -27,6 +38,13 @@ pub fn validate_editable_parameter(
 ) -> Result<(), ValidationError> {
     let value = value.clone();
     match name {
+        FAVORITE_EMOJIS => {
+            let emojis: Vec<String> = serde_json::from_value(value)
+                .map_err(|_| ValidationError("invalid value type"))?;
+            if !emojis.iter().all(|text| is_single_character(text)) {
+                return Err(ValidationError("invalid unicode emoji"));
+            };
+        },
         FEDERATED_TIMELINE_RESTRICTED
             | FILTER_BLOCKLIST_PUBLIC =>
         {
@@ -37,6 +55,13 @@ pub fn validate_editable_parameter(
             let _: Vec<String> = serde_json::from_value(value)
                 .map_err(|_| ValidationError("invalid value type"))?;
         },
+        LIKE_EMOJI => {
+            let value_str: String = serde_json::from_value(value)
+                .map_err(|_| ValidationError("invalid value type"))?;
+            if !LIKE_EMOJI_VARIANTS.contains(&value_str.as_str()) {
+                return Err(ValidationError("invalid emoji name"));
+            };
+        },
         _ => return Err(ValidationError("invalid parameter name")),
     };
     Ok(())
@@ -45,18 +70,24 @@ pub fn validate_editable_parameter(
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
 pub struct DynamicConfig {
+    pub favorite_emojis: Vec<String>,
     pub federated_timeline_restricted: bool,
     pub filter_blocklist_public: bool,
     pub filter_keywords: Vec<String>,
+    pub like_emoji: String,
 }
 
-#[allow(clippy::derivable_impls)]
 impl Default for DynamicConfig {
     fn default() -> Self {
         Self {
+            favorite_emojis: DEFAULT_FAVORITE_EMOJIS
+                .iter()
+                .map(|emoji| emoji.to_string())
+                .collect(),
             federated_timeline_restricted: false,
             filter_blocklist_public: false,
             filter_keywords: vec![],
+            like_emoji: LIKE_EMOJI_VARIANTS[0].to_string(),
         }
     }
 }

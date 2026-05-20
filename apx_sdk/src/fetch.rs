@@ -53,7 +53,7 @@ pub enum FetchError {
     #[error(transparent)]
     SignatureError(#[from] HttpSignatureError),
 
-    #[error("inavlid URL")]
+    #[error("invalid URL")]
     UrlError,
 
     #[error(transparent)]

@@ -141,24 +141,6 @@ https://www.w3.org/TR/vc-di-eddsa/#eddsa-jcs-2022
 
 A variant of [eddsa-jcs-2022](https://www.w3.org/TR/vc-di-eddsa/#eddsa-jcs-2022) cryptosuite without context injection.
 
-#### MitraJcsRsaSignature2022
-
-Canonicalization algorithm: JCS  
-Hashing algorithm: SHA-256  
-Signature algorithm: RSASSA-PKCS1-v1_5
-
-#### MitraJcsEip191Signature2022
-
-Canonicalization algorithm: JCS  
-Hashing algorithm: KECCAK-256 (EIP-191)  
-Signature algorithm: ECDSA (EIP-191)
-
-#### MitraJcsEd25519Signature2022
-
-Canonicalization algorithm: JCS  
-Hashing algorithm: BLAKE2b-512  
-Signature algorithm: EdDSA
-
 ## Quotes
 
 Supported representations:
@@ -272,6 +254,13 @@ The `Remove` activity is used to notify subscribers about expired subscriptions.
   "type": "Remove"
 }
 ```
+
+## Limits
+
+| Limited property                                              | Size limit | Consequence of exceeding the limit |
+| ------------------------------------------------------------- | ---------- | ---------------------------------- |
+| Post content                                                  | 150 kB     | Post will be dropped               |
+| Poll options (number of `anyOf`/`oneOf` in a `Question`)      | 20         | Poll will be removed from the post |
 
 ## Mitra Web client
 

@@ -9,6 +9,9 @@ fn default_page_size() -> PageSize { PageSize::new(20) }
 
 #[derive(Deserialize)]
 pub struct FavListQueryParams {
+    #[serde(default)]
+    pub all_reactions: bool,
+
     pub max_id: Option<Uuid>,
 
     #[serde(default = "default_page_size")]

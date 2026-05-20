@@ -35,7 +35,7 @@ use mitra_models::{
         queries::{
             create_reaction,
             delete_reaction,
-            get_reactions,
+            get_post_reactions_detailed,
         },
         types::{ReactionData, ReactionDetailed},
     },
@@ -214,7 +214,7 @@ async fn delete_reaction_view(
 }
 
 #[get("/{status_id}/reactions")]
-async fn get_reactions_view(
+async fn get_post_reactions_view(
     auth: BearerAuth,
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
@@ -228,7 +228,7 @@ async fn get_reactions_view(
         Some(&current_user.profile),
         *status_id,
     ).await?;
-    let reactions = get_reactions(
+    let reactions = get_post_reactions_detailed(
         db_client,
         post.id,
         Some(current_user.id),
@@ -282,5 +282,5 @@ pub fn reaction_api_scope() -> Scope {
     web::scope("/v1/pleroma/statuses")
         .service(create_reaction_view)
         .service(delete_reaction_view)
-        .service(get_reactions_view)
+        .service(get_post_reactions_view)
 }

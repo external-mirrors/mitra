@@ -1,7 +1,7 @@
 [package]
 name = "apx_core"
 description = "APx core primitives"
-version = "0.23.0"
+version = "0.24.1-dev"
 license.workspace = true
 repository = "https://codeberg.org/silverpill/mitra/src/branch/main/apx_core"
 
@@ -55,7 +55,7 @@ sha2 = { version = "0.10.6", features = ["oid"] }
 # Used to calculate keccak-256 hashes
 sha3 = "0.10.6"
 # Used for creating error types
-thiserror = "1.0.37"
+thiserror = "2.0"
 # Used for multicodec implementation
 unsigned-varint = "0.7.1"
 # Used to work with URLs

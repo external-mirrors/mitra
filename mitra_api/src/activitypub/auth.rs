@@ -35,7 +35,11 @@ pub async fn check_request(
     ).await {
         Ok((_, signer)) => signer,
         Err(error) => {
-            log::warn!("request verification error: {error}");
+            log::warn!(
+                "request verification error ({}): {}",
+                request_full_uri,
+                error,
+            );
             // Will be converted into HttpError
             return Err(error.into());
         },

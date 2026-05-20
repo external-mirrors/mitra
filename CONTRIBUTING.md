@@ -5,7 +5,7 @@
 Mitra is developed according to these principles:
 
 - Resilience. The primary function of Mitra is delivery of messages from publisher to the audience. It should be able to perform this task even in adversarial conditions.
-- Self-hosting. If some feature depends on other service (such as blockchain node), that service must be free / open source software and it must be able to run on affordable hardware. No dependecies on proprietary services allowed.
+- Self-hosting. If some feature depends on other service (such as blockchain node), that service must be free / open source software and it must be able to run on affordable hardware. No dependencies on proprietary services allowed.
 - Low system requirements. The default configuration should work smoothly on a low-end VPS.
 - Easy to operate. Installation and maintenance should be as simple as possible. Moderation tasks should be delegated to users.
 - Privacy. In its default configuration, Mitra shouldn't require any personal info (other than username / public key) or collect usage statistics. It also shouldn't reveal more information about the user than necessary.

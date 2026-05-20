@@ -83,6 +83,7 @@ async fn handle_undo_follow(
 
 #[derive(Deserialize)]
 struct Undo {
+    #[serde(deserialize_with = "deserialize_into_object_id")]
     actor: String,
     #[serde(deserialize_with = "deserialize_into_object_id")]
     object: String,

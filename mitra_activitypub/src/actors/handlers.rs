@@ -85,7 +85,7 @@ use crate::{
         VERIFIABLE_IDENTITY_STATEMENT,
     },
     webfinger::{
-        peform_reverse_webfinger_query,
+        perform_reverse_webfinger_query,
     },
 };
 
@@ -285,7 +285,7 @@ async fn get_webfinger_hostname(
     let (server_hostname, webfinger_hostname) = match canonical_actor_id {
         CanonicalUri::Http(http_uri) => {
             let server_hostname = http_uri.hostname().to_string();
-            let webfinger_hostname = match peform_reverse_webfinger_query(
+            let webfinger_hostname = match perform_reverse_webfinger_query(
                 agent,
                 &actor.preferred_username,
                 &http_uri,

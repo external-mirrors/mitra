@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Changed MSRV to 1.80.0.
+- Migrated to `thiserror` 2.0.
+- Replaced `required_components` argument in `parse_http_signature_rfc9421` with a boolean flag.
+- Don't try to extract content digest if request method is not POST, PUT or PATCH.
+
+### Security
+
+- Return `NoDigest` error if digest header is not present in POST, PUT or PATCH request.
+- Require signed digest header if request method is POST, PUT or PATCH.
+
+## [0.24.0] - 2026-05-13
+
 ### Added
 
 - Added `authority` field to `HttpSignatureData` struct.
@@ -21,6 +35,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Removed
 
 - Removed `query` parameter from `fetch_json` function.
+
+### Security
+
+- Harden SSRF protection by treating link-local and unspecified addresses as unsafe.
+- Block requests to mapped IPv4 private addresses.
 
 ## [0.23.0] - 2026-05-05
 

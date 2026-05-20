@@ -1,6 +1,6 @@
 use std::cmp::max;
 use std::error::{Error as _};
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::time::Duration;
 
 use bytes::Bytes;
@@ -73,9 +73,27 @@ pub enum RedirectAction {
 // https://www.w3.org/TR/activitypub/#security-localhost
 // https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html
 fn is_safe_addr(ip_addr: IpAddr) -> bool {
+    let is_unsafe_ipv4 = |addr: Ipv4Addr| {
+        addr.is_loopback()
+        || addr.is_unspecified()
+        || addr.is_private()
+        || addr.is_link_local()
+    };
+    let is_unsafe_ipv6 = |addr: Ipv6Addr| {
+        addr.is_loopback()
+        || addr.is_unspecified()
+        // is_unicast_link_local (Rust 1.84)
+        || (addr.segments()[0] & 0xffc0) == 0xfe80
+        // is_unique_local (Rust 1.84)
+        || (addr.segments()[0] & 0xfe00) == 0xfc00
+    };
     match ip_addr {
-        IpAddr::V4(addr_v4) => !addr_v4.is_loopback() && !addr_v4.is_private(),
-        IpAddr::V6(addr_v6) => !addr_v6.is_loopback(),
+        IpAddr::V4(addr_v4) => !is_unsafe_ipv4(addr_v4),
+        IpAddr::V6(addr_v6) => {
+            let is_unsafe_mapped = addr_v6.to_ipv4_mapped()
+                .is_some_and(is_unsafe_ipv4);
+            !is_unsafe_ipv6(addr_v6) && !is_unsafe_mapped
+        },
     }
 }
 
@@ -329,5 +347,32 @@ mod tests {
         assert_eq!(is_safe_url("http://[::1]:5941/test"), false);
         assert_eq!(is_safe_url("http://localhost:5941/test"), true);
         assert_eq!(is_safe_url("https://server.local/test"), true);
+    }
+
+    #[test]
+    fn test_is_safe_url_yggdrasil() {
+        let url = "http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/objects/1";
+        assert_eq!(is_safe_url(url), true);
+    }
+
+    #[test]
+    fn test_is_safe_url_unspecified() {
+        let url = "http://0.0.0.0:8080/admin/";
+        assert_eq!(is_safe_url(url), false);
+    }
+
+    #[test]
+    fn test_is_safe_url_private() {
+        let url = "http://172.17.0.1:8080/admin/";
+        assert_eq!(is_safe_url(url), false);
+        let url = "http://169.254.169.254/latest/meta-data/";
+        assert_eq!(is_safe_url(url), false);
+    }
+
+    #[test]
+    fn test_is_safe_url_ipv4_to_ipv6() {
+        // 127.0.0.1 converted into IPv6 address
+        let url = "http://[::ffff:7f00:1]:5941/test";
+        assert_eq!(is_safe_url(url), false);
     }
 }
