@@ -18,6 +18,7 @@ use uuid::Uuid;
 use mitra_activitypub::{
     adapters::posts::delete_local_post,
     agent::build_federation_agent,
+    authority::Authority,
     builders::{
         create_note::build_create_note,
         collection::OrderedCollection,
@@ -280,10 +281,11 @@ impl ExportPosts {
             self.limit,
         ).await?;
         add_related_posts(db_client, posts.iter_mut().collect()).await?;
+        let authority = Authority::from(&instance);
         let media_server = MediaServer::new(config);
         let activities = posts.iter().map(|post| {
             let activity = build_create_note(
-                instance.uri(),
+                &authority,
                 &instance.webfinger_hostname(),
                 &media_server,
                 post,

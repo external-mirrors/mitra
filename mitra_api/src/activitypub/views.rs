@@ -299,7 +299,7 @@ async fn outbox(
                 .expect("activity should be serializable")
         } else {
             let activity = build_create_note(
-                instance.uri(),
+                &authority,
                 &instance.webfinger_hostname(),
                 &media_server,
                 post,
