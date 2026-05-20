@@ -94,6 +94,7 @@ pub fn prepare_undo_follow(
 
 #[cfg(test)]
 mod tests {
+    use serde_json::{json, to_value};
     use mitra_utils::id::generate_ulid;
     use super::*;
 
@@ -109,37 +110,52 @@ mod tests {
             &source,
             target_actor_id,
             follow_request_id,
-            true, // legacy activity ID
+            false, // no legacy activity ID
         );
+        let value = to_value(&activity).unwrap();
+        let expected_value = json!({
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+                "https://w3id.org/security/v1",
+                "https://w3id.org/security/data-integrity/v2",
+                {
+                    "Hashtag": "as:Hashtag",
+                    "sensitive": "as:sensitive",
+                    "toot": "http://joinmastodon.org/ns#",
+                    "Emoji": "toot:Emoji"
+                },
+            ],
+            "id": format!("{}/activities/undo/{}", INSTANCE_URI, follow_request_id),
+            "type": "Undo",
+            "actor": activity.actor,
+            "object": {
+                "id": format!("{}/activities/follow/{}", INSTANCE_URI, follow_request_id),
+                "type": "Follow",
+                "actor": activity.actor,
+                "object": target_actor_id,
+                "to": [target_actor_id],
+            },
+            "to": [target_actor_id],
+        });
+        assert_eq!(value, expected_value);
+    }
 
-        assert_eq!(
-            activity.id,
-            format!("{}/activities/undo/{}", INSTANCE_URI, follow_request_id),
-        );
-        assert_eq!(activity.activity_type, "Undo");
-        assert_eq!(
-            activity.actor,
-            format!("{}/users/user", INSTANCE_URI),
-        );
-        assert_eq!(activity.object._context, None);
-        assert_eq!(
-            activity.object.id,
-            format!("{}/objects/{}", INSTANCE_URI, follow_request_id),
-        );
-        assert_eq!(activity.object.actor, activity.actor);
-        assert_eq!(activity.object.object, target_actor_id);
-        assert_eq!(activity.to, vec![target_actor_id]);
-
+    #[test]
+    fn test_build_undo_follow_legacy_follow_request() {
+        let source = DbActorProfile::local_for_test("user");
+        let target_actor_id = "https://test.remote/users/123";
+        let follow_request_id = generate_ulid();
         let activity = build_undo_follow(
             INSTANCE_URI,
             &source,
             target_actor_id,
             follow_request_id,
-            false, // no legacy activity ID
+            true, // legacy activity ID
         );
+        let value = to_value(activity).unwrap();
         assert_eq!(
-            activity.object.id,
-            format!("{}/activities/follow/{}", INSTANCE_URI, follow_request_id),
+            value["object"]["id"].as_str().unwrap(),
+            format!("{}/objects/{}", INSTANCE_URI, follow_request_id),
         );
     }
 }
