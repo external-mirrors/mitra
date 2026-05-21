@@ -80,7 +80,7 @@ pub async fn create_or_update_remote_emoji(
     Ok((emoji, deletion_queue))
 }
 
-pub async fn update_emoji(
+pub async fn update_remote_emoji(
     db_client: &mut impl DatabaseClient,
     emoji_id: Uuid,
     image: MediaInfo,
@@ -129,6 +129,7 @@ pub async fn create_or_update_local_emoji(
     db_client: &mut impl DatabaseClient,
     emoji_name: &str,
     image: MediaInfo,
+    category: Option<&str>,
 ) -> Result<(CustomEmoji, DeletionQueue), DatabaseError> {
     let transaction = db_client.transaction().await?;
     let maybe_detached_image_row = transaction.query_opt(
@@ -154,14 +155,23 @@ pub async fn create_or_update_local_emoji(
             id,
             emoji_name,
             image,
+            category,
             updated_at
         )
-        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+        VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
         ON CONFLICT (emoji_name) WHERE hostname IS NULL
-        DO UPDATE SET image = $3, updated_at = CURRENT_TIMESTAMP
+        DO UPDATE SET
+            image = $3,
+            category = $4,
+            updated_at = CURRENT_TIMESTAMP
         RETURNING emoji
         ",
-        &[&emoji_id, &emoji_name, &image],
+        &[
+            &emoji_id,
+            &emoji_name,
+            &image,
+            &category,
+        ],
     ).await?;
     let emoji: CustomEmoji = row.try_get("emoji")?;
     update_emoji_caches(&transaction, emoji.id).await?;
@@ -386,7 +396,7 @@ mod tests {
             "https://example.social/emojis/test",
             Utc::now(),
         ).await.unwrap();
-        let (updated_emoji, deletion_queue) = update_emoji(
+        let (updated_emoji, deletion_queue) = update_remote_emoji(
             db_client,
             emoji.id,
             image,
@@ -405,6 +415,7 @@ mod tests {
             db_client,
             "local",
             image.clone(),
+            None,
         ).await.unwrap();
         assert_eq!(emoji.hostname.is_none(), true);
         assert_eq!(deletion_queue.files.len(), 0);
@@ -412,9 +423,11 @@ mod tests {
             db_client,
             "local",
             image,
+            Some("blobcats"),
         ).await.unwrap();
         assert_eq!(updated_emoji.id, emoji.id);
         assert_eq!(updated_emoji.hostname.is_none(), true);
+        assert_eq!(updated_emoji.category.unwrap(), "blobcats");
         assert_ne!(updated_emoji.updated_at, emoji.updated_at);
         assert_eq!(deletion_queue.files.len(), 1);
     }
@@ -428,6 +441,7 @@ mod tests {
             db_client,
             "test",
             image,
+            None,
         ).await.unwrap();
         let deletion_queue = delete_emoji(db_client, emoji.id).await.unwrap();
         assert_eq!(deletion_queue.files.len(), 1);
@@ -443,6 +457,7 @@ mod tests {
             db_client,
             "test",
             image,
+            None,
         ).await.unwrap();
         let profile_data = ProfileCreateData {
             emojis: vec![emoji.id],

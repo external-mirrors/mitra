@@ -13,6 +13,7 @@ pub struct CustomEmoji {
     pub emoji_name: String,
     pub(super) hostname: Option<String>,
     pub image: PartialMediaInfo,
+    pub category: Option<String>,
     pub object_id: Option<String>,
     pub updated_at: DateTime<Utc>,
 }

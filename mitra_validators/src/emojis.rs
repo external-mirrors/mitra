@@ -8,6 +8,8 @@ use super::errors::ValidationError;
 const EMOJI_LOCAL_NAME_RE: &str = r"^[a-zA-Z0-9_]{2,}$";
 const EMOJI_REMOTE_NAME_RE: &str = r"^[a-zA-Z0-9._+-]+$";
 pub (super) const EMOJI_NAME_SIZE_MAX: usize = 100; // database column limit
+const EMOJI_CATEGORY_NAME_RE: &str = r"^[a-z]{2,}$";
+const EMOJI_CATEGORY_NAME_LENGTH_MAX: usize = 100;
 
 // https://github.com/mastodon/mastodon/blob/v4.4.2/app/models/custom_emoji.rb#L37
 pub const EMOJI_LOCAL_MEDIA_TYPES: [&str; 3] = [
@@ -54,6 +56,20 @@ pub fn clean_emoji_name(emoji_name: &str) -> &str {
     } else {
         emoji_name
     }
+}
+
+pub fn validate_emoji_category_name(
+    category_name: &str,
+) -> Result<(), ValidationError> {
+    let name_re = Regex::new(EMOJI_CATEGORY_NAME_RE)
+        .expect("regexp should be valid");
+    if !name_re.is_match(category_name) {
+        return Err(ValidationError("invalid category name"));
+    };
+    if category_name.len() > EMOJI_CATEGORY_NAME_LENGTH_MAX {
+        return Err(ValidationError("category name is too long"));
+    };
+    Ok(())
 }
 
 #[cfg(test)]
@@ -113,5 +129,12 @@ mod tests {
         let shortcode = "test_emoji:";
         let output = clean_emoji_name(shortcode);
         assert_eq!(output, "test_emoji:");
+    }
+
+    #[test]
+    fn test_validate_emoji_category_name() {
+        let category_name = "blobcats";
+        let result = validate_emoji_category_name(category_name);
+        assert!(result.is_ok());
     }
 }

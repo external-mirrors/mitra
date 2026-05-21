@@ -16,7 +16,7 @@ use mitra_models::{
     emojis::queries::{
         create_or_update_remote_emoji,
         get_remote_emoji_by_object_id,
-        update_emoji,
+        update_remote_emoji,
     },
     emojis::types::{CustomEmoji as DbCustomEmoji},
     filter_rules::types::FilterAction,
@@ -156,7 +156,7 @@ pub async fn handle_emoji(
     };
     let db_client = &mut **get_database_client(db_pool).await?;
     let db_emoji = if let Some(emoji_id) = maybe_emoji_id {
-        let (db_emoji, deletion_queue) = update_emoji(
+        let (db_emoji, deletion_queue) = update_remote_emoji(
             db_client,
             emoji_id,
             image,

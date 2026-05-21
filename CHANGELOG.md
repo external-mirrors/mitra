@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `federation.no_proxy` configuration parameter.
 - Added command groups: `account`, `ap`, `config`, `emoji`, `filter`, `invite`, `media`.
 - Added `instance` parameter to `/api/v1/timelines/public` API method.
+- Allow to specify category when adding emoji to local collection.
 
 ### Changed
 

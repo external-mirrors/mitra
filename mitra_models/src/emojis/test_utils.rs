@@ -9,6 +9,7 @@ impl CustomEmoji {
             emoji_name: name.to_owned(),
             hostname: None,
             image: PartialMediaInfo::from(MediaInfo::png_for_test()),
+            category: None,
             object_id: None,
             updated_at: Default::default(),
         }
@@ -29,6 +30,7 @@ impl CustomEmoji {
             emoji_name: name.to_owned(),
             hostname: Some(hostname.to_owned()),
             image: PartialMediaInfo::from(media_info),
+            category: None,
             object_id: Some(object_id),
             updated_at: Default::default(),
         }

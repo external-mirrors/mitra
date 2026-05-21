@@ -3372,6 +3372,10 @@ components:
         visible_in_picker:
           description: Whether this Emoji should be visible in the picker or unlisted.
           type: boolean
+        category:
+          description: Used for sorting custom emoji in the picker.
+          type: string
+          nullable: true
     DomainBlock:
       description: Represents a domain that is blocked by the instance.
       type: object
