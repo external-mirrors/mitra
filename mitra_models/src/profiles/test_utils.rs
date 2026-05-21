@@ -1,7 +1,7 @@
 use apx_core::{
     url::{
         ap_uri::is_ap_uri,
-        http_url_whatwg::get_hostname,
+        http_uri::HttpUri,
     },
 };
 use uuid::Uuid;
@@ -107,17 +107,20 @@ impl DbActorProfile {
         username: &str,
         actor_data: DbActor,
     ) -> Self {
-        let hostname = if actor_data.is_portable() {
-            get_hostname(actor_data.gateways.first().unwrap()).unwrap()
+        let hostname_uri = if actor_data.is_portable() {
+            actor_data.gateways[0].clone()
         } else {
-            get_hostname(&actor_data.id).unwrap()
+            actor_data.id.clone()
         };
+        let hostname = HttpUri::parse(&hostname_uri)
+            .unwrap()
+            .hostname();
         let acct = format!("{}@{}", username, hostname);
         let actor_id = actor_data.id.clone();
         let profile = Self {
             username: username.to_string(),
-            hostname: Some(hostname.clone()),
-            webfinger_hostname: Some(hostname.clone()),
+            hostname: Some(hostname.to_string()),
+            webfinger_hostname: Some(hostname.to_string()),
             acct: Some(acct),
             actor_json: Some(actor_data),
             actor_id: Some(actor_id),
