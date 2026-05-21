@@ -54,7 +54,7 @@ pub enum Network {
 pub fn get_network_type(request_url: &str) ->
     Result<Network, UrlError>
 {
-    let hostname = get_hostname(request_url)?;
+    let hostname = get_hostname(request_url)?.to_string();
     let network = if is_onion(&hostname) {
         Network::Tor
     } else if is_i2p(&hostname) {

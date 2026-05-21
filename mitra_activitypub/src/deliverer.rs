@@ -292,7 +292,7 @@ pub(super) async fn deliver_activity_worker(
         if recipient.is_finished() {
             continue;
         };
-        let hostname = get_hostname(&recipient.inbox)?;
+        let hostname = get_hostname(&recipient.inbox)?.to_string();
         deliveries.push((index, hostname, recipient.inbox.clone()));
     };
 
