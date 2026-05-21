@@ -47,6 +47,8 @@ pub struct FederationConfig {
     pub proxy_url: Option<String>,
     pub onion_proxy_url: Option<String>,
     pub i2p_proxy_url: Option<String>,
+    #[serde(default)]
+    pub no_proxy: Vec<String>,
 
     #[serde(
         alias = "announce_like_enabled",
@@ -77,6 +79,7 @@ impl Default for FederationConfig {
             proxy_url: None,
             onion_proxy_url: None,
             i2p_proxy_url: None,
+            no_proxy: vec![],
             fep_1b12_full_enabled: default_fep_1b12_full_enabled(),
             fep_ef61_gateway_enabled: default_fep_ef61_gateway_enabled(),
             fep_171b_public_enabled: default_fep_171b_public_enabled(),

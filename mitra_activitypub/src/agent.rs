@@ -40,7 +40,7 @@ pub(super) fn build_federation_agent_with_key(
         proxy_url: instance.federation.proxy_url.clone(),
         onion_proxy_url: instance.federation.onion_proxy_url.clone(),
         i2p_proxy_url: instance.federation.i2p_proxy_url.clone(),
-        no_proxy: vec![],
+        no_proxy: instance.federation.no_proxy.clone(),
         signer: maybe_signer,
         rfc9421_enabled: false,
     }
