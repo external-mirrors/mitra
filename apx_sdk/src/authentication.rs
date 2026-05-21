@@ -104,6 +104,7 @@ pub fn verify_fetched_object(
     match verify_portable_object(&object.value) {
         Ok(_) => (),
         Err(AuthenticationError::InvalidObjectID(_)) => {
+            // TODO: use different error variant
             return Err(FetchError::UrlError);
         },
         Err(AuthenticationError::NotPortable) => {

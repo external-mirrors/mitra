@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Re-exported `Host` from `http_url_whatwg` module.
+- Added `no_proxy` parameter to `FederationAgent`.
 
 ### Changed
 

@@ -32,11 +32,7 @@ use apx_core::{
     url::{
         hostname::{is_i2p, is_onion},
         http_uri::parse_http_url_whatwg,
-        http_url_whatwg::{
-            get_hostname,
-            get_ip_address,
-            UrlError,
-        },
+        http_url_whatwg::{get_ip_address, Host},
     },
 };
 
@@ -51,18 +47,14 @@ pub enum Network {
     I2p,
 }
 
-pub fn get_network_type(request_url: &str) ->
-    Result<Network, UrlError>
-{
-    let hostname = get_hostname(request_url)?.to_string();
-    let network = if is_onion(&hostname) {
+fn get_network_type(hostname: &str) -> Network {
+    if is_onion(hostname) {
         Network::Tor
-    } else if is_i2p(&hostname) {
+    } else if is_i2p(hostname) {
         Network::I2p
     } else {
         Network::Default
-    };
-    Ok(network)
+    }
 }
 
 pub enum RedirectAction {
@@ -175,12 +167,13 @@ mod dns_resolver {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn create_http_client(
     agent: &FederationAgent,
-    network: Network,
+    target_host: &Host<String>,
     timeout: u64,
     redirect_action: RedirectAction,
 ) -> reqwest::Result<Client> {
     let mut client_builder = Client::builder();
     let mut maybe_proxy_url = agent.proxy_url.as_ref();
+    let network = get_network_type(&target_host.to_string());
     match network {
         Network::Default => (),
         Network::Tor => {
@@ -194,7 +187,11 @@ pub fn create_http_client(
     };
     if let Some(proxy_url) = maybe_proxy_url {
         let proxy = Proxy::all(proxy_url)?;
-        client_builder = client_builder.proxy(proxy);
+        if !agent.no_proxy.iter()
+            .any(|host| *host == target_host.to_string())
+        {
+            client_builder = client_builder.proxy(proxy);
+        };
     };
     if agent.ssrf_protection_enabled {
         client_builder = client_builder.dns_resolver(
@@ -225,12 +222,13 @@ pub fn create_http_client(
 #[cfg(target_arch = "wasm32")]
 pub fn create_http_client(
     _agent: &FederationAgent,
-    _network: Network,
+    target_host: &Host<String>,
     timeout: u64,
     _redirect_action: RedirectAction,
 ) -> reqwest::Result<Client> {
     // Proxies are not supported:
     // https://github.com/seanmonstar/reqwest/issues/2504
+    let _network = get_network_type(&target_host.to_string());
 
     // DNS resolvers are not supported:
 

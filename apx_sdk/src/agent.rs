@@ -17,6 +17,8 @@ pub struct FederationAgent {
     pub proxy_url: Option<String>,
     pub onion_proxy_url: Option<String>,
     pub i2p_proxy_url: Option<String>,
+    /// List of hostnames for which the proxy should be disabled
+    pub no_proxy: Vec<String>,
 
     /// Key for creating HTTP signatures.
     pub signer: Option<HttpSigner>,
@@ -35,6 +37,7 @@ impl Default for FederationAgent {
             proxy_url: None,
             onion_proxy_url: None,
             i2p_proxy_url: None,
+            no_proxy: vec![],
             signer: None,
             rfc9421_enabled: false,
         }
