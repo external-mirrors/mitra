@@ -3,7 +3,6 @@ use apx_core::{
         canonical::CanonicalUri,
         common::Origin,
         http_uri::{Hostname, HttpUri},
-        http_url_whatwg::get_hostname,
     },
 };
 use apx_sdk::{
@@ -306,9 +305,10 @@ async fn get_webfinger_hostname(
         CanonicalUri::Ap(_) => {
             if let Some(gateway) = actor.gateways.first() {
                 // Primary gateway
-                let gateway_hostname = get_hostname(gateway)
+                let gateway_hostname = HttpUri::parse(gateway)
+                    .map(|http_uri| http_uri.hostname())
                     .map_err(|_| ValidationError("invalid gateway URL"))?;
-                if gateway_hostname == instance_uri.hostname().as_str() {
+                if gateway_hostname == instance_uri.hostname() {
                     // Portable actor with local account (unmanaged)
                     if has_portable_account {
                         return Ok((None, WebfingerHostname::Local));
@@ -319,7 +319,7 @@ async fn get_webfinger_hostname(
                 };
                 let webfinger_address = WebfingerAddress::new_unchecked(
                     &actor.preferred_username,
-                    &gateway_hostname,
+                    gateway_hostname.as_str(),
                 );
                 let webfinger_actor_id = perform_webfinger_query(
                     agent,
@@ -329,7 +329,10 @@ async fn get_webfinger_hostname(
                     .map_err(|_| ValidationError("invalid actor ID in JRD"))?;
                 if canonical_webfinger_actor_id == canonical_actor_id {
                     // Actor is hosted by this gateway
-                    (Some(gateway_hostname.clone()), WebfingerHostname::Remote(gateway_hostname))
+                    (
+                        Some(gateway_hostname.to_string()),
+                        WebfingerHostname::Remote(gateway_hostname.to_string()),
+                    )
                 } else {
                     return Err(ValidationError("unexpected actor ID in JRD").into());
                 }
@@ -341,9 +344,10 @@ async fn get_webfinger_hostname(
         CanonicalUri::Ap(_) => {
             if let Some(gateway) = actor.gateways.first() {
                 // Primary gateway
-                let gateway_hostname = get_hostname(gateway)
+                let gateway_hostname =  HttpUri::parse(gateway)
+                    .map(|http_uri| http_uri.hostname())
                     .map_err(|_| ValidationError("invalid gateway URL"))?;
-                if gateway_hostname == instance_uri.hostname().as_str() {
+                if gateway_hostname == instance_uri.hostname() {
                     // Portable actor with local account (unmanaged)
                     if has_portable_account {
                         return Ok((None, WebfingerHostname::Local));
@@ -354,7 +358,10 @@ async fn get_webfinger_hostname(
                 };
                 // Actor is hosted by this gateway
                 // WARNING: not verified
-                (Some(gateway_hostname.clone()), WebfingerHostname::Remote(gateway_hostname))
+                (
+                    Some(gateway_hostname.to_string()),
+                    WebfingerHostname::Remote(gateway_hostname.to_string()),
+                )
             } else {
                 return Err(ValidationError("at least one gateway must be specified").into());
             }

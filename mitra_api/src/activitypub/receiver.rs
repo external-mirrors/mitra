@@ -97,7 +97,7 @@ pub async fn receive_activity(
     let filter = &ap_client.filter;
     if let Ok(possible_actor_hostname) = get_hostname(&activity_actor) {
         // This only works for HTTP URIs
-        if filter.is_incoming_blocked(&possible_actor_hostname) {
+        if filter.is_incoming_blocked(&possible_actor_hostname.to_string()) {
             log::info!("ignoring activity from blocked instance {possible_actor_hostname}");
             return Ok(());
         };

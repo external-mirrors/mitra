@@ -1,18 +1,19 @@
 use std::net::IpAddr;
 
-use url::{Host, Url};
+use url::Url;
 
 pub use url::{
+    Host,
     ParseError as UrlError,
 };
 
 /// Returns URL host name (without port number)
 /// IDNs are converted into punycode
-pub fn get_hostname(url: &str) -> Result<String, UrlError> {
+pub fn get_hostname(url: &str) -> Result<Host<String>, UrlError> {
     let hostname = Url::parse(url)?
         .host()
         .ok_or(UrlError::EmptyHost)?
-        .to_string();
+        .to_owned();
     Ok(hostname)
 }
 
@@ -34,35 +35,35 @@ mod tests {
     fn test_get_hostname() {
         let url = "https://example.org/objects/1";
         let hostname = get_hostname(url).unwrap();
-        assert_eq!(hostname, "example.org");
+        assert_eq!(hostname.to_string(), "example.org");
     }
 
     #[test]
     fn test_get_hostname_if_port_number() {
         let url = "http://127.0.0.1:8380/objects/1";
         let hostname = get_hostname(url).unwrap();
-        assert_eq!(hostname, "127.0.0.1");
+        assert_eq!(hostname.to_string(), "127.0.0.1");
     }
 
     #[test]
     fn test_get_hostname_tor() {
         let url = "http://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion/objects/1";
         let hostname = get_hostname(url).unwrap();
-        assert_eq!(hostname, "2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion");
+        assert_eq!(hostname.to_string(), "2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion");
     }
 
     #[test]
     fn test_get_hostname_yggdrasil() {
         let url = "http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/objects/1";
         let hostname = get_hostname(url).unwrap();
-        assert_eq!(hostname, "[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]");
+        assert_eq!(hostname.to_string(), "[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]");
     }
 
     #[test]
     fn test_get_hostname_idn() {
         let url = "https://räksmörgås.josefsson.org/raksmorgas.jpg";
         let hostname = get_hostname(url).unwrap();
-        assert_eq!(hostname, "xn--rksmrgs-5wao1o.josefsson.org");
+        assert_eq!(hostname.to_string(), "xn--rksmrgs-5wao1o.josefsson.org");
     }
 
     #[test]

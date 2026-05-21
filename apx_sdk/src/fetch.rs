@@ -22,7 +22,10 @@ use thiserror::Error;
 use apx_core::{
     http_signatures::create::HttpSignatureError,
     media_type::sniff_media_type,
-    url::canonical::is_same_origin,
+    url::{
+        canonical::is_same_origin,
+        http_url_whatwg::get_hostname,
+    },
 };
 
 use super::{
@@ -35,7 +38,6 @@ use super::{
         build_http_request,
         create_http_client,
         describe_request_error,
-        get_network_type,
         limited_response,
         sign_http_request,
         RedirectAction,
@@ -53,6 +55,7 @@ pub enum FetchError {
     #[error(transparent)]
     SignatureError(#[from] HttpSignatureError),
 
+    // TODO: from UrlError
     #[error("invalid URL")]
     UrlError,
 
@@ -112,11 +115,11 @@ fn create_fetcher_client(
     request_url: &str,
     redirect_action: RedirectAction,
 ) -> Result<Client, FetchError> {
-    let network = get_network_type(request_url)
+    let hostname = get_hostname(request_url)
         .map_err(|_| FetchError::UrlError)?;
     let client = create_http_client(
         agent,
-        network,
+        &hostname,
         agent.fetcher_timeout,
         redirect_action,
     )?;
