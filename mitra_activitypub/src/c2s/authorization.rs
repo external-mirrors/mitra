@@ -7,6 +7,7 @@ use apx_sdk::{
         },
         json_signatures::create::is_object_signed,
     },
+    deserialization::object_to_id,
     ownership::is_ownership_ambiguous,
     utils::{
         get_core_type,
@@ -16,16 +17,30 @@ use apx_sdk::{
 use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
-use mitra_models::users::types::PortableUser;
+use mitra_models::{
+    activitypub::queries::get_object,
+    database::DatabaseClient,
+    users::types::PortableUser,
+};
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    errors::HandlerError,
+    identifiers::canonicalize_id,
     keys::verification_method_to_public_key,
     ownership::{
         get_object_id_opt,
         get_owner,
         is_local_origin,
         is_same_id,
+    },
+    vocabulary::{
+        ADD,
+        DELETE,
+        MOVE,
+        REMOVE,
+        UNDO,
+        UPDATE,
     },
 };
 
@@ -112,6 +127,40 @@ pub fn verify_embedded_ownership(
         };
         if !is_same_id(&object_owner, &root_owner)? {
             return Err(ValidationError("embedded object has different owner"))
+        };
+    };
+    Ok(())
+}
+
+pub async fn verify_permissions(
+    db_client: &impl DatabaseClient,
+    object: &JsonValue,
+) -> Result<(), HandlerError> {
+    let objects = find_objects(object);
+    if objects.len() > 20 {
+        return Err(ValidationError("too many embedded objects").into());
+    };
+    for object in objects {
+        let (activity, object) = match object["type"].as_str() {
+            Some(UPDATE | DELETE | UNDO) => (object, &object["object"]),
+            Some(ADD | REMOVE) => (object, &object["target"]),
+            // Move: both object and target?
+            Some(MOVE) =>
+                return Err(ValidationError("Move activity is not allowed").into()),
+            // Non-AS activities?
+            _ => continue,
+        };
+        // Actions will appear as same-origin to servers that don't implement FEP-ef61
+        let activity_owner = get_owner(activity, get_core_type(activity))?;
+        let object_id = object_to_id(object)
+            .map_err(|_| ValidationError("unexpected activity structure"))?;
+        let canonical_object_id = canonicalize_id(&object_id)?;
+        let object = get_object(db_client, &canonical_object_id).await?;
+        let object_owner = get_owner(&object, get_core_type(&object))?;
+        if !is_same_id(&activity_owner, &object_owner)? {
+            return Err(ValidationError(
+                "actor is not authorized to perform action"
+            ).into());
         };
     };
     Ok(())

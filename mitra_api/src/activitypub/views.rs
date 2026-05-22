@@ -27,6 +27,7 @@ use apx_core::{
     http_types::{header_map_adapter, method_adapter, uri_adapter},
     url::{
         ap_uri::with_ap_prefix,
+        canonical::CanonicalUri,
         common::url_decode,
         http_uri::HttpUri,
     },
@@ -59,6 +60,7 @@ use mitra_activitypub::{
     },
     c2s::authorization::{
         verify_embedded_ownership,
+        verify_permissions,
         verify_public_keys,
     },
     forwarder::get_activity_recipients,
@@ -718,9 +720,12 @@ pub async fn activity_view(
     request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
     let request_full_uri = get_request_full_uri(&connection_info, request.uri());
+    let canonical_activity_id =
+        CanonicalUri::parse_canonical(&request_full_uri.to_string())
+            .map_err(|_| ValidationError("invalid activity ID"))?;
     let activity = get_object(
         db_client_await!(&db_pool),
-        &request_full_uri.to_string(),
+        &canonical_activity_id,
     ).await?;
     let audience = get_activity_audience(&activity, None)?;
     if !audience.iter().any(|id| id.to_string() == AP_PUBLIC) {
@@ -777,6 +782,7 @@ async fn apgateway_create_actor_view(
         &actor,
     )?;
     verify_embedded_ownership(&actor)?;
+    verify_permissions(db_client_await!(&db_pool), &actor).await?;
     let (user, created) = register_portable_actor(
         &config,
         &db_pool,
@@ -986,6 +992,8 @@ async fn apgateway_outbox_push_view(
         &activity,
     )?;
     verify_embedded_ownership(&activity)?;
+    verify_permissions(db_client, &activity).await?;
+    // TODO: process activity immediately
     IncomingActivityJobData::new(
         &activity,
         None, // no inbox
