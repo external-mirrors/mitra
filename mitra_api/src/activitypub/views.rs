@@ -61,7 +61,6 @@ use mitra_activitypub::{
         verify_embedded_ownership,
         verify_public_keys,
     },
-    errors::HandlerError,
     forwarder::get_activity_recipients,
     handlers::activity::get_activity_audience,
     identifiers::{
@@ -783,14 +782,8 @@ async fn apgateway_create_actor_view(
         &db_pool,
         actor.into_inner(),
         maybe_invite_code,
-    ).await.map_err(|error| {
+    ).await.inspect_err(|error| {
         log::warn!("failed to register portable actor ({error})");
-        match error {
-            HandlerError::ValidationError(error) =>
-                HttpError::ValidationError(error),
-            HandlerError::DatabaseError(error) => error.into(),
-            other_error => HttpError::from_internal(other_error),
-        }
     })?;
     let status_code = if created {
         log::warn!("created portable account {}", user);

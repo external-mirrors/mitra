@@ -1,6 +1,9 @@
 use thiserror::Error;
 
-use mitra_activitypub::authentication::AuthenticationError;
+use mitra_activitypub::{
+    authentication::AuthenticationError,
+    errors::HandlerError,
+};
 use mitra_models::database::errors::DatabaseError;
 use mitra_validators::errors::ValidationError;
 
@@ -36,6 +39,17 @@ impl From<EndpointError> for HttpError {
             EndpointError::AuthError(_) => {
                 HttpError::AuthError("invalid signature")
             },
+        }
+    }
+}
+
+impl From<HandlerError> for HttpError {
+    fn from(error: HandlerError) -> Self {
+         match error {
+            HandlerError::ValidationError(error) =>
+                HttpError::ValidationError(error),
+            HandlerError::DatabaseError(error) => error.into(),
+            other_error => HttpError::from_internal(other_error),
         }
     }
 }
