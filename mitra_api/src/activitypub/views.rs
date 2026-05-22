@@ -143,10 +143,8 @@ use super::{
         check_request,
         check_request_opt,
     },
-    receiver::{
-        receive_activity,
-        EndpointError,
-    },
+    errors::EndpointError,
+    receiver::receive_activity,
     types::{
         CollectionQueryParams,
         GatewayMetadata,

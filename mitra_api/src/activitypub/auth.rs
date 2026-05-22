@@ -16,7 +16,7 @@ use mitra_models::{
     profiles::types::DbActorProfile,
 };
 
-use super::receiver::EndpointError;
+use super::errors::EndpointError;
 
 pub async fn check_request(
     ap_client: &ApClient,
