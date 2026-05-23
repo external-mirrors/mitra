@@ -57,12 +57,12 @@ use mitra_activitypub::{
         note::build_note,
         proposal::build_proposal,
     },
-    errors::HandlerError,
-    forwarder::{
-        get_activity_recipients,
+    c2s::authorization::{
         verify_embedded_ownership,
         verify_public_keys,
     },
+    errors::HandlerError,
+    forwarder::get_activity_recipients,
     handlers::activity::get_activity_audience,
     identifiers::{
         canonicalize_id,
