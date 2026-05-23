@@ -17,6 +17,7 @@ use apx_sdk::{
 
 use mitra_activitypub::agent::build_federation_agent;
 use mitra_config::Config;
+use mitra_utils::files::APPLICATION_OCTET_STREAM;
 
 use crate::errors::HttpError;
 
@@ -35,10 +36,19 @@ async fn media_proxy_view(
     verify_eddsa_signature(&public_key, signature_base, &params.signature)
         .map_err(|_| HttpError::PermissionError)?;
     let agent = build_federation_agent(&config.instance(), None);
+    let supported_media_types: Vec<_> = config
+        .limits
+        .media
+        .supported_media_types()
+        .into_iter()
+        // Allow application/octet-stream because some servers
+        // don't properly identify the type of served content.
+        .chain(vec![APPLICATION_OCTET_STREAM])
+        .collect();
     let (stream, content_type) = stream_media(
         &agent,
         &url,
-        &config.limits.media.supported_media_types(),
+        &supported_media_types,
         config.limits.media.file_size_limit,
     ).await
         .map_err(|error| {

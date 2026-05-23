@@ -123,6 +123,7 @@ use mitra_models::{
     },
 };
 use mitra_services::media::{MediaServer, MediaStorage};
+use mitra_utils::files::APPLICATION_OCTET_STREAM;
 use mitra_validators::errors::ValidationError;
 
 use crate::{
@@ -1138,7 +1139,6 @@ async fn apgateway_media_upload_view(
     };
 
     let storage = MediaStorage::new(&config);
-    const APPLICATION_OCTET_STREAM: &str = "application/octet-stream";
     let media_type = request.headers()
         .get(http_header::CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())

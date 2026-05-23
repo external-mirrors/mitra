@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add `attributedTo` property to `outbox` and `featured` collections.
 - Allowed `Undo` activities with embedded `actor`.
 - Add request URI to GET request verification error message.
+- Allowed `application/octet-stream` when streaming media through media proxy.
 
 ### Fixed
 
