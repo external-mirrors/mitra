@@ -8,7 +8,6 @@ use mitra_models::{
 use mitra_workers::workers::{run_worker, PeriodicTask};
 
 #[derive(Parser)]
-#[clap(hide = true)]
 pub struct Worker {
     task: String,
 }

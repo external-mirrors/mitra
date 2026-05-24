@@ -166,7 +166,6 @@ impl ImportObject {
 
 /// Load replies from 'replies' or 'context' collection
 #[derive(Parser)]
-#[command(visible_alias = "fetch-replies")]
 pub struct LoadReplies {
     object_id: String,
     #[arg(long, default_value_t = 20)]
@@ -459,5 +458,27 @@ impl SendActivity {
             },
         };
         Ok(())
+    }
+}
+
+/// ActivityPub commands
+#[derive(Subcommand)]
+pub enum ApCommand {
+    Import(ImportObject),
+    Fetch(FetchObject),
+    Webfinger(Webfinger),
+}
+
+impl ApCommand {
+    pub async fn execute(
+        self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        match self {
+            Self::Import(command) => command.execute(config, db_pool).await,
+            Self::Fetch(command) => command.execute(config, db_pool).await,
+            Self::Webfinger(command) => command.execute(config, db_pool).await,
+        }
     }
 }

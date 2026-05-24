@@ -1,6 +1,9 @@
 use anyhow::Error;
 use apx_core::url::canonical::CanonicalUri;
-use clap::Parser;
+use clap::{
+    Parser,
+    Subcommand,
+};
 
 use mitra_activitypub::{
     builders::undo_announce::prepare_undo_announce,
@@ -208,5 +211,25 @@ impl CheckUris {
             };
         };
         Ok(())
+    }
+}
+
+/// Manage media
+#[derive(Subcommand)]
+pub enum MediaCommand {
+    Local(ListLocalFiles),
+    DeleteOrphaned(DeleteOrphanedFiles),
+}
+
+impl MediaCommand {
+    pub async fn execute(
+        self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        match self {
+            Self::Local(command) => command.execute(config, db_pool).await,
+            Self::DeleteOrphaned(command) => command.execute(config, db_pool).await,
+        }
     }
 }

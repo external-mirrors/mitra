@@ -1,5 +1,9 @@
 use anyhow::Error;
-use clap::{Parser, ValueEnum};
+use clap::{
+    Parser,
+    Subcommand,
+    ValueEnum,
+};
 use serde_json::{Value as JsonValue};
 
 use mitra_adapters::dynamic_config::{
@@ -101,5 +105,24 @@ impl UpdateConfig {
         set_internal_property(db_client, self.name.as_str(), &value).await?;
         println!("configuration updated");
         Ok(())
+    }
+}
+
+/// Change dynamic configuration parameters
+#[derive(Subcommand)]
+pub enum ConfigCommand {
+    Get(GetConfig),
+    Set(UpdateConfig),
+}
+
+impl ConfigCommand {
+    pub async fn execute(
+        self,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        match self {
+            Self::Get(command) => command.execute(db_pool).await,
+            Self::Set(command) => command.execute(db_pool).await,
+        }
     }
 }

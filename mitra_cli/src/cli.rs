@@ -8,9 +8,11 @@ use log::Level;
 
 use crate::commands::{
     account::{
+        AccountCommand,
         CreateAccount,
         CreateSystemAccount,
         GenerateInviteCode,
+        InviteCommand,
         ListAccounts,
         ListInviteCodes,
         SetPassword,
@@ -18,6 +20,7 @@ use crate::commands::{
         RevokeOauthTokens,
     },
     activitypub::{
+        ApCommand,
         CreateActivity,
         FetchObject,
         ImportObject,
@@ -26,9 +29,23 @@ use crate::commands::{
         SendActivity,
         Webfinger,
     },
-    config::{GetConfig, UpdateConfig},
-    emoji::{AddEmoji, DeleteEmoji, ImportEmoji},
-    filter::{AddFilterRule, ListFilterRules, RemoveFilterRule},
+    config::{
+        ConfigCommand,
+        GetConfig,
+        UpdateConfig,
+    },
+    emoji::{
+        AddEmoji,
+        DeleteEmoji,
+        EmojiCommand,
+        ImportEmoji,
+    },
+    filter::{
+        AddFilterRule,
+        FilterCommand,
+        ListFilterRules,
+        RemoveFilterRule,
+    },
     invoice::{
         ReopenInvoice,
         RepairInvoice,
@@ -54,6 +71,7 @@ use crate::commands::{
         DeleteOrphanedFiles,
         DeleteUnusedAttachments,
         ListLocalFiles,
+        MediaCommand,
         PruneReposts,
     },
 };
@@ -66,14 +84,31 @@ pub struct Cli {
     pub log_level: Level,
 
     #[clap(subcommand)]
-    pub subcmd: SubCommand,
+    pub command: Command,
 }
 
 #[derive(Parser)]
-pub enum SubCommand {
+pub enum Command {
     /// Start HTTP server
     Server,
+    #[command(hide = true)]
     Worker(Worker),
+
+    #[command(subcommand, hide = true)]
+    Account(AccountCommand),
+    #[command(subcommand, hide = true)]
+    Ap(ApCommand),
+    #[command(subcommand, hide = true)]
+    Config(ConfigCommand),
+    #[command(subcommand, hide = true)]
+    Emoji(EmojiCommand),
+    #[command(subcommand, hide = true)]
+    Filter(FilterCommand),
+    #[command(subcommand, hide = true)]
+    Invite(InviteCommand),
+    #[command(subcommand, hide = true)]
+    Media(MediaCommand),
+
     GetConfig(GetConfig),
     UpdateConfig(UpdateConfig),
     AddFilterRule(AddFilterRule),
@@ -81,25 +116,31 @@ pub enum SubCommand {
     ListFilterRules(ListFilterRules),
     GenerateInviteCode(GenerateInviteCode),
     ListInviteCodes(ListInviteCodes),
+    #[command(visible_alias = "create-user")]
     CreateAccount(CreateAccount),
+    #[command(hide = true)]
     CreateSystemAccount(CreateSystemAccount),
+    #[command(visible_alias = "list-users")]
     ListAccounts(ListAccounts),
     SetPassword(SetPassword),
     SetRole(SetRole),
     RevokeOauthTokens(RevokeOauthTokens),
     ImportObject(ImportObject),
+    #[command(visible_alias = "fetch-replies")]
     LoadReplies(LoadReplies),
     FetchObject(FetchObject),
     Webfinger(Webfinger),
     LoadPortableObject(LoadPortableObject),
     CreateActivity(CreateActivity),
     SendActivity(SendActivity),
+    #[command(visible_alias = "delete-account", alias = "delete-profile")]
     DeleteUser(DeleteUser),
     CreatePost(CreatePost),
     ImportPosts(ImportPosts),
     ExportPosts(ExportPosts),
     DeletePost(DeletePost),
     AddEmoji(AddEmoji),
+    #[command(visible_alias = "steal-emoji")]
     ImportEmoji(ImportEmoji),
     DeleteEmoji(DeleteEmoji),
     DeleteExtraneousPosts(DeleteExtraneousPosts),
@@ -118,6 +159,7 @@ pub enum SubCommand {
     ListActiveAddresses(ListActiveAddresses),
     GetPaymentAddress(GetPaymentAddress),
     InstanceReport(InstanceReport),
+
     /// Generate shell completions
     Completion {
         #[arg(short, long)]

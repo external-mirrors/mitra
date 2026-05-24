@@ -4,7 +4,10 @@ use apx_core::{
     url::http_uri::HttpUri,
 };
 use apx_sdk::fetch::fetch_media;
-use clap::Parser;
+use clap::{
+    Parser,
+    Subcommand,
+};
 
 use mitra_activitypub::agent::build_federation_agent;
 use mitra_adapters::media::delete_orphaned_media;
@@ -102,7 +105,6 @@ impl AddEmoji {
 
 /// Copy cached custom emoji to local collection
 #[derive(Parser)]
-#[command(visible_alias = "steal-emoji")]
 pub struct ImportEmoji {
     emoji_name: String,
     hostname: String,
@@ -176,5 +178,27 @@ impl DeleteEmoji {
         delete_orphaned_media(config, db_client, deletion_queue).await?;
         println!("emoji deleted");
         Ok(())
+    }
+}
+
+/// Manage custom emojis
+#[derive(Subcommand)]
+pub enum EmojiCommand {
+    Create(AddEmoji),
+    Steal(ImportEmoji),
+    Delete(DeleteEmoji),
+}
+
+impl EmojiCommand {
+    pub async fn execute(
+        self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        match self {
+            Self::Create(command) => command.execute(config, db_pool).await,
+            Self::Steal(command) => command.execute(config, db_pool).await,
+            Self::Delete(command) => command.execute(config, db_pool).await,
+        }
     }
 }

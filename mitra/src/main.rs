@@ -11,7 +11,11 @@ use mitra_adapters::init::{
 };
 use mitra_api::server::run_server;
 use mitra_config::SoftwareMetadata;
-use mitra_cli::cli::{print_completer, Cli, SubCommand};
+use mitra_cli::cli::{
+    print_completer,
+    Cli,
+    Command,
+};
 use mitra_workers::workers::start_workers;
 
 fn get_software_metadata() -> SoftwareMetadata {
@@ -26,13 +30,13 @@ fn get_software_metadata() -> SoftwareMetadata {
 async fn main() -> Result<(), Error> {
     let opts: Cli = Cli::parse();
 
-    if let SubCommand::Completion { shell } = opts.subcmd {
+    if let Command::Completion { shell } = opts.command {
         print_completer(shell);
         return Ok(());
     };
 
-    let maybe_override_log_level = match opts.subcmd {
-        SubCommand::Server | SubCommand::Worker(_) => {
+    let maybe_override_log_level = match opts.command {
+        Command::Server | Command::Worker(_) => {
             // Do not override log level when running a process
             None
         },
@@ -53,58 +57,65 @@ async fn main() -> Result<(), Error> {
     std::mem::drop(db_client_value);
 
     let db_pool = create_database_connection_pool(&config);
-    let result = match opts.subcmd {
-        SubCommand::Server => {
+    let result = match opts.command {
+        Command::Server => {
             start_workers(config.clone(), db_pool.clone());
             let result = run_server(config, db_pool).await;
             result.map_err(Into::into)
         },
-        SubCommand::Worker(cmd) => cmd.execute(config, db_pool).await,
-        SubCommand::GetConfig(cmd) => cmd.execute(&db_pool).await,
-        SubCommand::UpdateConfig(cmd) => cmd.execute(&db_pool).await,
-        SubCommand::AddFilterRule(cmd) => cmd.execute(&db_pool).await,
-        SubCommand::RemoveFilterRule(cmd) => cmd.execute(&db_pool).await,
-        SubCommand::ListFilterRules(cmd) => cmd.execute(&db_pool).await,
-        SubCommand::GenerateInviteCode(cmd) => cmd.execute(&db_pool).await,
-        SubCommand::ListInviteCodes(cmd) => cmd.execute(&db_pool).await,
-        SubCommand::CreateAccount(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::CreateSystemAccount(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::ListAccounts(cmd) => cmd.execute(&db_pool).await,
-        SubCommand::SetPassword(cmd) => cmd.execute(&db_pool).await,
-        SubCommand::SetRole(cmd) => cmd.execute(&db_pool).await,
-        SubCommand::RevokeOauthTokens(cmd) => cmd.execute(&db_pool).await,
-        SubCommand::ImportObject(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::LoadReplies(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::FetchObject(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::Webfinger(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::LoadPortableObject(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::CreateActivity(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::SendActivity(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::DeleteUser(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::CreatePost(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::ImportPosts(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::ExportPosts(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::DeletePost(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::AddEmoji(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::ImportEmoji(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::DeleteEmoji(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::DeleteExtraneousPosts(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::PruneReposts(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::DeleteUnusedAttachments(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::DeleteEmptyProfiles(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::ListLocalFiles(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::DeleteOrphanedFiles(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::ListUnreachableActors(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::CheckUris(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::CreateMoneroWallet(cmd) => cmd.execute(&config).await,
-        SubCommand::CreateMoneroSignature(cmd) => cmd.execute(&config).await,
-        SubCommand::VerifyMoneroSignature(cmd) => cmd.execute(&config).await,
-        SubCommand::ReopenInvoice(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::RepairInvoice(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::ListActiveAddresses(cmd) => cmd.execute(&config).await,
-        SubCommand::GetPaymentAddress(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::InstanceReport(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::Completion { .. } => unreachable!(),
+        Command::Worker(cmd) => cmd.execute(config, db_pool).await,
+        Command::Account(command) => command.execute(&config, &db_pool).await,
+        Command::Ap(command) => command.execute(&config, &db_pool).await,
+        Command::Config(command) => command.execute(&db_pool).await,
+        Command::Emoji(command) => command.execute(&config, &db_pool).await,
+        Command::Filter(command) => command.execute(&db_pool).await,
+        Command::Invite(command) => command.execute(&db_pool).await,
+        Command::Media(command) => command.execute(&config, &db_pool).await,
+        Command::GetConfig(cmd) => cmd.execute(&db_pool).await,
+        Command::UpdateConfig(cmd) => cmd.execute(&db_pool).await,
+        Command::AddFilterRule(cmd) => cmd.execute(&db_pool).await,
+        Command::RemoveFilterRule(cmd) => cmd.execute(&db_pool).await,
+        Command::ListFilterRules(cmd) => cmd.execute(&db_pool).await,
+        Command::GenerateInviteCode(cmd) => cmd.execute(&db_pool).await,
+        Command::ListInviteCodes(cmd) => cmd.execute(&db_pool).await,
+        Command::CreateAccount(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::CreateSystemAccount(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::ListAccounts(cmd) => cmd.execute(&db_pool).await,
+        Command::SetPassword(cmd) => cmd.execute(&db_pool).await,
+        Command::SetRole(cmd) => cmd.execute(&db_pool).await,
+        Command::RevokeOauthTokens(cmd) => cmd.execute(&db_pool).await,
+        Command::ImportObject(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::LoadReplies(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::FetchObject(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::Webfinger(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::LoadPortableObject(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::CreateActivity(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::SendActivity(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::DeleteUser(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::CreatePost(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::ImportPosts(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::ExportPosts(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::DeletePost(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::AddEmoji(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::ImportEmoji(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::DeleteEmoji(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::DeleteExtraneousPosts(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::PruneReposts(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::DeleteUnusedAttachments(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::DeleteEmptyProfiles(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::ListLocalFiles(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::DeleteOrphanedFiles(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::ListUnreachableActors(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::CheckUris(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::CreateMoneroWallet(cmd) => cmd.execute(&config).await,
+        Command::CreateMoneroSignature(cmd) => cmd.execute(&config).await,
+        Command::VerifyMoneroSignature(cmd) => cmd.execute(&config).await,
+        Command::ReopenInvoice(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::RepairInvoice(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::ListActiveAddresses(cmd) => cmd.execute(&config).await,
+        Command::GetPaymentAddress(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::InstanceReport(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::Completion { .. } => unreachable!(),
     };
     result
 }

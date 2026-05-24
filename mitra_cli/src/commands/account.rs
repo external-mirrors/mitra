@@ -8,7 +8,10 @@ use apx_sdk::core::{
         },
     },
 };
-use clap::Parser;
+use clap::{
+    Parser,
+    Subcommand,
+};
 
 use mitra_adapters::{
     roles::{
@@ -46,7 +49,6 @@ use mitra_validators::users::validate_local_username;
 
 /// Create new account
 #[derive(Parser)]
-#[command(visible_alias = "create-user")]
 pub struct CreateAccount {
     username: String,
     password: String,
@@ -89,7 +91,6 @@ impl CreateAccount {
 
 /// Create system account
 #[derive(Parser)]
-#[clap(hide = true)]
 pub struct CreateSystemAccount;
 
 impl CreateSystemAccount {
@@ -114,7 +115,6 @@ impl CreateSystemAccount {
 
 /// List local users
 #[derive(Parser)]
-#[command(visible_alias = "list-users")]
 pub struct ListAccounts;
 
 impl ListAccounts {
@@ -263,5 +263,50 @@ impl ListInviteCodes {
             };
         };
         Ok(())
+    }
+}
+
+/// Manage accounts
+#[derive(Subcommand)]
+pub enum AccountCommand {
+    Create(CreateAccount),
+    List(ListAccounts),
+    Password(SetPassword),
+    Role(SetRole),
+    Logout(RevokeOauthTokens),
+}
+
+impl AccountCommand {
+    pub async fn execute(
+        self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        match self {
+            Self::Create(command) => command.execute(config, db_pool).await,
+            Self::List(command) => command.execute(db_pool).await,
+            Self::Password(command) => command.execute(db_pool).await,
+            Self::Role(command) => command.execute(db_pool).await,
+            Self::Logout(command) => command.execute(db_pool).await,
+        }
+    }
+}
+
+/// Manage invite codes
+#[derive(Subcommand)]
+pub enum InviteCommand {
+    Create(GenerateInviteCode),
+    List(ListInviteCodes),
+}
+
+impl InviteCommand {
+    pub async fn execute(
+        self,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        match self {
+            Self::Create(command) => command.execute(db_pool).await,
+            Self::List(command) => command.execute(db_pool).await,
+        }
     }
 }

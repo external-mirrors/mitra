@@ -1,7 +1,11 @@
 use std::fmt;
 
 use anyhow::Error;
-use clap::{Parser, ValueEnum};
+use clap::{
+    Parser,
+    Subcommand,
+    ValueEnum,
+};
 
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
@@ -189,5 +193,26 @@ impl ListFilterRules {
             );
         };
         Ok(())
+    }
+}
+
+/// Manage federation filter rules
+#[derive(Subcommand)]
+pub enum FilterCommand {
+    Add(AddFilterRule),
+    Remove(RemoveFilterRule),
+    List(ListFilterRules),
+}
+
+impl FilterCommand {
+    pub async fn execute(
+        self,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        match self {
+            Self::Add(command) => command.execute(db_pool).await,
+            Self::Remove(command) => command.execute(db_pool).await,
+            Self::List(command) => command.execute(db_pool).await,
+        }
     }
 }
