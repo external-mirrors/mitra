@@ -27,8 +27,10 @@ use mitra_models::{
         helpers::get_user_by_id_or_name,
         queries::{
             create_automated_account,
+            create_invite_code,
             create_user,
             get_accounts_for_admin,
+            get_invite_codes,
             set_user_password,
             set_user_role,
         },
@@ -213,6 +215,53 @@ impl RevokeOauthTokens {
         ).await?;
         delete_oauth_tokens(db_client, user.id).await?;
         println!("access tokens revoked");
+        Ok(())
+    }
+}
+
+/// Generate invite code
+#[derive(Parser)]
+pub struct GenerateInviteCode {
+    note: Option<String>,
+}
+
+impl GenerateInviteCode {
+    pub async fn execute(
+        self,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
+        let invite_code = create_invite_code(
+            db_client,
+            self.note.as_deref(),
+        ).await?;
+        println!("generated invite code: {}", invite_code);
+        Ok(())
+    }
+}
+
+/// List invite codes
+#[derive(Parser)]
+pub struct ListInviteCodes;
+
+impl ListInviteCodes {
+    pub async fn execute(
+        self,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
+        let invite_codes = get_invite_codes(db_client).await?;
+        if invite_codes.is_empty() {
+            println!("no invite codes found");
+            return Ok(());
+        };
+        for invite_code in invite_codes {
+            if let Some(note) = invite_code.note {
+                println!("{} ({})", invite_code.code, note);
+            } else {
+                println!("{}", invite_code.code);
+            };
+        };
         Ok(())
     }
 }

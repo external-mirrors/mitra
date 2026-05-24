@@ -4,6 +4,7 @@ pub mod config;
 pub mod emoji;
 pub mod filter;
 pub mod invoice;
+pub mod monero;
 pub mod post;
 pub mod profile;
 pub mod process;
