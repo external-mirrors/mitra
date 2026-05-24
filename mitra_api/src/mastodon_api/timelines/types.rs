@@ -26,6 +26,9 @@ pub struct PublicTimelineQueryParams {
     )]
     pub local: bool,
 
+    // https://docs-develop.pleroma.social/backend/development/API/differences_in_mastoapi_responses/#timelines
+    pub instance: Option<String>,
+
     pub max_id: Option<Uuid>,
 
     #[serde(default = "default_page_size")]
