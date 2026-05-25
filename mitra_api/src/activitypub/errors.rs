@@ -37,7 +37,7 @@ impl From<EndpointError> for HttpError {
             EndpointError::ValidationError(error) => error.into(),
             EndpointError::DatabaseError(error) => error.into(),
             EndpointError::AuthError(_) => {
-                HttpError::AuthError("invalid signature")
+                HttpError::AuthError("signature verification error")
             },
         }
     }
