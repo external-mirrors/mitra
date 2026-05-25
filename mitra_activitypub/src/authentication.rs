@@ -78,6 +78,9 @@ pub enum AuthenticationError {
     #[error("no HTTP signature")]
     NoHttpSignature,
 
+    #[error("unexpected target authority: {0}")]
+    UnexpectedTargetAuthority(String),
+
     #[error("invalid JSON signature: {0}")]
     JsonSignatureError(#[from] JsonSignatureError),
 
@@ -245,7 +248,9 @@ pub async fn verify_signed_request(
         log::info!("RFC-9421 signature found");
     };
     if signature_data.authority != ap_client.instance.uri().authority() {
-        log::warn!("unexpected target authority: {}", signature_data.authority);
+        return Err(AuthenticationError::UnexpectedTargetAuthority(
+            signature_data.authority,
+        ));
     };
     // Try to guess the key owner ID from the key ID.
     let signer_id = match signature_data.key_id {

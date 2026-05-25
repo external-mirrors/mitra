@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Security
 
 - Verify permissions on embedded objects when processing activities sent to FEP-ae97 outbox.
+- Return error when target authority of a signed request doesn't match instance hostname.
 
 ## [5.3.0] - 2026-05-13
 
