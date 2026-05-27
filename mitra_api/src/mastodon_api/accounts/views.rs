@@ -1164,7 +1164,6 @@ async fn get_account_aliases(
     Ok(HttpResponse::Ok().json(aliases))
 }
 
-#[post("/{account_id}/load_activities")]
 async fn load_activities(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
@@ -1200,6 +1199,10 @@ pub fn account_api_scope(
     let create_account_limited = web::resource("")
         .post(create_account)
         .wrap(Governor::new(&ratelimit_configs.registration));
+    let load_activities_limited = web
+        ::resource("/{account_id}/load_activities")
+        .post(load_activities)
+        .wrap(Governor::new(&ratelimit_configs.fetch_collection));
     web::scope("/v1/accounts")
         // Routes without account ID
         .service(create_account_limited)
@@ -1226,5 +1229,5 @@ pub fn account_api_scope(
         .service(get_account_subscribers)
         .service(get_account_lists)
         .service(get_account_aliases)
-        .service(load_activities)
+        .service(load_activities_limited)
 }

@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add request URI to GET request verification error message.
 - Allowed `application/octet-stream` when streaming media through media proxy.
 - Changed HTTP signature error message from `invalid signature` to `signature verification error`.
+- Rate-limit `/api/v1/accounts/{account_id}/load_activities` endpoint.
 
 ### Fixed
 
