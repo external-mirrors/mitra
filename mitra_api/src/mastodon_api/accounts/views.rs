@@ -106,7 +106,7 @@ use mitra_models::{
         is_valid_invite_code,
         set_shared_client_config,
     },
-    users::types::{Permission, UserCreateData},
+    users::types::UserCreateData,
 };
 use mitra_services::{
     ethereum::eip4361::verify_eip4361_signature,
@@ -1171,10 +1171,7 @@ async fn load_activities(
     request_params: web::Json<LoadActivitiesParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let current_user = get_current_user(db_client, auth.token()).await?;
-    if !current_user.role.has_permission(Permission::DeleteAnyProfile) {
-        return Err(MastodonError::PermissionError);
-    };
+    let _current_user = get_current_user(db_client, auth.token()).await?;
     let profile = get_profile_by_id(db_client, *account_id).await?;
     let Some(remote_actor) = profile.actor_json.as_ref() else {
         // Local profile
