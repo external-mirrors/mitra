@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fixed misleading error message when digest header is not signed.
 - Fixed double-decoding of media URL in media proxy view.
+- Fixed panic on handling non-normalized paths.
 
 ### Security
 
