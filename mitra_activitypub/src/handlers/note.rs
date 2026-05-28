@@ -255,6 +255,8 @@ pub struct AttributedObject {
     to: Vec<String>,
     #[serde(default, deserialize_with = "deserialize_into_id_array")]
     cc: Vec<String>,
+    #[serde(default, deserialize_with = "deserialize_into_id_array")]
+    audience: Vec<String>,
 
     pub published: Option<DateTime<Utc>>,
     pub updated: Option<DateTime<Utc>>,
@@ -286,7 +288,10 @@ impl AttributedObject {
     }
 
     pub fn audience(&self) -> Vec<&String> {
-        self.to.iter().chain(self.cc.iter()).collect()
+        self.to.iter()
+            .chain(self.cc.iter())
+            .chain(self.audience.iter())
+            .collect()
     }
 
     fn language(&self) -> Option<Language> {
