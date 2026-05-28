@@ -225,7 +225,11 @@ async fn create_status(
             Visibility::Conversation => None, // will be rejected by validator
             Visibility::Direct => None,
         };
-        PostContext::Top { object_id: None, audience }
+        PostContext::Top {
+            group_id: None,
+            object_id: None,
+            audience,
+        }
     };
 
     // Prepare poll data

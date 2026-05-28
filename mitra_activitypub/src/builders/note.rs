@@ -19,6 +19,7 @@ use mitra_models::{
         queries::get_post_author,
         types::{PostDetailed, Visibility},
     },
+    profiles::queries::get_profile_by_id,
     relationships::queries::{get_followers, get_subscribers},
 };
 use mitra_services::media::MediaServer;
@@ -397,6 +398,11 @@ pub async fn get_note_recipients(
         // TODO: use post.in_reply_to ?
         let in_reply_to_author = get_post_author(db_client, in_reply_to_id).await?;
         primary_audience.push(in_reply_to_author);
+    };
+    if let Some(group_id) = post.group_id {
+         let group = get_profile_by_id(db_client, group_id).await?;
+        // TODO: use audience field
+        primary_audience.push(group);
     };
     primary_audience.extend(post.mentions.clone());
     if let Some(ref poll) = post.poll {

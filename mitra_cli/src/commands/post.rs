@@ -143,6 +143,7 @@ impl CreatePost {
         let post_data = PostCreateData {
             id: Some(post_id),
             context: PostContext::Top {
+                group_id: None,
                 object_id: None,
                 audience: Some(AP_PUBLIC.to_owned()),
             },

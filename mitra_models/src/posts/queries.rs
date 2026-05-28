@@ -215,10 +215,11 @@ pub async fn create_post(
 
     // Create or find existing conversation
     let maybe_conversation = match post_data.context {
-        PostContext::Top { ref object_id, ref audience } => {
+        PostContext::Top { group_id, ref object_id, ref audience } => {
             let conversation = create_conversation(
                 &transaction,
                 post_id,
+                group_id,
                 post_data.object_id.is_none(), // is_managed
                 object_id.as_deref(),
                 audience.as_deref(),
@@ -245,13 +246,14 @@ pub async fn create_post(
             conversation_id,
             in_reply_to_id,
             repost_of_id,
+            group_id,
             visibility,
             is_sensitive,
             url,
             object_id,
             created_at
         )
-        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
         WHERE
         -- don't allow replies to reposts
         NOT EXISTS (
@@ -281,6 +283,9 @@ pub async fn create_post(
             &maybe_conversation.as_ref().map(|conversation| conversation.id),
             &post_data.context.in_reply_to_id(),
             &post_data.context.repost_of_id(),
+            &maybe_conversation
+                .as_ref()
+                .and_then(|conversation| conversation.group_id),
             &post_data.visibility,
             &post_data.is_sensitive,
             &post_data.url,
@@ -2076,6 +2081,32 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    async fn test_create_post_with_group() {
+        let db_client = &mut create_test_database().await;
+        let author = create_test_user(db_client, "test").await;
+        let group = create_test_remote_profile(
+            db_client,
+            "group",
+            "groups.example",
+            "https://groups.example/groups/1",
+        ).await;
+        let post_data = PostCreateData {
+            context: PostContext::Top {
+                group_id: Some(group.id),
+                object_id: None,
+                audience: Some(AP_PUBLIC.to_owned()),
+            },
+            ..PostCreateData::for_test()
+        };
+        let post =
+            create_post(db_client, author.id, post_data).await.unwrap();
+        assert_eq!(post.group_id, Some(group.id));
+        let conversation = post.expect_conversation();
+        assert_eq!(conversation.group_id, Some(group.id));
+    }
+
+    #[tokio::test]
+    #[serial]
     async fn test_create_repost() {
         let db_client = &mut create_test_database().await;
         let author = create_test_user(db_client, "test").await;
@@ -2700,6 +2731,7 @@ mod tests {
         mute(db_client, user_1.id, user_3.id).await.unwrap();
         let post_data_1 = PostCreateData {
             context: PostContext::Top {
+                group_id: None,
                 object_id: None,
                 audience: Some(AP_PUBLIC.to_owned()),
             },
@@ -2750,6 +2782,7 @@ mod tests {
         follow(db_client, user_3.id, user_2.id).await.unwrap();
         let post_data_1 = PostCreateData {
             context: PostContext::Top {
+                group_id: None,
                 object_id: None,
                 audience: Some("https://local/test_1/followers".to_owned()),
             },

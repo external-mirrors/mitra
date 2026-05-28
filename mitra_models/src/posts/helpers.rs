@@ -495,6 +495,7 @@ mod tests {
         follow(db_client, root_follower.id, root_author.id).await.unwrap();
         let root_data = PostCreateData {
             context: PostContext::Top {
+                group_id: None,
                 object_id: None,
                 audience: Some("https://local/op/followers".to_owned()),
             },

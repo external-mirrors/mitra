@@ -186,6 +186,7 @@ CREATE TABLE post (
     in_reply_to_id UUID REFERENCES post (id) ON DELETE CASCADE,
     repost_of_id UUID REFERENCES post (id) ON DELETE CASCADE,
     repost_has_deprecated_ap_id BOOLEAN NOT NULL DEFAULT FALSE,
+    group_id UUID REFERENCES actor_profile (id) ON DELETE CASCADE,
     visibility SMALLINT NOT NULL,
     is_sensitive BOOLEAN NOT NULL,
     is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
@@ -203,6 +204,7 @@ CREATE TABLE post (
 
 CREATE INDEX post_in_reply_to_id_btree ON post (in_reply_to_id);
 CREATE INDEX post_repost_of_id_btree ON post (repost_of_id);
+CREATE INDEX post_group_id_index ON post (group_id);
 CREATE INDEX post_id_author_id_btree ON post (id, author_id);
 CREATE INDEX post_author_id_is_pinned_btree ON post (author_id, is_pinned);
 CREATE INDEX post_conversation_id_btree ON post (conversation_id);
@@ -211,6 +213,7 @@ CREATE INDEX post_content_tsvector_simple_index ON post USING GIN (to_tsvector('
 CREATE TABLE conversation (
     id UUID PRIMARY KEY,
     root_id UUID UNIQUE NOT NULL REFERENCES post (id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
+    group_id UUID REFERENCES actor_profile (id) ON DELETE CASCADE,
     is_managed BOOLEAN NOT NULL,
     object_id VARCHAR(2000),
     audience VARCHAR(2000)
