@@ -334,7 +334,7 @@ pub async fn verify_signed_object(
                 .map_err(|_| ValidationError("invalid key ID"))?;
             let signer = get_signer(ap_client, db_pool, &signer_id, no_fetch).await?;
             match signature_data.proof_type {
-                #[allow(deprecated)]
+                #[expect(deprecated)]
                 ProofType::JcsEddsaSignature | ProofType::EddsaJcsSignature => {
                     // Check reciprocal claim
                     let signer_key = get_signer_ed25519_key(

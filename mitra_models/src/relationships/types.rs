@@ -62,7 +62,7 @@ pub struct Relationship {
     pub source_id: Uuid,
     pub target_id: Uuid,
     pub relationship_type: RelationshipType,
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     created_at: DateTime<Utc>,
 }
 
@@ -144,7 +144,7 @@ impl From<FollowRequestStatus> for i16 {
         match value {
             FollowRequestStatus::Pending  => 1,
             FollowRequestStatus::Accepted => 2,
-            #[allow(deprecated)]
+            #[expect(deprecated)]
             FollowRequestStatus::Rejected => 3,
         }
     }
@@ -157,7 +157,7 @@ impl TryFrom<i16> for FollowRequestStatus {
         let status = match value {
             1 => Self::Pending,
             2 => Self::Accepted,
-            #[allow(deprecated)]
+            #[expect(deprecated)]
             3 => Self::Rejected,
             _ => return Err(DatabaseTypeError),
         };
@@ -176,9 +176,9 @@ pub struct FollowRequest {
     pub target_id: Uuid,
     pub activity_id: Option<String>,
     pub request_status: FollowRequestStatus,
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     has_deprecated_ap_id: bool,
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     created_at: DateTime<Utc>,
 }
 

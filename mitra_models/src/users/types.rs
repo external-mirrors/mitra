@@ -39,7 +39,7 @@ use crate::{
     profiles::types::{get_identity_key, DbActorProfile},
 };
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 #[derive(FromSql)]
 #[postgres(name = "user_invite_code")]
 pub struct DbInviteCode {
@@ -197,7 +197,7 @@ impl Default for SharedClientConfig {
 json_from_sql!(SharedClientConfig);
 json_to_sql!(SharedClientConfig);
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 #[derive(FromSql)]
 #[postgres(name = "user_account")]
 pub struct DbUser {
@@ -424,9 +424,9 @@ pub struct DbPortableUser {
     id: Uuid,
     rsa_secret_key: Vec<u8>,
     ed25519_secret_key: Vec<u8>,
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     invite_code: Option<String>,
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     created_at: DateTime<Utc>,
 }
 

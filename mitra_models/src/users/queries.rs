@@ -394,7 +394,7 @@ pub async fn get_user_by_did(
     Ok(user)
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 async fn get_user_by_identity_key(
     db_client: &impl DatabaseClient,
     identity_key: &str,

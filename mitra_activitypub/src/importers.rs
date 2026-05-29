@@ -533,7 +533,7 @@ pub(crate) async fn import_post(
 
     // Fetch ancestors by going through inReplyTo references
     // TODO: fetch replies too
-    #[allow(clippy::while_let_loop)]
+    #[expect(clippy::while_let_loop)]
     loop {
         let object_id = match queue.pop() {
             Some(object_id) => {

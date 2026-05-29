@@ -73,7 +73,7 @@ impl TryFrom<i16> for EventType {
 int_enum_from_sql!(EventType);
 int_enum_to_sql!(EventType);
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 #[derive(FromSql)]
 #[postgres(name = "notification")]
 struct Notification {

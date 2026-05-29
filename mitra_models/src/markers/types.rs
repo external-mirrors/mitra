@@ -38,7 +38,7 @@ impl TryFrom<i16> for Timeline {
 int_enum_from_sql!(Timeline);
 int_enum_to_sql!(Timeline);
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 #[derive(FromSql)]
 #[postgres(name = "timeline_marker")]
 pub struct TimelineMarker {

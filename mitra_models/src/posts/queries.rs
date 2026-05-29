@@ -992,7 +992,7 @@ pub(super) async fn get_related_posts(
     Ok(posts)
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub async fn get_posts_by_author(
     db_client: &impl DatabaseClient,
     profile_id: Uuid,

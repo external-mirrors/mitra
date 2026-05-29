@@ -171,7 +171,6 @@ pub struct Post {
     pub conversation_id: Option<Uuid>,
     pub in_reply_to_id: Option<Uuid>,
     pub repost_of_id: Option<Uuid>,
-    #[allow(dead_code)]
     repost_has_deprecated_ap_id: bool, // deprecated
     pub visibility: Visibility,
     pub is_sensitive: bool,
@@ -278,7 +277,7 @@ pub struct PostDetailed {
 }
 
 impl PostDetailed {
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     pub fn new(
         db_post: Post,
         db_author: DbActorProfile,

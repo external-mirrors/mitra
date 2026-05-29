@@ -1,3 +1,3 @@
 pub mod store;
-#[allow(dead_code)]
+#[expect(dead_code)]
 mod utils;

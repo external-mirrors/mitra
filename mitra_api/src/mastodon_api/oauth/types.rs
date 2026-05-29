@@ -24,7 +24,7 @@ pub struct TokenRequest {
 
     // Required if grant type is "authorization_code"
     pub code: Option<String>,
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub redirect_uri: Option<String>,
     pub client_id: Option<Uuid>,
     pub client_secret: Option<String>,

@@ -20,7 +20,7 @@ const REACTION_CONTENT_SIZE_MAX: usize = EMOJI_NAME_SIZE_MAX + 2; // database co
 pub fn validate_reaction_data(
     reaction_data: &ReactionData,
 ) -> Result<(), ValidationError> {
-    #[allow(clippy::collapsible_else_if)]
+    #[expect(clippy::collapsible_else_if)]
     if let Some(ref content) = reaction_data.content {
         if content.len() > REACTION_CONTENT_SIZE_MAX {
             return Err(ValidationError("reaction content is too long"));

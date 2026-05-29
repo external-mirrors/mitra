@@ -204,7 +204,7 @@ fn validate_extra_fields(
     for field in extra_fields {
         validate_extra_field(field)?;
     };
-    #[allow(clippy::collapsible_else_if)]
+    #[expect(clippy::collapsible_else_if)]
     if is_remote {
         if extra_fields.len() > FIELD_REMOTE_LIMIT {
             return Err(ValidationError("at most 100 fields are allowed"));
@@ -411,7 +411,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::invisible_characters)]
+    #[expect(clippy::invisible_characters)]
     fn test_clean_display_name_zerowidth() {
         let name = " ​";
         let output = clean_display_name(name, true);

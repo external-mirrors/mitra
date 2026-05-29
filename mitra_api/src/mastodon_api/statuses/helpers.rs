@@ -242,7 +242,7 @@ pub async fn build_status_list(
     Ok(statuses)
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub async fn get_paginated_status_list(
     db_client: &impl DatabaseClient,
     base_url: &str,

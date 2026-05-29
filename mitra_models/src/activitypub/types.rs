@@ -3,7 +3,7 @@ use postgres_types::FromSql;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 #[derive(FromSql)]
 #[postgres(name = "activitypub_object")]
 pub struct ActivityPubObject {
