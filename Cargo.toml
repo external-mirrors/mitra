@@ -38,7 +38,7 @@ version = "5.4.1-dev"
 license = "AGPL-3.0-only"
 
 edition = "2021"
-rust-version = "1.80.0"
+rust-version = "1.81.0"
 
 publish = false
 
