@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Re-exported `Host` from `http_url_whatwg` module.
 - Added `no_proxy` parameter to `FederationAgent`.
+- Implemented `Debug` and `PartialEq` for `PublicKey` type.
+- Added `to_multikey` and `to_pem` methods to `PublicKey` type.
 
 ### Changed
 
