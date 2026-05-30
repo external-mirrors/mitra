@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Added `/api/v1/groups/followed` API endpoint.
+- Added `/api/v1/timelines/group/{group_id}` API endpoint.
 
 ### Changed
 

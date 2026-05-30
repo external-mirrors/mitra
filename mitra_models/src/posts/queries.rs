@@ -647,7 +647,7 @@ pub(crate) fn post_subqueries() -> String {
     ].join(",")
 }
 
-fn build_visibility_filter() -> String {
+pub(crate) fn build_visibility_filter() -> String {
     format!(
         "(
             post.author_id = $current_user_id
@@ -707,7 +707,7 @@ fn build_visibility_filter() -> String {
     )
 }
 
-fn build_mute_filter() -> String {
+pub(crate) fn build_mute_filter() -> String {
     format!(
         "(
             NOT EXISTS (
