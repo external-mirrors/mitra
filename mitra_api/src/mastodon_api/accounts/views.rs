@@ -106,7 +106,7 @@ use mitra_models::{
         is_valid_invite_code,
         set_shared_client_config,
     },
-    users::types::{Permission, UserCreateData},
+    users::types::UserCreateData,
 };
 use mitra_services::{
     ethereum::eip4361::verify_eip4361_signature,
@@ -1165,7 +1165,6 @@ async fn get_account_aliases(
     Ok(HttpResponse::Ok().json(aliases))
 }
 
-#[post("/{account_id}/load_activities")]
 async fn load_activities(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
@@ -1173,10 +1172,7 @@ async fn load_activities(
     request_params: web::Json<LoadActivitiesParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let current_user = get_current_user(db_client, auth.token()).await?;
-    if !current_user.role.has_permission(Permission::DeleteAnyProfile) {
-        return Err(MastodonError::PermissionError);
-    };
+    let _current_user = get_current_user(db_client, auth.token()).await?;
     let profile = get_profile_by_id(db_client, *account_id).await?;
     let Some(remote_actor) = profile.actor_json.as_ref() else {
         // Local profile
@@ -1201,6 +1197,10 @@ pub fn account_api_scope(
     let create_account_limited = web::resource("")
         .post(create_account)
         .wrap(Governor::new(&ratelimit_configs.registration));
+    let load_activities_limited = web
+        ::resource("/{account_id}/load_activities")
+        .post(load_activities)
+        .wrap(Governor::new(&ratelimit_configs.fetch_collection));
     web::scope("/v1/accounts")
         // Routes without account ID
         .service(create_account_limited)
@@ -1227,5 +1227,5 @@ pub fn account_api_scope(
         .service(get_account_subscribers)
         .service(get_account_lists)
         .service(get_account_aliases)
-        .service(load_activities)
+        .service(load_activities_limited)
 }

@@ -69,7 +69,6 @@ impl CanonicalUri {
         let http_uri = match self {
             Self::Http(http_uri) => http_uri.to_string(),
             Self::Ap(ap_uri) => {
-                #[allow(clippy::question_mark)]
                 if let Some(gateway) = maybe_gateway {
                     with_gateway(ap_uri, gateway)
                 } else {

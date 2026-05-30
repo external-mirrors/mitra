@@ -1152,6 +1152,7 @@ mod tests {
             db_client,
             "testemoji",
             image,
+            None,
         ).await.unwrap();
         let profile_data = ProfileCreateData {
             username: "test".to_string(),

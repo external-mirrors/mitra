@@ -27,7 +27,10 @@ use mitra_models::{
     database::{
         connect,
         migrate::apply_migrations,
-        utils::get_postgres_version,
+        utils::{
+            get_postgres_version,
+            POSTGRES_VERSION_MIN,
+        },
         BasicDatabaseClient,
         DatabaseClient,
         DatabaseConnectionPool,
@@ -130,7 +133,7 @@ async fn check_postgres_version(
     db_client: &impl DatabaseClient,
 ) -> Result<(), DatabaseError> {
     let version = get_postgres_version(db_client).await?;
-    if version < 150_000 {
+    if version < POSTGRES_VERSION_MIN {
         log::error!("unsupported PostgreSQL version: {version}");
     } else {
         log::info!("PostgreSQL version: {version}");

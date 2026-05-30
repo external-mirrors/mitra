@@ -4,7 +4,10 @@ use apx_core::{
     url::http_uri::HttpUri,
 };
 use apx_sdk::fetch::fetch_media;
-use clap::Parser;
+use clap::{
+    Parser,
+    Subcommand,
+};
 
 use mitra_activitypub::agent::build_federation_agent;
 use mitra_adapters::media::delete_orphaned_media;
@@ -27,6 +30,7 @@ use mitra_utils::files::FileSize;
 use mitra_validators::{
     emojis::{
         clean_emoji_name,
+        validate_emoji_category_name,
         validate_emoji_name,
         EMOJI_LOCAL_MEDIA_TYPES,
         EMOJI_REMOTE_MEDIA_TYPES,
@@ -38,6 +42,7 @@ fn validate_local_emoji_data(
     emoji_name: &str,
     file_data: &[u8],
     media_type: &str,
+    maybe_category: Option<&str>,
 ) -> Result<(), Error> {
     if validate_emoji_name(emoji_name, Local).is_err() {
         return Err(anyhow!("invalid emoji name"));
@@ -51,6 +56,9 @@ fn validate_local_emoji_data(
             FileSize::new(config.limits.media.emoji_local_size_limit),
         ));
     };
+    if let Some(category) = maybe_category {
+        validate_emoji_category_name(category)?;
+    };
     Ok(())
 }
 
@@ -60,6 +68,9 @@ pub struct AddEmoji {
     emoji_name: String,
     /// File path or URL
     location: String,
+    /// Category name
+    #[arg(long)]
+    category: Option<String>,
 }
 
 impl AddEmoji {
@@ -85,7 +96,13 @@ impl AddEmoji {
                 .ok_or(anyhow!("unknown media type"))?;
             (file_data, media_type)
         };
-        validate_local_emoji_data(config, &self.emoji_name, &file_data, &media_type)?;
+        validate_local_emoji_data(
+            config,
+            &self.emoji_name,
+            &file_data,
+            &media_type,
+            self.category.as_deref(),
+        )?;
         let media_storage = MediaStorage::new(config);
         let file_info = media_storage.save_file(file_data, &media_type)?;
         let image = MediaInfo::local(file_info);
@@ -93,6 +110,7 @@ impl AddEmoji {
             db_client,
             &self.emoji_name,
             image,
+            self.category.as_deref(),
         ).await?;
         deletion_queue.into_job(db_client).await?;
         println!("added emoji to local collection");
@@ -102,10 +120,12 @@ impl AddEmoji {
 
 /// Copy cached custom emoji to local collection
 #[derive(Parser)]
-#[command(visible_alias = "steal-emoji")]
 pub struct ImportEmoji {
     emoji_name: String,
     hostname: String,
+    /// Category name
+    #[arg(long)]
+    category: Option<String>,
 }
 
 impl ImportEmoji {
@@ -139,13 +159,20 @@ impl ImportEmoji {
                 ).await?
             },
         };
-        validate_local_emoji_data(config, &emoji.emoji_name, &file_data, &media_type)?;
+        validate_local_emoji_data(
+            config,
+            &emoji.emoji_name,
+            &file_data,
+            &media_type,
+            self.category.as_deref(),
+        )?;
         let file_info = media_storage.save_file(file_data, &media_type)?;
         let image = MediaInfo::local(file_info);
         let (_, deletion_queue) = create_or_update_local_emoji(
             db_client,
             &emoji.emoji_name,
             image,
+            self.category.as_deref(),
         ).await?;
         deletion_queue.into_job(db_client).await?;
         println!("added emoji to local collection");
@@ -176,5 +203,27 @@ impl DeleteEmoji {
         delete_orphaned_media(config, db_client, deletion_queue).await?;
         println!("emoji deleted");
         Ok(())
+    }
+}
+
+/// Manage custom emojis
+#[derive(Subcommand)]
+pub enum EmojiCommand {
+    Create(AddEmoji),
+    Steal(ImportEmoji),
+    Delete(DeleteEmoji),
+}
+
+impl EmojiCommand {
+    pub async fn execute(
+        self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        match self {
+            Self::Create(command) => command.execute(config, db_pool).await,
+            Self::Steal(command) => command.execute(config, db_pool).await,
+            Self::Delete(command) => command.execute(config, db_pool).await,
+        }
     }
 }

@@ -12,6 +12,8 @@ use std::path::Path;
 use mime_guess::get_mime_extensions_str;
 use serde::{Deserialize, Serialize};
 
+pub const APPLICATION_OCTET_STREAM: &str = "application/octet-stream";
+
 pub fn get_media_type_extension(media_type: &str) -> Option<&'static str> {
     match media_type {
         // Override extension provided by mime_guess

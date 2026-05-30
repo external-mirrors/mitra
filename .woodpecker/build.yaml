@@ -1,0 +1,26 @@
+when:
+  - branch: [main]
+    event: [push]
+
+steps:
+  build:
+    image: docker.io/debian:trixie
+    environment:
+      DEFAULT_CONFIG_PATH: /etc/mitra/config.yaml
+      RUST_VERSION: "1.81.0"
+    commands:
+      - apt update
+      - apt install --yes build-essential musl-tools rustup
+      - rustup toolchain install $RUST_VERSION --target x86_64-unknown-linux-musl
+      - rustup default $RUST_VERSION
+      - cargo build --locked --release --features production --target x86_64-unknown-linux-musl --jobs 4
+  artifacts:
+    image: codeberg.org/s1m/woodpecker-upload
+    settings:
+      token:
+        # This token should be available on "Push" events
+        from_secret: codeberg_token
+      file:
+        - ./target/x86_64-unknown-linux-musl/release/mitra
+      version: "${CI_COMMIT_SHA}"
+      package: true

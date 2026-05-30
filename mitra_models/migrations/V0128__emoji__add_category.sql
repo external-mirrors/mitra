@@ -1,0 +1,1 @@
+ALTER TABLE emoji ADD COLUMN category VARCHAR(100);

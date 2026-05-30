@@ -4,7 +4,7 @@ pub mod agent;
 pub mod authentication;
 pub mod authority;
 pub mod builders;
-mod c2s;
+pub mod c2s;
 mod constants;
 pub mod contexts;
 pub mod deliverer;

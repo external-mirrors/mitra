@@ -20,6 +20,7 @@ use apx_sdk::{
     deserialization::{deserialize_into_object_id_opt, object_to_id},
     fetch::{
         fetch_object,
+        FetchedObject,
         FetchError,
         FetchObjectOptions,
     },
@@ -191,20 +192,14 @@ impl ApClient {
         &self,
         object_id: &str,
         options: FetchObjectOptions,
-        skip_authentication: bool,
-        fep_ef61_trusted_origins: Vec<String>,
-    ) -> Result<JsonValue, FetchError> {
+    ) -> Result<FetchedObject, FetchError> {
         let agent = self.agent();
         let object = fetch_object(
             &agent,
             object_id,
             options,
         ).await?;
-        if !skip_authentication {
-            verify_fetched_object(&object, fep_ef61_trusted_origins)?;
-        };
-        let object_json = object.extract_fragment()?;
-        Ok(object_json)
+        Ok(object)
     }
 
     // Performs filtering before fetching
@@ -223,15 +218,16 @@ impl ApClient {
             return Err(HandlerError::Filtered(error_message));
         };
         let options = FetchObjectOptions::default();
-        let object_json = self.fetch_object_raw(
+        let object = self.fetch_object_raw(
             object_id,
             options,
-            false, // authentication is required
-            #[cfg(feature = "mini")]
-            vec![self.instance.uri().to_string()],
-            #[cfg(not(feature = "mini"))]
-            vec![],
         ).await?;
+        #[cfg(feature = "mini")]
+        let fep_ef61_trusted_origins = vec![self.instance.uri().to_string()];
+        #[cfg(not(feature = "mini"))]
+        let fep_ef61_trusted_origins = vec![];
+        verify_fetched_object(&object, fep_ef61_trusted_origins)?;
+        let object_json = object.extract_fragment()?;
         let object_id = get_object_id(&object_json)?;
         if is_local_origin(&self.instance, object_id) {
             return Err(HandlerError::LocalObject);
@@ -568,7 +564,7 @@ pub(crate) async fn import_post(
 
     // Fetch ancestors by going through inReplyTo references
     // TODO: fetch replies too
-    #[allow(clippy::while_let_loop)]
+    #[expect(clippy::while_let_loop)]
     loop {
         let object_id = match queue.pop() {
             Some(object_id) => {

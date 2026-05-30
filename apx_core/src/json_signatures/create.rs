@@ -220,7 +220,7 @@ pub fn sign_object_rsa(
     )?;
     let signature_created_at = current_time.unwrap_or(Utc::now());
     // Insert proof
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     let proof = IntegrityProof::jcs_rsa(
         signer_key_id,
         &signature,
@@ -255,7 +255,7 @@ pub fn sign_object_eddsa(
     let signature_created_at = current_time.unwrap_or(Utc::now());
     let proof_config = if use_legacy_cryptosuite {
         // jcs-eddsa-2022
-        #[allow(deprecated)]
+        #[expect(deprecated)]
         IntegrityProofConfig::jcs_eddsa_legacy(
             signer_key_id,
             signature_created_at,
@@ -322,7 +322,7 @@ mod tests {
     use super::*;
 
     #[test]
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     fn test_sign_object_rsa() {
         let signer_key = generate_weak_rsa_key().unwrap();
         let signer_key_id = "https://example.org/users/test#main-key";

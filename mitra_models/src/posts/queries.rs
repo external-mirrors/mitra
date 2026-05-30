@@ -847,6 +847,7 @@ pub async fn get_public_timeline(
     db_client: &impl DatabaseClient,
     current_user_id: Option<Uuid>,
     only_local: bool,
+    maybe_hostname: Option<&str>,
     max_post_id: Option<Uuid>,
     limit: u16,
 ) -> Result<Vec<PostDetailed>, DatabaseError> {
@@ -855,6 +856,9 @@ pub async fn get_public_timeline(
         filter += "(actor_profile.user_id IS NOT NULL
             OR automated_account_id IS NOT NULL
             OR actor_profile.portable_user_id IS NOT NULL) AND";
+    };
+    if maybe_hostname.is_some() {
+        filter += "(actor_profile.hostname = $hostname) AND";
     };
     let statement = format!(
         "
@@ -882,6 +886,7 @@ pub async fn get_public_timeline(
     let query = query!(
         &statement,
         current_user_id=current_user_id,
+        hostname=maybe_hostname,
         max_post_id=max_post_id,
         limit=limit,
     )?;
@@ -987,7 +992,7 @@ pub(super) async fn get_related_posts(
     Ok(posts)
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub async fn get_posts_by_author(
     db_client: &impl DatabaseClient,
     profile_id: Uuid,
@@ -2330,6 +2335,7 @@ mod tests {
             Some(current_user.id),
             false,
             None,
+            None,
             20,
         ).await.unwrap();
         assert_eq!(timeline.len(), 1);
@@ -2342,11 +2348,67 @@ mod tests {
             None,
             false,
             None,
+            None,
             20,
         ).await.unwrap();
         assert_eq!(timeline.len(), 1);
         assert_eq!(timeline.iter().any(|post| post.id == post_1.id), true);
         assert_eq!(timeline.iter().any(|post| post.id == post_2.id), false);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_public_timeline_hostname_filter() {
+        let db_client = &mut create_test_database().await;
+        let current_user = create_test_user(db_client, "test").await;
+        let author_1 = create_test_remote_profile(
+            db_client,
+            "test",
+            "server1.example",
+            "https://server1.example/users/test",
+        ).await;
+        let post_1 = create_test_remote_post(
+            db_client,
+            author_1.id,
+            "test",
+            "https://server1.example/objects/1",
+        ).await;
+        let author_2 = create_test_remote_profile(
+            db_client,
+            "test",
+            "server2.example",
+            "https://server2.example/users/test",
+        ).await;
+        let post_2 = create_test_remote_post(
+            db_client,
+            author_2.id,
+            "test",
+            "https://server2.example/objects/1",
+        ).await;
+
+        let timeline = get_public_timeline(
+            db_client,
+            Some(current_user.id),
+            false,
+            None,
+            None,
+            20,
+        ).await.unwrap();
+        assert_eq!(timeline.len(), 2);
+        assert_eq!(timeline.iter().any(|post| post.id == post_1.id), true);
+        assert_eq!(timeline.iter().any(|post| post.id == post_2.id), true);
+
+        let timeline = get_public_timeline(
+            db_client,
+            Some(current_user.id),
+            false,
+            Some("server2.example"),
+            None,
+            20,
+        ).await.unwrap();
+        assert_eq!(timeline.len(), 1);
+        assert_eq!(timeline.iter().any(|post| post.id == post_1.id), false);
+        assert_eq!(timeline.iter().any(|post| post.id == post_2.id), true);
     }
 
     #[tokio::test]

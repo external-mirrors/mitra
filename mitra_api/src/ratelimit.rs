@@ -75,6 +75,7 @@ pub struct RatelimitConfigs {
     pub registration: RatelimitConfig,
     pub login: RatelimitConfig,
     pub search: RatelimitConfig,
+    pub fetch_collection: RatelimitConfig,
 }
 
 impl RatelimitConfigs {
@@ -84,6 +85,7 @@ impl RatelimitConfigs {
             registration: ratelimit_config(extractor, 2, 300, false),
             login: ratelimit_config(extractor, 5, 120, false),
             search: ratelimit_config(extractor, 2, 30, true),
+            fetch_collection: ratelimit_config(extractor, 6, 300, false),
         }
     }
 }

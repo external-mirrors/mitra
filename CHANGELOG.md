@@ -6,10 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Changed MSRV to 1.81.0.
+
+## [5.4.0] - 2026-05-27
+
 ### Added
 
 - Added option to generate `Like` activities to `create-activity` command.
 - Added `federation.no_proxy` configuration parameter.
+- Added command groups: `account`, `ap`, `config`, `emoji`, `filter`, `invite`, `media`.
+- Added `instance` parameter to `/api/v1/timelines/public` API method.
+- Allow to specify category when adding emoji to local collection.
+- Added `--verify-proof` option to `fetch-object` command.
 
 ### Changed
 
@@ -18,10 +28,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add `attributedTo` property to `outbox` and `featured` collections.
 - Allowed `Undo` activities with embedded `actor`.
 - Add request URI to GET request verification error message.
+- Allowed `application/octet-stream` when streaming media through media proxy.
+- Changed HTTP signature error message from `invalid signature` to `signature verification error`.
+- Rate-limit `/api/v1/accounts/{account_id}/load_activities` endpoint.
+- Allow non-admins to call `/api/v1/accounts/{account_id}/load_activities`.
 
 ### Fixed
 
 - Fixed misleading error message when digest header is not signed.
+- Fixed double-decoding of media URL in media proxy view.
+- Fixed panic on handling non-normalized paths.
+
+### Security
+
+- Verify permissions on embedded objects when processing activities sent to FEP-ae97 outbox.
+- Return error when target authority of a signed request doesn't match instance hostname.
 
 ## [5.3.0] - 2026-05-13
 

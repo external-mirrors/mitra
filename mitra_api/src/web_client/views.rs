@@ -58,7 +58,6 @@ fn web_client_service(web_client_dir: &Path) -> Files {
     Files::new("/", web_client_dir)
         .index_file(INDEX_FILE)
         .prefer_utf8(true)
-        .use_hidden_files()
         .default_handler(fn_service(|service_request: ServiceRequest| {
             // Workaround for https://github.com/actix/actix-web/issues/2617
             let (request, _) = service_request.into_parts();

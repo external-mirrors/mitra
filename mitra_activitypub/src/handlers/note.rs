@@ -881,7 +881,7 @@ fn get_object_visibility(
                 // TODO: check scope widening
                 Visibility::Conversation
             } else {
-                #[allow(clippy::collapsible_else_if)]
+                #[expect(clippy::collapsible_else_if)]
                 if audience.iter().any(|id| id == AP_PUBLIC) {
                     log::warn!("changing visibility from Public to Conversation");
                     Visibility::Conversation

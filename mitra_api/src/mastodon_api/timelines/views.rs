@@ -106,6 +106,7 @@ async fn public_timeline(
         db_client,
         maybe_current_user.as_ref().map(|user| user.id),
         query_params.local,
+        query_params.instance.as_deref(),
         query_params.max_id,
         query_params.limit.inner(),
     ).await?;

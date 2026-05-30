@@ -3,7 +3,10 @@ use std::path::PathBuf;
 use anyhow::{anyhow, Error};
 use apx_sdk::{
     addresses::WebfingerAddress,
-    authentication::verify_portable_object,
+    authentication::{
+        verify_fetched_object,
+        verify_portable_object,
+    },
     deliver::{send_object, DelivererError},
     fetch::FetchObjectOptions,
     utils::{get_core_type, CoreType},
@@ -14,7 +17,10 @@ use uuid::Uuid;
 
 use mitra_activitypub::{
     agent::build_federation_agent,
-    authentication::verify_signed_object,
+    authentication::{
+        verify_signed_fetched_object,
+        verify_signed_object,
+    },
     authority::Authority,
     builders::{
         announce::build_relay_announce,
@@ -166,7 +172,6 @@ impl ImportObject {
 
 /// Load replies from 'replies' or 'context' collection
 #[derive(Parser)]
-#[command(visible_alias = "fetch-replies")]
 pub struct LoadReplies {
     object_id: String,
     #[arg(long, default_value_t = 20)]
@@ -205,6 +210,9 @@ pub struct FetchObject {
     user_agent: Option<String>,
     #[arg(long)]
     skip_verification: bool,
+    /// Verify FEP-8b32 proof after fetching?
+    #[arg(long)]
+    verify_proof: bool,
 }
 
 impl FetchObject {
@@ -242,10 +250,23 @@ impl FetchObject {
         let object = ap_client.fetch_object_raw(
             &object_id,
             options,
-            self.skip_verification, // skip_authentication
-            vec![],
         ).await?;
-        println!("{}", object);
+        // TODO: don't verify by default
+        if !self.skip_verification {
+            if self.verify_proof {
+                // Verifies integrity proofs on all objects
+                verify_signed_fetched_object(
+                    &ap_client,
+                    db_pool,
+                    &object,
+                ).await?;
+            } else {
+                // Verifies integrity proofs only on portable objects
+                verify_fetched_object(&object, vec![])?;
+            };
+        };
+        let object_json = object.extract_fragment()?;
+        println!("{}", object_json);
         Ok(())
     }
 }
@@ -459,5 +480,27 @@ impl SendActivity {
             },
         };
         Ok(())
+    }
+}
+
+/// ActivityPub commands
+#[derive(Subcommand)]
+pub enum ApCommand {
+    Import(ImportObject),
+    Fetch(FetchObject),
+    Webfinger(Webfinger),
+}
+
+impl ApCommand {
+    pub async fn execute(
+        self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        match self {
+            Self::Import(command) => command.execute(config, db_pool).await,
+            Self::Fetch(command) => command.execute(config, db_pool).await,
+            Self::Webfinger(command) => command.execute(config, db_pool).await,
+        }
     }
 }

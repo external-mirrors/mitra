@@ -1,5 +1,7 @@
 use super::{DatabaseClient, DatabaseError, DatabaseTypeError};
 
+pub const POSTGRES_VERSION_MIN: u32 = 150_000;
+
 pub async fn get_postgres_version(
     db_client: &impl  DatabaseClient,
 ) -> Result<u32, DatabaseError> {

@@ -1970,8 +1970,15 @@ paths:
                   allOf:
                     - $ref: '#/components/schemas/Visibility'
                     - description: |
-                        Visibility of the post.
-                        Default: "direct" when parent post is not public, otherwise "public".
+                        Visibility of the post:
+                        
+                        - `public` - visible to everyone
+                        - `private` - visible to followers
+                        - `subscribers` - visible to paid subscribers
+                        - `conversation` - visible to people chosen by the conversation owner (the author of the top-level post)
+                        - `direct` - visible to mentioned users
+                        
+                        Default: `direct` when parent post is not public, otherwise `public`.
                 sensitiive:
                   description: Mark post and attached media as sensitive?
                   type: boolean
@@ -2715,6 +2722,12 @@ paths:
           schema:
             type: boolean
             default: false
+        - name: instance
+          in: query
+          description: Return only posts originating from this server.
+          required: false
+          schema:
+            type: string
         - name: max_id
           in: query
           description: Return results older than this ID.
@@ -3366,6 +3379,10 @@ components:
         visible_in_picker:
           description: Whether this Emoji should be visible in the picker or unlisted.
           type: boolean
+        category:
+          description: Used for sorting custom emoji in the picker.
+          type: string
+          nullable: true
     DomainBlock:
       description: Represents a domain that is blocked by the instance.
       type: object

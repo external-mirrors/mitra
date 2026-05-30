@@ -59,7 +59,7 @@ impl FromStr for ProofType {
             PROOF_TYPE_JCS_EIP191 => Self::JcsEip191Signature,
             #[cfg(feature = "minisign")]
             PROOF_TYPE_JCS_BLAKE2_ED25519 => Self::JcsBlake2Ed25519Signature,
-            #[allow(deprecated)]
+            #[expect(deprecated)]
             PROOF_TYPE_JCS_RSA => Self::JcsRsaSignature,
             _ => return Err(UnsupportedProofType),
         };
@@ -70,7 +70,7 @@ impl FromStr for ProofType {
 impl ProofType {
     pub fn from_cryptosuite(value: &str) -> Result<Self, UnsupportedProofType> {
         let proof_type = match value {
-            #[allow(deprecated)]
+            #[expect(deprecated)]
             CRYPTOSUITE_JCS_EDDSA_LEGACY => Self::JcsEddsaSignature,
             CRYPTOSUITE_JCS_EDDSA => Self::EddsaJcsSignature,
             _ => return Err(UnsupportedProofType),

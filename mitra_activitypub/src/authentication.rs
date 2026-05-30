@@ -41,7 +41,12 @@ use apx_sdk::{
         verify_portable_object,
         AuthenticationError as PortableObjectAuthenticationError,
     },
-    utils::{key_id_to_actor_id, CoreType},
+    fetch::FetchedObject,
+    utils::{
+        get_core_type,
+        key_id_to_actor_id,
+        CoreType,
+    },
 };
 use serde_json::{Value as JsonValue};
 use thiserror::Error;
@@ -77,6 +82,9 @@ pub enum AuthenticationError {
 
     #[error("no HTTP signature")]
     NoHttpSignature,
+
+    #[error("unexpected target authority: {0}")]
+    UnexpectedTargetAuthority(String),
 
     #[error("invalid JSON signature: {0}")]
     JsonSignatureError(#[from] JsonSignatureError),
@@ -245,7 +253,9 @@ pub async fn verify_signed_request(
         log::info!("RFC-9421 signature found");
     };
     if signature_data.authority != ap_client.instance.uri().authority() {
-        log::warn!("unexpected target authority: {}", signature_data.authority);
+        return Err(AuthenticationError::UnexpectedTargetAuthority(
+            signature_data.authority,
+        ));
     };
     // Try to guess the key owner ID from the key ID.
     let signer_id = match signature_data.key_id {
@@ -324,7 +334,7 @@ pub async fn verify_signed_object(
                 .map_err(|_| ValidationError("invalid key ID"))?;
             let signer = get_signer(ap_client, db_pool, &signer_id, no_fetch).await?;
             match signature_data.proof_type {
-                #[allow(deprecated)]
+                #[expect(deprecated)]
                 ProofType::JcsEddsaSignature | ProofType::EddsaJcsSignature => {
                     // Check reciprocal claim
                     let signer_key = get_signer_ed25519_key(
@@ -357,4 +367,35 @@ pub async fn verify_signed_object(
         return Err(AuthenticationError::UnexpectedObjectSigner);
     };
     Ok(signer)
+}
+
+// Unlike verify_fetched_object from APx,
+// this verifier supports non-portable signed objects
+pub async fn verify_signed_fetched_object(
+    ap_client: &ApClient,
+    db_pool: &DatabaseConnectionPool,
+    object: &FetchedObject,
+) -> Result<(), HandlerError> {
+    let Err(fetch_error) = object.verify_origin() else {
+        return Ok(());
+    };
+    let core_type = get_core_type(&object.value);
+    match verify_signed_object(
+        ap_client,
+        db_pool,
+        &object.value,
+        core_type,
+        true, // don't fetch
+    ).await {
+        Ok(_) => (),
+        Err(AuthenticationError::NoJsonSignature) =>
+            // Return origin verification error
+            return Err(fetch_error.into()),
+        Err(AuthenticationError::DatabaseError(db_error)) =>
+            return Err(db_error.into()),
+        Err(other_error) =>
+            // TODO: add AuthenticationError variant?
+            return Err(HandlerError::ValidationError(other_error.to_string())),
+    };
+    Ok(())
 }

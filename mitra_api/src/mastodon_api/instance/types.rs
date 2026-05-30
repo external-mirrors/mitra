@@ -280,7 +280,6 @@ fn get_full_api_version(software: SoftwareMetadata) -> String {
 }
 
 impl InstanceInfo {
-    #[allow(clippy::too_many_arguments)]
     pub fn create(
         config: &Config,
         dynamic_config: DynamicConfig,

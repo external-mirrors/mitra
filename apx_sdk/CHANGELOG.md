@@ -10,10 +10,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Re-exported `Host` from `http_url_whatwg` module.
 - Added `no_proxy` parameter to `FederationAgent`.
+- Implemented `Debug` and `PartialEq` for `PublicKey` type.
+- Added `to_multikey` and `to_pem` methods to `PublicKey` type.
 
 ### Changed
 
-- Changed MSRV to 1.80.0.
+- Changed MSRV to 1.81.0.
 - Migrated to `thiserror` 2.0.
 - Replaced `required_components` argument in `parse_http_signature_rfc9421` with a boolean flag.
 - Don't try to extract content digest if request method is not POST, PUT or PATCH.

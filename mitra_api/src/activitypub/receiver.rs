@@ -12,7 +12,6 @@ use apx_sdk::{
     utils::CoreType,
 };
 use serde_json::{Value as JsonValue};
-use thiserror::Error;
 
 use mitra_activitypub::{
     authentication::{
@@ -32,50 +31,13 @@ use mitra_models::{
     database::{
         get_database_client,
         DatabaseConnectionPool,
-        DatabaseError,
     },
 };
 use mitra_validators::{
     errors::ValidationError,
 };
 
-use crate::{
-    errors::HttpError,
-};
-
-#[derive(Debug, Error)]
-pub enum EndpointError {
-    #[error(transparent)]
-    ValidationError(#[from] ValidationError),
-
-    #[error(transparent)]
-    DatabaseError(#[from] DatabaseError),
-
-    #[error("authentication error: {0}")]
-    AuthError(#[source] AuthenticationError),
-}
-
-impl From<AuthenticationError> for EndpointError {
-    fn from(error: AuthenticationError) -> Self {
-        match error {
-            AuthenticationError::ValidationError(inner) => inner.into(),
-            AuthenticationError::DatabaseError(inner) => inner.into(),
-            _ => Self::AuthError(error),
-        }
-    }
-}
-
-impl From<EndpointError> for HttpError {
-    fn from(error: EndpointError) -> Self {
-        match error {
-            EndpointError::ValidationError(error) => error.into(),
-            EndpointError::DatabaseError(error) => error.into(),
-            EndpointError::AuthError(_) => {
-                HttpError::AuthError("invalid signature")
-            },
-        }
-    }
-}
+use super::errors::EndpointError;
 
 pub async fn receive_activity(
     config: &Config,

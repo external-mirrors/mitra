@@ -14,6 +14,7 @@ use mitra_models::attachments::types::{
     AttachmentType,
     MediaAttachment as DbMediaAttachment,
 };
+use mitra_utils::files::APPLICATION_OCTET_STREAM;
 
 use crate::mastodon_api::media_server::ClientMediaServer;
 
@@ -33,7 +34,6 @@ pub struct AttachmentDataMultipartForm {
 
 impl From<AttachmentDataMultipartForm> for AttachmentData {
     fn from(form: AttachmentDataMultipartForm) -> Self {
-        const APPLICATION_OCTET_STREAM: &str = "application/octet-stream";
         let media_type = form.file.content_type
             .map(|mime| mime.essence_str().to_string())
             // Ignore if content type is application/octet-stream

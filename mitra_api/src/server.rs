@@ -163,7 +163,7 @@ pub async fn run_server(
                 web::resource("/.well-known/{path}")
                     .to(HttpResponse::NotFound)
             );
-        #[allow(irrefutable_let_patterns)]
+        #[expect(irrefutable_let_patterns)]
         if let MediaStorage::Filesystem(ref backend) = media_storage {
             app = app.service(actix_files::Files::new(
                 FilesystemServer::BASE_PATH,

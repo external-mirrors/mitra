@@ -20,7 +20,7 @@ pub struct Reaction {
     pub emoji_id: Option<Uuid>,
     pub visibility: Visibility,
     pub activity_id: Option<String>,
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     has_deprecated_ap_id: bool,
     pub created_at: DateTime<Utc>,
 }

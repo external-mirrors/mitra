@@ -304,6 +304,7 @@ CREATE TABLE emoji (
     emoji_name VARCHAR(100) NOT NULL,
     hostname VARCHAR(100) REFERENCES instance (hostname) ON DELETE RESTRICT,
     image JSONB NOT NULL,
+    category VARCHAR(100),
     object_id VARCHAR(2000) UNIQUE,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
     UNIQUE (emoji_name, hostname),

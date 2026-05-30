@@ -57,7 +57,7 @@ int_enum_to_sql!(FilterAction);
 #[derive(Clone, FromSql)]
 #[postgres(name = "filter_rule")]
 pub struct FilterRule {
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     id: i32,
     pub target: String,
     pub filter_action: FilterAction,

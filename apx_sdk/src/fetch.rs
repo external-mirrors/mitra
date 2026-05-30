@@ -348,7 +348,7 @@ pub async fn fetch_media(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-#[allow(impl_trait_overcaptures)]
+#[expect(impl_trait_overcaptures)]
 pub async fn stream_media(
     agent: &FederationAgent,
     url: &str,
