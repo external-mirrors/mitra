@@ -34,6 +34,7 @@ mod directory;
 mod favourites;
 mod filters;
 mod follow_requests;
+mod groups;
 mod instance;
 mod lists;
 mod markers;
@@ -148,6 +149,7 @@ pub fn mastodon_api_scope(
         .service(favourites::views::favourite_api_scope())
         .service(filters::views::filter_api_scope())
         .service(follow_requests::views::follow_request_api_scope())
+        .service(groups::views::group_api_scope())
         .service(instance::views::instance_api_v1_scope())
         .service(instance::views::instance_api_v2_scope())
         .service(lists::views::list_api_scope())

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `/api/v1/groups/followed` API endpoint.
+
 ### Changed
 
 - Changed MSRV to 1.81.0.

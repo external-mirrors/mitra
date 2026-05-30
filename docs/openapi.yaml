@@ -1148,6 +1148,38 @@ paths:
                 $ref: '#/components/schemas/Relationship'
         404:
           description: Follow request not found
+  /api/v1/groups/followed:
+    get:
+      summary: List groups followed by the user.
+      security:
+        - tokenAuth: []
+      parameters:
+        - name: offset
+          in: query
+          description: How many groups to skip before returning results.
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          description: Maximum number of results to return.
+          required: false
+          schema:
+            type: integer
+            default: 40
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: Profile list
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+        400:
+          description: Invalid query parameters.
   /api/v1/instance:
     get:
       summary: Information about the instance.
