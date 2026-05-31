@@ -71,7 +71,8 @@ impl DeleteUser {
             db_client,
             &self.id_or_name,
         ).await?;
-        if profile.is_local() {
+        // TODO: federate group deletions
+        if profile.is_local() && !profile.is_group() {
             let user = get_user_by_id(db_client, profile.id).await?;
             delete_user(config, db_client, &user).await?;
         } else {

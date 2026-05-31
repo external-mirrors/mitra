@@ -518,7 +518,10 @@ pub async fn create_automated_account(
     check_local_username_unique(&transaction, &account_data.username).await?;
     // Create profile
     let profile_data = ProfileCreateData {
-        actor_type: ActorType::Automated,
+        actor_type: match account_data.account_type {
+            AutomatedAccountType::Group => ActorType::Group,
+            _ => ActorType::Automated,
+        },
         username: account_data.username.clone(),
         hostname: None,
         webfinger_hostname: WebfingerHostname::Local,

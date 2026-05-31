@@ -1148,6 +1148,29 @@ paths:
                 $ref: '#/components/schemas/Relationship'
         404:
           description: Follow request not found
+  /api/v1/groups:
+    post:
+      summary: Create a group
+      security:
+        - tokenAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  description: The name of the group
+                  type: string
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        400:
+          description: Invalid group info
   /api/v1/groups/followed:
     get:
       summary: List groups followed by the user.

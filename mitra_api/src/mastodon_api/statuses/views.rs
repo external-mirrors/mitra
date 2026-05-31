@@ -178,7 +178,7 @@ async fn create_status(
     };
     let maybe_group = if let Some(group_id) = status_data.group_id {
         match get_profile_by_id(db_client, group_id).await {
-            Ok(profile) if profile.is_group() =>  Some(profile),
+            Ok(profile) if profile.is_group() => Some(profile),
             Ok(_) | Err(DatabaseError::NotFound(_)) => {
                 return Err(ValidationError("invalid group ID").into());
             },

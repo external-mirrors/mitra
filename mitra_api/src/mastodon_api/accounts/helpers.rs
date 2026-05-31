@@ -97,6 +97,7 @@ fn create_relationship_map(
                     relationship_map.rejected_by = true;
                 };
             },
+            RelationshipType::GroupAdmin => (),
         };
     };
     Ok(relationship_map)

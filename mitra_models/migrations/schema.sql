@@ -132,11 +132,13 @@ CREATE TABLE oauth_token (
 
 CREATE TABLE automated_account (
     id UUID PRIMARY KEY REFERENCES actor_profile (id) ON DELETE CASCADE,
-    account_type SMALLINT UNIQUE NOT NULL,
+    account_type SMALLINT NOT NULL,
     rsa_secret_key BYTEA NOT NULL,
     ed25519_secret_key BYTEA NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX automated_account_account_type_idx ON automated_account (account_type) WHERE account_type != 4;
 
 ALTER TABLE actor_profile
     ADD CONSTRAINT actor_profile_automated_account_id_fkey

@@ -2,6 +2,11 @@ use serde::Deserialize;
 
 use crate::mastodon_api::pagination::PageSize;
 
+#[derive(Deserialize)]
+pub struct GroupCreateData {
+    pub name: String,
+}
+
 fn default_group_list_page_size() -> PageSize { PageSize::new(40) }
 
 #[derive(Deserialize)]

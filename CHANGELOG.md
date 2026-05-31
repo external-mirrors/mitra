@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add `title` field to `Status` API entity if ActivityPub object has a `name`.
 - Added `default_fts_config` dynamic configuration parameter for changing text search settings.
 - Added `is_group` field to Mastodon API `Status` entity.
+- Added API method for creating groups.
 
 ### Changed
 

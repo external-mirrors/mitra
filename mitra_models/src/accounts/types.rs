@@ -36,7 +36,11 @@ use crate::{
         DatabaseTypeError,
     },
     posts::types::{DbLanguage, Visibility},
-    profiles::types::{get_identity_key, DbActorProfile},
+    profiles::types::{
+        get_identity_key,
+        ActorType,
+        DbActorProfile,
+    },
 };
 
 #[expect(dead_code)]
@@ -382,6 +386,7 @@ pub enum AutomatedAccountType {
     Application,
     Relay,
     Anonymous,
+    Group,
 }
 
 impl From<AutomatedAccountType> for i16 {
@@ -390,6 +395,7 @@ impl From<AutomatedAccountType> for i16 {
             AutomatedAccountType::Application => 1,
             AutomatedAccountType::Relay => 2,
             AutomatedAccountType::Anonymous => 3,
+            AutomatedAccountType::Group => 4,
         }
     }
 }
@@ -402,6 +408,7 @@ impl TryFrom<i16> for AutomatedAccountType {
             1 => Self::Application,
             2 => Self::Relay,
             3 => Self::Anonymous,
+            4 => Self::Group,
             _ => return Err(DatabaseTypeError),
         };
         Ok(account_type)
@@ -441,6 +448,18 @@ impl AutomatedAccountDetailed {
         };
         if db_profile.automated_account_id != Some(db_account.id) {
             return Err(DatabaseTypeError);
+        };
+        match db_account.account_type {
+            AutomatedAccountType::Group => {
+                if db_profile.actor_type != ActorType::Group {
+                    return Err(DatabaseTypeError);
+                };
+            },
+            _ => {
+                if db_profile.actor_type != ActorType::Automated {
+                    return Err(DatabaseTypeError);
+                };
+            },
         };
         let rsa_secret_key =
             rsa_secret_key_from_pkcs1_der(&db_account.rsa_secret_key)
