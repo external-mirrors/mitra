@@ -1108,7 +1108,6 @@ pub async fn get_custom_feed_timeline(
     max_post_id: Option<Uuid>,
     limit: u16,
 ) -> Result<Vec<PostDetailed>, DatabaseError> {
-    // show_replies / show_reposts settings are ignored
     let statement = format!(
         "
         SELECT
