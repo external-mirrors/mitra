@@ -524,6 +524,12 @@ impl ConversationTrackingData {
     }
 }
 
+#[derive(Deserialize)]
+pub struct LoadConversationRequest {
+    #[serde(default)]
+    pub use_context: bool,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

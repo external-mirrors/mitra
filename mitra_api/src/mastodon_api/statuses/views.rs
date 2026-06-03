@@ -124,6 +124,7 @@ use super::types::{
     Context,
     ConversationTrackingData,
     FavouritedByQueryParams,
+    LoadConversationRequest,
     ReblogParams,
     RebloggedByQueryParams,
     Status,
@@ -1269,6 +1270,7 @@ async fn load_conversation(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
+    request_data: web::Json<LoadConversationRequest>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -1280,13 +1282,47 @@ async fn load_conversation(
         Some(&current_user.profile),
         *status_id,
     ).await?;
-    let job_data = if let Some(object_id) = post.object_id {
-        FetcherJobData::Context { object_id }
+    let conversation = post.expect_conversation();
+    let root = get_post_by_id(db_client, conversation.root_id).await?;
+    let mut jobs = vec![];
+    if request_data.use_context {
+        if let Some(root_object_id) = root.object_id {
+            // Remote conversation
+            jobs.push(FetcherJobData::Context {
+                object_id: root_object_id.clone(),
+                use_context: true,
+            });
+            // Load replies too because context may be empty (Pleroma)
+            jobs.push(FetcherJobData::Context {
+                object_id: root_object_id,
+                use_context: false,
+            });
+            // Also load replies to selected post
+            if post.id != root.id {
+                if let Some(object_id) = post.object_id {
+                    jobs.push(FetcherJobData::Context {
+                        object_id,
+                        use_context: false,
+                    });
+                };
+            };
+        };
+        // Do not return error if conversation is local
     } else {
-        // Local posts
-        return Err(MastodonError::NotFound("post"));
+        // Legacy mode: find replies to this post
+        if let Some(object_id) = post.object_id {
+            jobs.push(FetcherJobData::Context {
+                object_id,
+                use_context: false,
+            });
+        } else {
+            // Local posts
+            return Err(MastodonError::NotFound("post"));
+        };
     };
-    job_data.into_job(db_client).await?;
+    for job_data in jobs {
+        job_data.into_job(db_client).await?;
+    };
     Ok(HttpResponse::NoContent().finish())
 }
 

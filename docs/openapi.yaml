@@ -2518,11 +2518,20 @@ paths:
           description: Post already saved to IPFS
   /api/v1/statuses/{status_id}/load_conversation:
     post:
-      summary: Load conversation from a remote server.
+      summary: Load replies or full conversation from a remote server.
       security:
         - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/status_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                use_context:
+                  description: Try to load full conversation.
+                  type: boolean
       responses:
         204:
           description: Successful operation

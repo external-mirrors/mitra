@@ -576,7 +576,11 @@ pub async fn process_queued_outgoing_activities(
 pub enum FetcherJobData {
     Outbox { actor_id: String },
     Featured { actor_id: String },
-    Context { object_id: String },
+    Context {
+        object_id: String,
+        #[serde(default)]
+        use_context: bool,
+    },
 }
 
 impl FetcherJobData {
@@ -632,12 +636,12 @@ pub async fn fetcher_queue_executor(
                     COLLECTION_LIMIT,
                 ).await
             },
-            FetcherJobData::Context { object_id } => {
+            FetcherJobData::Context { object_id, use_context } => {
                 import_replies(
                     config,
                     db_pool,
                     &object_id,
-                    false, // don't use context
+                    use_context,
                     COLLECTION_LIMIT,
                 ).await
             },
