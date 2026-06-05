@@ -186,7 +186,7 @@ pub struct Actor {
     gateways: Vec<String>,
 }
 
-fn local_actor_data(
+pub(crate) fn local_actor_data(
     authority: &Authority,
     profile: &DbActorProfile,
 ) -> DbActor {

@@ -20,15 +20,20 @@ use mitra_config::Instance;
 use mitra_models::{
     activitypub::queries::get_object,
     database::DatabaseClient,
-    users::types::PortableUser,
+    users::types::{PortableUser, User},
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    authority::Authority,
     errors::HandlerError,
-    identifiers::canonicalize_id,
+    identifiers::{
+        canonicalize_id,
+        local_actor_id_unified,
+    },
     keys::verification_method_to_public_key,
     ownership::{
+        get_object_id,
         get_object_id_opt,
         get_owner,
         is_local_origin,
@@ -43,6 +48,38 @@ use crate::{
         UPDATE,
     },
 };
+
+pub fn verify_activity_id(
+    instance: &Instance,
+    activity: &JsonValue,
+) -> Result<(), ValidationError> {
+    // TODO: replace activity ID to prevent conflicts
+    // TODO: replace all local IDs in embedded objects
+    let activity_id = get_object_id(activity)?;
+    if !is_local_origin(instance, activity_id) {
+        return Err(ValidationError("activity ID is not local"));
+    };
+    Ok(())
+}
+
+pub fn verify_activity_actor(
+    instance: &Instance,
+    account: &User,
+    activity: &JsonValue,
+) -> Result<(), ValidationError> {
+    let activity_actor = object_to_id(&activity["actor"])
+        .map_err(|_| ValidationError("invalid actor property"))?;
+    let authority = Authority::from(instance);
+    let expected_actor_id = local_actor_id_unified(
+        &authority,
+        account.profile.id,
+        &account.profile.username,
+    );
+    if activity_actor != expected_actor_id {
+        return Err(ValidationError("actor is not authorized to perform activity"));
+    };
+    Ok(())
+}
 
 fn find_objects(object: &JsonValue) -> Vec<&JsonValue> {
     let mut objects = vec![];
