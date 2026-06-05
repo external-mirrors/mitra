@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add actors from `audience` field to post audience.
 - Associate group posts with group actors.
 - Preserve order of targets when forwarding portable activities.
+- Made `recipient` argument optional for `send-activity` command.
 
 ## [5.4.0] - 2026-05-27
 
