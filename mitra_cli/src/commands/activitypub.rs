@@ -32,6 +32,7 @@ use mitra_activitypub::{
     handlers::activity::get_activity_audience,
     identifiers::canonicalize_id,
     importers::{
+        get_post_by_object_id,
         get_user_by_actor_id,
         import_activity,
         import_actor,
@@ -54,7 +55,6 @@ use mitra_models::{
     },
     posts::queries::{
         get_post_by_id,
-        get_remote_post_by_object_id,
     },
     profiles::queries::get_remote_profile_by_actor_id,
     users::{
@@ -384,7 +384,12 @@ impl CreateActivity {
             },
             Activity::Like { sender, object } => {
                 let account = get_user_by_name(db_client, &sender).await?;
-                let post = get_remote_post_by_object_id(db_client, &object).await?;
+                let canonical_object_id = canonicalize_id(&object)?;
+                let post = get_post_by_object_id(
+                    db_client,
+                    &authority,
+                    &canonical_object_id,
+                ).await?;
                 let media_server = MediaServer::new(config);
                 let like = build_like(
                     &authority,
