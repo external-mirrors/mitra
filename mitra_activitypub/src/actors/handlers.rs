@@ -262,6 +262,7 @@ impl ValidatedActor {
             featured: maybe_canonical_featured.map(|id| id.to_string()),
             url: self.url.clone(),
             gateways: self.gateways.clone(),
+            #[expect(deprecated)]
             public_key: None,
         };
         Ok(db_actor)

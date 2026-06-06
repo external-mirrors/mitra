@@ -9,7 +9,7 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseError, DatabaseTypeError},
-    profiles::types::IdentityProofType,
+    profiles::types::{DbActor, DbActorProfile, IdentityProofType},
     users::types::User,
 };
 use mitra_services::media::MediaServer;
@@ -186,6 +186,36 @@ pub struct Actor {
     gateways: Vec<String>,
 }
 
+fn local_actor_data(
+    authority: &Authority,
+    profile: &DbActorProfile,
+) -> DbActor {
+    let actor_id = local_actor_id_unified(
+        authority,
+        profile.id,
+        &profile.username,
+    );
+    let actor_type = if profile.is_automated {
+        SERVICE
+    } else {
+        PERSON
+    };
+    DbActor {
+        object_type: actor_type.to_owned(),
+        id: actor_id.clone(),
+        inbox: LocalActorCollection::Inbox.of(&actor_id),
+        shared_inbox: None,
+        outbox: LocalActorCollection::Outbox.of(&actor_id),
+        followers: Some(LocalActorCollection::Followers.of(&actor_id)),
+        subscribers: Some(LocalActorCollection::Subscribers.of(&actor_id)),
+        featured: Some(LocalActorCollection::Featured.of(&actor_id)),
+        url: None,
+        gateways: vec![],
+        #[expect(deprecated)]
+        public_key: None,
+    }
+}
+
 pub fn build_local_actor(
     authority: &Authority,
     media_server: &MediaServer,
@@ -193,25 +223,16 @@ pub fn build_local_actor(
 ) -> Result<Actor, DatabaseError> {
     let server_uri = authority.expect_server_uri();
     let username = &user.profile.username;
-    let actor_id = local_actor_id_unified(authority, user.id, username);
-    let actor_type = if user.profile.is_automated {
-        SERVICE
-    } else {
-        PERSON
-    };
-    let inbox = LocalActorCollection::Inbox.of(&actor_id);
-    let outbox = LocalActorCollection::Outbox.of(&actor_id);
-    let followers = LocalActorCollection::Followers.of(&actor_id);
-    let following = LocalActorCollection::Following.of(&actor_id);
-    let subscribers = LocalActorCollection::Subscribers.of(&actor_id);
-    let featured = LocalActorCollection::Featured.of(&actor_id);
+    let actor_data = local_actor_data(authority, &user.profile);
+    // TODO: add to actor data?
+    let following = LocalActorCollection::Following.of(&actor_data.id);
 
-    let public_key = PublicKeyPem::build(&actor_id, &user.rsa_secret_key)
+    let public_key = PublicKeyPem::build(&actor_data.id, &user.rsa_secret_key)
         .map_err(|_| DatabaseTypeError)?;
     let verification_methods = vec![
-        Multikey::build_rsa(&actor_id, &user.rsa_secret_key)
+        Multikey::build_rsa(&actor_data.id, &user.rsa_secret_key)
             .map_err(|_| DatabaseTypeError)?,
-        Multikey::build_ed25519(&actor_id, &user.ed25519_secret_key),
+        Multikey::build_ed25519(&actor_data.id, &user.ed25519_secret_key),
     ];
     let avatar = match &user.profile.avatar {
         Some(image) => {
@@ -290,16 +311,16 @@ pub fn build_local_actor(
         .unwrap_or_default();
     let actor = Actor {
         _context: build_actor_context(),
-        id: actor_id.clone(),
-        object_type: actor_type.to_string(),
+        id: actor_data.id,
+        object_type: actor_data.object_type,
         name: user.profile.display_name.clone(),
         preferred_username: username.clone(),
-        inbox,
-        outbox,
-        followers: Some(followers),
+        inbox: actor_data.inbox,
+        outbox: actor_data.outbox,
+        followers: actor_data.followers,
         following: Some(following),
-        subscribers: Some(subscribers),
-        featured: Some(featured),
+        subscribers: actor_data.subscribers,
+        featured: actor_data.featured,
         assertion_method: verification_methods,
         public_key,
         implements: vec![],

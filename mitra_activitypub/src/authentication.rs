@@ -205,6 +205,7 @@ fn get_signer_key(
     } else {
         // TODO: remove public_key from actor data
         log::warn!("key not found in public_keys: {}", canonical_key_id);
+        #[expect(deprecated)]
         let public_key = &profile.actor_json.as_ref()
             .expect("should be signed by remote actor")
             .public_key.as_ref()
