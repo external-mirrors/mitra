@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Preserve order of targets when forwarding portable activities.
 - Made `recipient` argument optional for `send-activity` command.
 - Allow to use `create-activity` command for creating `Like` activities where `object` is local post.
+- Save actor JSON representation to database when creating or updating local user.
 
 ## [5.4.0] - 2026-05-27
 

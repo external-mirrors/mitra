@@ -47,6 +47,7 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    adapters::users::create_or_update_local_actor,
     authority::Authority,
     builders::{
         follow::follow_or_create_request,
@@ -280,6 +281,7 @@ pub async fn create_account(
             return Err(ValidationError("user already exists").into()),
         Err(other_error) => return Err(other_error.into()),
     };
+    create_or_update_local_actor(&config, db_client, &user).await?;
     create_signup_notifications(db_client, user.id).await?;
     log::warn!("created user {}", user);
     let base_url = get_request_base_url(connection_info);
@@ -355,6 +357,7 @@ async fn update_credentials(
         profile_data,
     ).await?;
     current_user.profile = updated_profile;
+    create_or_update_local_actor(&config, db_client, &current_user).await?;
     // Delete orphaned images after update
     deletion_queue.into_job(db_client).await?;
 
@@ -561,6 +564,7 @@ async fn create_identity_proof(
         profile_data,
     ).await?;
     current_user.profile = updated_profile;
+    create_or_update_local_actor(&config, db_client, &current_user).await?;
 
     // Federate
     let media_server = MediaServer::new(&config);
@@ -602,6 +606,7 @@ async fn delete_identity_proof(
         profile_data,
     ).await?;
     current_user.profile = updated_profile;
+    create_or_update_local_actor(&config, db_client, &current_user).await?;
 
     // Federate
     let media_server = MediaServer::new(&config);

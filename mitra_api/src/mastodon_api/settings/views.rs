@@ -11,7 +11,10 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::Utc;
 
 use mitra_activitypub::{
-    adapters::users::delete_user,
+    adapters::users::{
+        create_or_update_local_actor,
+        delete_user,
+    },
     authority::Authority,
     builders::{
         follow::follow_or_create_request,
@@ -214,6 +217,7 @@ async fn add_alias_view(
         profile_data,
     ).await?;
     current_user.profile = updated_profile;
+    create_or_update_local_actor(&config, db_client, &current_user).await?;
     let media_server = MediaServer::new(&config);
     prepare_update_person(
         db_client,
@@ -256,6 +260,7 @@ async fn remove_alias_view(
         profile_data,
     ).await?;
     current_user.profile = updated_profile;
+    create_or_update_local_actor(&config, db_client, &current_user).await?;
     let media_server = MediaServer::new(&config);
     prepare_update_person(
         db_client,

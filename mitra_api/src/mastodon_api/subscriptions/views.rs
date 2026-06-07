@@ -13,6 +13,7 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    adapters::users::create_or_update_local_actor,
     authority::Authority,
     builders::{
         add_person::prepare_add_subscriber,
@@ -279,6 +280,7 @@ async fn register_subscription_option(
         profile_data,
     ).await?;
     current_user.profile = updated_profile;
+    create_or_update_local_actor(&config, db_client, &current_user).await?;
 
     // Federate
     let media_server = MediaServer::new(&config);

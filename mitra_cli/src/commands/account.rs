@@ -13,6 +13,7 @@ use clap::{
     Subcommand,
 };
 
+use mitra_activitypub::adapters::users::create_or_update_local_actor;
 use mitra_adapters::{
     roles::{
         from_default_role,
@@ -83,7 +84,8 @@ impl CreateAccount {
             invite_code: None,
             role,
         };
-        create_user(db_client, user_data).await?;
+        let account = create_user(db_client, user_data).await?;
+        create_or_update_local_actor(config, db_client, &account).await?;
         println!("account created");
         Ok(())
     }
