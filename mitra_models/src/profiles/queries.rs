@@ -521,11 +521,13 @@ pub async fn get_remote_profiles_by_actor_ids(
     db_client: &impl DatabaseClient,
     actors_ids: &[String],
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
+    // Preserves order
     let rows = db_client.query(
         "
         SELECT actor_profile
-        FROM actor_profile
-        WHERE actor_id = ANY($1)
+        FROM unnest($1::text[]) WITH ORDINALITY AS ranked(actor_id, rank)
+        JOIN actor_profile USING (actor_id)
+        ORDER BY rank
         ",
         &[&actors_ids],
     ).await?;
