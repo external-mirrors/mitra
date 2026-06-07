@@ -183,6 +183,47 @@ pub async fn add_object_to_collection(
     Ok(())
 }
 
+pub async fn add_relationship(
+    db_client: &mut impl DatabaseClient,
+    owner_id: Uuid,
+    relationship_id: i32,
+    collection_id: &CanonicalUri,
+    object_id: &CanonicalUri,
+) -> Result<(), DatabaseError> {
+    let transaction = db_client.transaction().await?;
+    let maybe_row = transaction.query_opt(
+        "
+        SELECT 1
+        FROM activitypub_object
+        WHERE object_id = $1
+        FOR UPDATE
+        ",
+        &[&object_id.to_string()],
+    ).await?;
+    maybe_row.ok_or(DatabaseError::NotFound("activitypub object"))?;
+    transaction.execute(
+        "
+        INSERT INTO activitypub_collection_item (
+            owner_id,
+            relationship_id,
+            collection_id,
+            object_id
+        )
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (collection_id, object_id)
+        DO NOTHING
+        ",
+        &[
+            &owner_id,
+            &relationship_id,
+            &collection_id.to_string(),
+            &object_id.to_string(),
+        ],
+    ).await?;
+    transaction.commit().await?;
+    Ok(())
+}
+
 pub async fn remove_object_from_collection(
     db_client: &impl DatabaseClient,
     collection_id: &str,

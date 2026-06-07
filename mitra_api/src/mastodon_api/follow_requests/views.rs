@@ -12,6 +12,7 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    adapters::follow_requests::accept_and_add_follower,
     authority::Authority,
     builders::{
         accept_follow::prepare_accept_follow,
@@ -28,7 +29,6 @@ use mitra_models::{
     profiles::queries::get_profile_by_id,
     relationships::{
         queries::{
-            follow_request_accepted,
             follow_request_rejected,
             get_follow_request_by_participants,
             get_follow_requests_paginated,
@@ -145,7 +145,12 @@ async fn accept_follow_request_view(
         source_profile.id,
         current_user.id,
     ).await?;
-    follow_request_accepted(db_client, follow_request.id).await?;
+    let authority = Authority::from(&config.instance());
+    accept_and_add_follower(
+        authority.root(),
+        db_client,
+        follow_request.id,
+    ).await?;
     if let Some(remote_actor) = source_profile.actor_json {
         // Activity ID should be known
         let activity_id = follow_request.activity_id

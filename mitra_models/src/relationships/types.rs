@@ -58,6 +58,44 @@ impl TryFrom<i16> for RelationshipType {
 int_enum_from_sql!(RelationshipType);
 int_enum_to_sql!(RelationshipType);
 
+#[derive(FromSql)]
+#[postgres(name = "relationship")]
+struct Relationship {
+    id: i32,
+    #[expect(dead_code)]
+    source_id: Uuid,
+    #[expect(dead_code)]
+    target_id: Uuid,
+    relationship_type: RelationshipType,
+    #[expect(dead_code)]
+    created_at: DateTime<Utc>,
+}
+
+pub struct RelationshipDetailed {
+    pub id: i32,
+    pub source: DbActorProfile,
+    pub target: DbActorProfile,
+    pub relationship_type: RelationshipType,
+}
+
+impl TryFrom<&Row> for RelationshipDetailed {
+
+    type Error = tokio_postgres::Error;
+
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        let db_relationship: Relationship = row.try_get("relationship")?;
+        let db_source = row.try_get("source")?;
+        let db_target = row.try_get("target")?;
+        let relationship = Self {
+            id: db_relationship.id,
+            source: db_source,
+            target: db_target,
+            relationship_type: db_relationship.relationship_type,
+        };
+        Ok(relationship)
+    }
+}
+
 pub struct RelationshipOrFollowRequest {
     pub source_id: Uuid,
     pub target_id: Uuid,

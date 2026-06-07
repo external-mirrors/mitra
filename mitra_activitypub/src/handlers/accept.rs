@@ -21,7 +21,6 @@ use mitra_models::{
     },
     relationships::{
         queries::{
-            follow_request_accepted,
             get_follow_request_by_id,
             get_follow_request_by_remote_activity_id,
         },
@@ -34,6 +33,7 @@ use mitra_validators::{
 };
 
 use crate::{
+    adapters::follow_requests::accept_and_add_follower,
     authority::Authority,
     c2s::followers::add_follower,
     identifiers::{canonicalize_id, parse_local_activity_id},
@@ -106,7 +106,11 @@ pub async fn handle_accept(
         // Ignore Accept if follow request already accepted
         return Ok(None);
     };
-    follow_request_accepted(db_client, follow_request.id).await?;
+    accept_and_add_follower(
+        authority.root(),
+        db_client,
+        follow_request.id,
+    ).await?;
     if actor_profile.has_portable_account() {
         let source = get_profile_by_id(db_client, follow_request.source_id).await?;
         add_follower(db_client, &source, &actor_profile).await?;
