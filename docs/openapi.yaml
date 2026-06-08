@@ -2011,7 +2011,7 @@ paths:
                         - `direct` - visible to mentioned users
                         
                         Default: `direct` when parent post is not public, otherwise `public`.
-                sensitiive:
+                sensitive:
                   description: Mark post and attached media as sensitive?
                   type: boolean
                   default: false
@@ -2114,7 +2114,7 @@ paths:
                   items:
                     type: string
                     format: uuid
-                sensitiive:
+                sensitive:
                   description: Mark post and attached media as sensitive?
                   type: boolean
                   default: false
@@ -3302,8 +3302,9 @@ components:
                   type: string
                   example: null
             role:
-              description: The role assigned to the currently authorized user.
-              $ref: '#/components/schemas/Role'
+              allOf:
+                - description: The role assigned to the currently authorized user.
+                - $ref: '#/components/schemas/Role'
             authentication_methods:
               description: The list of authentication methods.
               type: array
@@ -4220,8 +4221,9 @@ components:
           format: date-time
           nullable: true
         account:
-          description: The user that authored this post.
-          $ref: '#/components/schemas/Account'
+          allOf:
+            - description: The user that authored this post.
+            - $ref: '#/components/schemas/Account'
         content:
           description: HTML-encoded post content.
           type: string
@@ -4230,9 +4232,10 @@ components:
           type: string
           nullable: true
         visibility:
-          description: Visibility of this post.
-          $ref: '#/components/schemas/Visibility'
-        sensitiive:
+          allOf:
+            - description: Visibility of this post.
+            - $ref: '#/components/schemas/Visibility'
+        sensitive:
           description: Is this post marked as sensitive content?
           type: boolean
           example: false
