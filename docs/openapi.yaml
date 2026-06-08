@@ -1998,6 +1998,11 @@ paths:
                   type: string
                   format: uuid
                   nullable: true
+                group_id:
+                  description: Group to which this post will be addressed.
+                  type: string
+                  format: uuid
+                  nullable: true
                 visibility:
                   allOf:
                     - $ref: '#/components/schemas/Visibility'

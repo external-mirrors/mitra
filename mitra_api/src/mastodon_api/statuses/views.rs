@@ -74,7 +74,10 @@ use mitra_models::{
         RelatedPosts,
         Visibility,
     },
-    profiles::types::Origin::Local,
+    profiles::{
+        queries::get_profile_by_id,
+        types::Origin::Local,
+    },
     reactions::queries::{
         create_reaction,
         delete_reaction,
@@ -173,6 +176,17 @@ async fn create_status(
     } else {
         None
     };
+    let maybe_group = if let Some(group_id) = status_data.group_id {
+        match get_profile_by_id(db_client, group_id).await {
+            Ok(profile) if profile.is_group() =>  Some(profile),
+            Ok(_) | Err(DatabaseError::NotFound(_)) => {
+                return Err(ValidationError("invalid group ID").into());
+            },
+            Err(other_error) => return Err(other_error.into()),
+        }
+    } else {
+        None
+    };
     let visibility = match status_data.visibility.as_deref() {
         Some(visibility_str) => visibility_from_str(visibility_str)?,
         None => {
@@ -199,6 +213,7 @@ async fn create_status(
         current_user.id,
         visibility,
         maybe_in_reply_to.as_ref(),
+        maybe_group.as_ref(),
         mentions,
     ).await?;
 
@@ -227,7 +242,7 @@ async fn create_status(
             Visibility::Direct => None,
         };
         PostContext::Top {
-            group_id: None,
+            group_id: maybe_group.map(|group| group.id),
             object_id: None,
             audience,
         }
@@ -466,6 +481,12 @@ async fn edit_status(
     } else {
         None
     };
+    let maybe_group = if let Some(group_id) = post.group_id {
+        let group = get_profile_by_id(db_client, group_id).await?;
+        Some(group)
+    } else {
+        None
+    };
     let instance = config.instance();
     let status_data = status_data.into_inner();
     // Parse content
@@ -482,6 +503,7 @@ async fn edit_status(
         post.author.id,
         post.visibility,
         maybe_in_reply_to.as_ref(),
+        maybe_group.as_ref(),
         mentions,
     ).await?;
 

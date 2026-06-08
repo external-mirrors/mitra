@@ -156,6 +156,8 @@ pub struct Note {
 
     pub to: Vec<String>,
     pub cc: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    audience: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     quote: Option<String>,
@@ -200,6 +202,7 @@ pub fn build_note(
 
     let mut primary_audience = vec![];
     let mut secondary_audience = vec![];
+    let mut group_audience = None;
     let followers_collection_id =
         LocalActorCollection::Followers.of(&actor_id);
     let subscribers_collection_id =
@@ -253,6 +256,10 @@ pub fn build_note(
         let actor_id = compatible_profile_actor_id(authority, profile);
         if !primary_audience.contains(&actor_id) {
             primary_audience.push(actor_id.clone());
+        };
+        // TODO: do not require group mentions
+        if post.group_id.is_some_and(|group_id| group_id == profile.id) {
+            group_audience = Some(actor_id.clone());
         };
         let tag = SimpleTag {
             tag_type: MENTION.to_string(),
@@ -365,6 +372,7 @@ pub fn build_note(
         end_time: end_time,
         to: primary_audience,
         cc: secondary_audience,
+        audience: group_audience,
         quote: maybe_quote_url.clone(),
         quote_url: maybe_quote_url,
         published: post.created_at,
@@ -401,7 +409,6 @@ pub async fn get_note_recipients(
     };
     if let Some(group_id) = post.group_id {
          let group = get_profile_by_id(db_client, group_id).await?;
-        // TODO: use audience field
         primary_audience.push(group);
     };
     primary_audience.extend(post.mentions.clone());

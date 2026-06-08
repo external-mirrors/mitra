@@ -370,6 +370,9 @@ pub struct StatusData {
     pub content_type: String,
 
     pub quote_id: Option<Uuid>,
+
+    // Custom fields
+    pub group_id: Option<Uuid>,
 }
 
 impl StatusData {
