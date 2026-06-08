@@ -3,6 +3,7 @@ use std::num::NonZeroU64;
 use chrono::{DateTime, TimeDelta, Utc};
 
 use mitra_models::{
+    accounts::types::User,
     database::{DatabaseClient, DatabaseError},
     profiles::types::DbActorProfile,
     subscriptions::queries::{
@@ -11,7 +12,6 @@ use mitra_models::{
         update_subscription,
     },
     subscriptions::types::Subscription,
-    users::types::User,
 };
 use mitra_validators::errors::ValidationError;
 

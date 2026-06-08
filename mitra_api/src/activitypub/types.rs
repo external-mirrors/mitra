@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use mitra_activitypub::keys::Multikey;
-use mitra_models::users::types::PortableUser;
+use mitra_models::accounts::types::PortableUser;
 
 #[derive(Deserialize)]
 pub struct CollectionQueryParams {

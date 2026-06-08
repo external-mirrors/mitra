@@ -8,9 +8,9 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::User,
     database::{DatabaseError, DatabaseTypeError},
     profiles::types::{DbActor, DbActorProfile, IdentityProofType},
-    users::types::User,
 };
 use mitra_services::media::MediaServer;
 

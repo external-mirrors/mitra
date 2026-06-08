@@ -24,6 +24,13 @@ use mitra_activitypub::{
 use mitra_adapters::payments::subscriptions::MONERO_PAYMENT_AMOUNT_MIN;
 use mitra_config::MediaLimits;
 use mitra_models::{
+    accounts::types::{
+        ClientConfig,
+        Permission,
+        Role as DbRole,
+        SharedClientConfig,
+        User,
+    },
     media::types::{MediaInfo, PartialMediaInfo},
     posts::types::{DbLanguage, Visibility},
     profiles::types::{
@@ -34,13 +41,6 @@ use mitra_models::{
         ProfileUpdateData,
     },
     subscriptions::types::{SubscriptionDetailed as DbSubscriptionDetailed},
-    users::types::{
-        ClientConfig,
-        Permission,
-        Role as DbRole,
-        SharedClientConfig,
-        User,
-    },
 };
 use mitra_services::media::MediaStorage;
 use mitra_utils::{

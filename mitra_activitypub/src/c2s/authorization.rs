@@ -18,9 +18,9 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::{PortableUser, User},
     activitypub::queries::get_object,
     database::DatabaseClient,
-    users::types::{PortableUser, User},
 };
 use mitra_validators::errors::ValidationError;
 

@@ -40,6 +40,7 @@ use mitra_activitypub::{
 use mitra_adapters::posts::check_post_limits;
 use mitra_config::Config;
 use mitra_models::{
+    accounts::types::Permission,
     bookmarks::queries::{create_bookmark, delete_bookmark},
     conversations::queries::set_conversation_tracking_status,
     database::{
@@ -80,7 +81,6 @@ use mitra_models::{
         get_post_reactions_detailed,
     },
     reactions::types::{ReactionData, ReactionDetailed},
-    users::types::Permission,
 };
 use mitra_services::{
     ipfs::{store as ipfs_store},

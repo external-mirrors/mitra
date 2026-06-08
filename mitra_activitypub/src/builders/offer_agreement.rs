@@ -3,11 +3,11 @@ use uuid::Uuid;
 
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::User,
     profiles::types::{
         DbActor,
         RemoteMoneroSubscription,
     },
-    users::types::User,
 };
 
 use crate::{

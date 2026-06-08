@@ -35,6 +35,16 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::{Config, Instance, Limits, RegistrationType};
 use mitra_models::{
+    accounts::{
+        queries::{
+            create_portable_user,
+            get_portable_user_by_actor_id,
+            get_user_by_id,
+            get_user_by_name,
+            is_valid_invite_code,
+        },
+        types::{PortableUser, PortableUserData, User},
+    },
     database::{
         db_client_await,
         get_database_client,
@@ -56,14 +66,6 @@ use mitra_models::{
         get_remote_profile_by_actor_id,
     },
     profiles::types::{DbActor, DbActorProfile},
-    users::queries::{
-        create_portable_user,
-        get_portable_user_by_actor_id,
-        get_user_by_id,
-        get_user_by_name,
-        is_valid_invite_code,
-    },
-    users::types::{PortableUser, PortableUserData, User},
 };
 use mitra_services::media::MediaStorage;
 use mitra_validators::{

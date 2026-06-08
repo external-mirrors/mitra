@@ -24,6 +24,10 @@ use mitra_config::{
     MoneroLightConfig,
 };
 use mitra_models::{
+    accounts::queries::{
+        get_anonymous_system_account_id,
+        get_user_by_id,
+    },
     database::{
         db_client_await,
         get_database_client,
@@ -54,10 +58,6 @@ use mitra_models::{
         types::PaymentType,
     },
     profiles::queries::get_profile_by_id,
-    users::queries::{
-        get_anonymous_system_account_id,
-        get_user_by_id,
-    },
 };
 use mitra_services::monero::{
     light_wallet::{

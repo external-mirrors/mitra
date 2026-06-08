@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use mitra_config::Config;
 use mitra_models::{
+    accounts::types::{PortableUser, User},
     activitypub::queries::{
         save_activity,
         add_object_to_collection,
@@ -37,7 +38,6 @@ use mitra_models::{
         set_reachability_status,
     },
     profiles::types::DbActor,
-    users::types::{PortableUser, User},
 };
 
 use crate::{

@@ -6,10 +6,10 @@ use serde::Serialize;
 
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::User,
     database::{DatabaseClient, DatabaseError},
     profiles::helpers::find_declared_aliases,
     relationships::queries::get_followers,
-    users::types::User,
 };
 use mitra_services::media::MediaServer;
 use mitra_utils::id::generate_ulid;

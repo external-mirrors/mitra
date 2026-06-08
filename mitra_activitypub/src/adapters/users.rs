@@ -1,8 +1,8 @@
 use mitra_config::Config;
 use mitra_models::{
+    accounts::types::User,
     database::{DatabaseClient, DatabaseError},
     profiles::queries::delete_profile,
-    users::types::User,
 };
 
 use crate::{

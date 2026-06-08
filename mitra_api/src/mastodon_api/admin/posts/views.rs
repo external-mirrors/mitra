@@ -12,9 +12,9 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
+    accounts::types::Permission,
     database::{get_database_client, DatabaseConnectionPool},
     posts::queries::{delete_post, get_post_by_id},
-    users::types::Permission,
 };
 
 use crate::mastodon_api::{

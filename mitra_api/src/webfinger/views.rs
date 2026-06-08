@@ -22,6 +22,10 @@ use mitra_activitypub::{
 };
 use mitra_config::{Config, Instance};
 use mitra_models::{
+    accounts::queries::{
+        get_portable_user_by_name,
+        is_registered_user,
+    },
     database::{
         get_database_client,
         DatabaseClient,
@@ -29,10 +33,6 @@ use mitra_models::{
         DatabaseError,
     },
     profiles::types::WebfingerHostname,
-    users::queries::{
-        get_portable_user_by_name,
-        is_registered_user,
-    },
 };
 
 use crate::atom::urls::get_user_feed_url;
@@ -185,8 +185,8 @@ mod tests {
     use serde_json::json;
     use serial_test::serial;
     use mitra_models::{
+        accounts::test_utils::create_test_user,
         database::test_utils::create_test_database,
-        users::test_utils::create_test_user,
     };
     use super::*;
 

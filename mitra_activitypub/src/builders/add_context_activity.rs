@@ -5,15 +5,15 @@ use uuid::Uuid;
 
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::{
+        queries::get_user_by_id,
+        types::User,
+    },
     conversations::types::Conversation,
     database::{DatabaseClient, DatabaseError},
     posts::{
         queries::get_post_by_id,
         types::{PostDetailed, Visibility},
-    },
-    users::{
-        queries::get_user_by_id,
-        types::User,
     },
 };
 use mitra_utils::id::generate_ulid;

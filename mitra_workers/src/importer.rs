@@ -18,6 +18,7 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
+    accounts::queries::get_user_by_id,
     background_jobs::{
         queries::enqueue_job,
         types::JobType,
@@ -34,9 +35,6 @@ use mitra_models::{
         queries::get_remote_profile_by_actor_id,
     },
     relationships::queries::{follow, unfollow},
-    users::{
-        queries::get_user_by_id,
-    },
 };
 
 #[derive(Serialize, Deserialize)]

@@ -10,6 +10,7 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use mitra_models::{
+    accounts::queries::get_user_by_id,
     database::{
         db_client_await,
         get_database_client,
@@ -22,7 +23,6 @@ use mitra_models::{
         queries::create_reaction,
         types::{ReactionData, ReactionDetailed},
     },
-    users::queries::get_user_by_id,
 };
 use mitra_utils::unicode::is_single_character;
 use mitra_validators::{

@@ -177,6 +177,10 @@ pub async fn get_aliases(
 mod tests {
     use serial_test::serial;
     use mitra_models::{
+        accounts::{
+            test_utils::create_test_user,
+            types::User,
+        },
         database::test_utils::create_test_database,
         relationships::helpers::create_follow_request,
         relationships::queries::{
@@ -190,8 +194,6 @@ mod tests {
             unmute,
             unsubscribe,
         },
-        users::test_utils::create_test_user,
-        users::types::User,
     };
     use super::*;
 

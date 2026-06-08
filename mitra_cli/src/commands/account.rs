@@ -23,10 +23,7 @@ use mitra_adapters::{
 };
 use mitra_config::Config;
 use mitra_models::{
-    database::{get_database_client, DatabaseConnectionPool},
-    oauth::queries::delete_oauth_tokens,
-    profiles::types::ANONYMOUS,
-    users::{
+    accounts::{
         helpers::get_user_by_id_or_name,
         queries::{
             create_automated_account,
@@ -43,9 +40,12 @@ use mitra_models::{
             UserCreateData,
         },
     },
+    database::{get_database_client, DatabaseConnectionPool},
+    oauth::queries::delete_oauth_tokens,
+    profiles::types::ANONYMOUS,
 };
 use mitra_utils::passwords::hash_password;
-use mitra_validators::users::validate_local_username;
+use mitra_validators::accounts::validate_local_username;
 
 /// Create new account
 #[derive(Parser)]

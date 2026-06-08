@@ -1044,6 +1044,11 @@ mod tests {
     use serde_json::json;
     use serial_test::serial;
     use crate::{
+        accounts::{
+            queries::create_user,
+            test_utils::create_test_portable_user,
+            types::UserCreateData,
+        },
         database::test_utils::create_test_database,
         emojis::queries::create_or_update_local_emoji,
         media::types::MediaInfo,
@@ -1064,11 +1069,6 @@ mod tests {
                 IdentityProofType,
                 PaymentOption,
             },
-        },
-        users::{
-            queries::create_user,
-            test_utils::create_test_portable_user,
-            types::UserCreateData,
         },
     };
     use super::*;

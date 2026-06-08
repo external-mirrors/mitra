@@ -12,6 +12,10 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_models::{
+    accounts::queries::{
+        get_portable_user_by_actor_id,
+        get_portable_user_by_id,
+    },
     activitypub::queries::{
         add_object_to_collection,
         save_activity,
@@ -20,10 +24,6 @@ use mitra_models::{
         get_database_client,
         DatabaseConnectionPool,
         DatabaseError,
-    },
-    users::queries::{
-        get_portable_user_by_actor_id,
-        get_portable_user_by_id,
     },
 };
 use mitra_validators::errors::ValidationError;

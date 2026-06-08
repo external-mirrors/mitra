@@ -149,6 +149,7 @@ pub async fn remote_invoice_opened(
 mod tests {
     use serial_test::serial;
     use crate::{
+        accounts::test_utils::create_test_user,
         database::test_utils::create_test_database,
         invoices::{
             queries::{create_local_invoice, create_remote_invoice},
@@ -156,7 +157,6 @@ mod tests {
         },
         payment_methods::types::PaymentType,
         profiles::test_utils::create_test_remote_profile,
-        users::test_utils::create_test_user,
     };
     use super::*;
 

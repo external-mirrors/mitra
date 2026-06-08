@@ -48,6 +48,7 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
+    accounts::queries::get_user_by_name,
     database::{
         db_client_await,
         get_database_client,
@@ -57,11 +58,6 @@ use mitra_models::{
         get_post_by_id,
     },
     profiles::queries::get_remote_profile_by_actor_id,
-    users::{
-        queries::{
-            get_user_by_name,
-        },
-    },
 };
 use mitra_services::media::MediaServer;
 use mitra_utils::id::generate_ulid;

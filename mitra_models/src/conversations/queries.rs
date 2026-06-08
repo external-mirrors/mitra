@@ -269,6 +269,7 @@ pub(crate) async fn find_tracking_statuses_by_user(
 mod tests {
     use serial_test::serial;
     use crate::{
+        accounts::test_utils::create_test_user,
         database::test_utils::create_test_database,
         posts::{
             queries::create_post,
@@ -276,7 +277,6 @@ mod tests {
             types::{PostContext, PostCreateData},
         },
         profiles::test_utils::create_test_local_profile,
-        users::test_utils::create_test_user,
     };
     use super::*;
 

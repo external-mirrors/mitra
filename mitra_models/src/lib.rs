@@ -1,3 +1,4 @@
+pub mod accounts;
 pub mod activitypub;
 pub mod attachments;
 pub mod background_jobs;
@@ -24,4 +25,3 @@ pub mod reactions;
 pub mod relationships;
 pub mod subscriptions;
 pub mod tags;
-pub mod users;

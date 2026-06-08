@@ -769,6 +769,10 @@ mod tests {
     use serde_json::json;
     use serial_test::serial;
     use crate::{
+        accounts::{
+            test_utils::{create_test_user, create_test_portable_user},
+            types::Role,
+        },
         database::test_utils::create_test_database,
         posts::types::Visibility,
         profiles::{
@@ -778,10 +782,6 @@ mod tests {
                 DbActorKey,
                 WebfingerHostname,
             },
-        },
-        users::{
-            test_utils::{create_test_user, create_test_portable_user},
-            types::Role,
         },
     };
     use super::*;

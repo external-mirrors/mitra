@@ -91,6 +91,15 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
+    accounts::{
+        queries::{
+            get_portable_user_by_id,
+            get_portable_user_by_inbox_id,
+            get_portable_user_by_outbox_id,
+            get_user_by_name,
+        },
+        types::Role,
+    },
     activitypub::{
         helpers::get_collection_items_json,
         queries::{
@@ -122,15 +131,6 @@ use mitra_models::{
     profiles::{
         queries::get_remote_profile_by_actor_id,
         types::PaymentOption,
-    },
-    users::{
-        queries::{
-            get_portable_user_by_id,
-            get_portable_user_by_inbox_id,
-            get_portable_user_by_outbox_id,
-            get_user_by_name,
-        },
-        types::Role,
     },
 };
 use mitra_services::media::{MediaServer, MediaStorage};

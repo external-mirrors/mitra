@@ -77,13 +77,13 @@ pub async fn remove_follower(
 mod tests {
     use serial_test::serial;
     use crate::{
+        accounts::test_utils::create_test_user,
         database::test_utils::create_test_database,
         profiles::test_utils::create_test_remote_profile,
         relationships::queries::{
             create_remote_follow_request_opt,
             follow_request_accepted,
         },
-        users::test_utils::create_test_user,
     };
     use super::*;
 

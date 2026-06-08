@@ -3,9 +3,9 @@ use uuid::Uuid;
 
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::User,
     database::DatabaseError,
     profiles::types::{DbActor, DbActorProfile},
-    users::types::User,
 };
 
 use crate::{

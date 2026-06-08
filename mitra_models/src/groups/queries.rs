@@ -106,6 +106,7 @@ pub async fn get_group_timeline(
 mod tests {
     use serial_test::serial;
     use crate::{
+        accounts::test_utils::create_test_user,
         activitypub::constants::AP_PUBLIC,
         database::test_utils::create_test_database,
         posts::{
@@ -118,7 +119,6 @@ mod tests {
             types::ProfileCreateData,
         },
         relationships::queries::follow,
-        users::test_utils::create_test_user,
     };
     use super::*;
 

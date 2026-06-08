@@ -3,12 +3,12 @@ use serde::{Deserialize, Serialize};
 
 use mitra_activitypub::authority::Authority;
 use mitra_models::{
+    accounts::types::User,
     notifications::types::{
         EventType,
         NotificationDetailed as DbNotificationDetailed,
     },
     profiles::types::MentionPolicy,
-    users::types::User,
 };
 
 use crate::mastodon_api::{

@@ -34,6 +34,10 @@ use mitra_adapters::payments::{
 };
 use mitra_config::Config;
 use mitra_models::{
+    accounts::{
+        queries::get_user_by_id,
+        types::Permission,
+    },
     database::{get_database_client, DatabaseConnectionPool},
     invoices::queries::{
         create_local_invoice,
@@ -62,8 +66,6 @@ use mitra_models::{
     relationships::queries::has_relationship,
     relationships::types::RelationshipType,
     subscriptions::queries::get_subscription_by_participants,
-    users::queries::get_user_by_id,
-    users::types::Permission,
 };
 use mitra_services::{
     media::MediaServer,

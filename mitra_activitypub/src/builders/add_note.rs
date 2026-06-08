@@ -4,9 +4,9 @@ use uuid::Uuid;
 
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::User,
     database::{DatabaseClient, DatabaseError},
     relationships::queries::get_followers,
-    users::types::User,
 };
 use mitra_utils::id::generate_ulid;
 

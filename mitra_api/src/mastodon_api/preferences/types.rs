@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use mitra_models::users::types::SharedClientConfig;
+use mitra_models::accounts::types::SharedClientConfig;
 
 use crate::mastodon_api::statuses::types::visibility_to_str;
 

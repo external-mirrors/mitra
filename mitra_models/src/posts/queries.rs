@@ -2011,6 +2011,7 @@ mod tests {
     use chrono::TimeDelta;
     use serial_test::serial;
     use crate::{
+        accounts::test_utils::create_test_user,
         activitypub::constants::AP_PUBLIC,
         custom_feeds::queries::{
             add_custom_feed_sources,
@@ -2030,7 +2031,6 @@ mod tests {
             subscribe,
             mute,
         },
-        users::test_utils::create_test_user,
     };
     use super::*;
 

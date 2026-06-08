@@ -22,6 +22,14 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
+    accounts::{
+        queries::{
+            get_user_by_id,
+            set_user_password,
+            update_client_config,
+        },
+        types::ClientConfig,
+    },
     database::{
         get_database_client,
         DatabaseConnectionPool,
@@ -40,19 +48,13 @@ use mitra_models::{
     },
     profiles::types::ProfileUpdateData,
     relationships::queries::{get_followers, unfollow},
-    users::queries::{
-        get_user_by_id,
-        set_user_password,
-        update_client_config,
-    },
-    users::types::ClientConfig,
 };
 use mitra_services::media::MediaServer;
 use mitra_utils::passwords::hash_password;
 use mitra_validators::{
+    accounts::validate_client_config_update,
     errors::ValidationError,
     profiles::validate_aliases,
-    users::validate_client_config_update,
 };
 use mitra_workers::importer::ImporterJobData;
 

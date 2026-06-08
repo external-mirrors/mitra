@@ -7,6 +7,7 @@ use mitra_adapters::payments::monero::{
 };
 use mitra_config::Config;
 use mitra_models::{
+    accounts::queries::get_user_by_name,
     database::{
         get_database_client,
         DatabaseConnectionPool,
@@ -15,7 +16,6 @@ use mitra_models::{
     payment_methods::queries::get_payment_method_by_chain_id,
     profiles::queries::get_remote_profile_by_actor_id,
     profiles::types::MoneroSubscription,
-    users::queries::get_user_by_name,
 };
 use mitra_validators::errors::ValidationError;
 

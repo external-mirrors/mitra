@@ -6,6 +6,7 @@ use uuid::Uuid;
 use mitra_activitypub::authority::Authority;
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::User,
     database::{DatabaseClient, DatabaseError},
     emojis::types::{CustomEmoji as DbCustomEmoji},
     posts::{
@@ -14,7 +15,6 @@ use mitra_models::{
         types::{PostDetailed as DbPostDetailed, Visibility},
     },
     relationships::queries::get_subscribers,
-    users::types::User,
 };
 use mitra_utils::markdown::markdown_lite_to_html;
 use mitra_validators::{

@@ -1,13 +1,15 @@
 use uuid::Uuid;
 
-use crate::database::{DatabaseClient, DatabaseError};
-use crate::relationships::{
-    queries::has_relationship,
-    types::RelationshipType,
-};
-use crate::users::{
-    queries::get_users_by_role,
-    types::Role,
+use crate::{
+    accounts::{
+        queries::get_users_by_role,
+        types::Role,
+    },
+    database::{DatabaseClient, DatabaseError},
+    relationships::{
+        queries::has_relationship,
+        types::RelationshipType,
+    },
 };
 
 use super::queries::create_notification;
@@ -250,9 +252,9 @@ pub async fn create_signup_notifications(
 mod tests {
     use serial_test::serial;
     use crate::{
+        accounts::test_utils::create_test_user,
         database::test_utils::create_test_database,
         notifications::queries::get_notifications,
-        users::test_utils::create_test_user,
     };
     use super::*;
 

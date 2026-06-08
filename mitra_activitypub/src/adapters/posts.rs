@@ -1,11 +1,11 @@
 use mitra_config::Config;
 use mitra_models::{
+    accounts::queries::get_user_by_id,
     database::{DatabaseClient, DatabaseError},
     posts::{
         queries::delete_post,
         types::PostDetailed,
     },
-    users::queries::get_user_by_id,
 };
 use mitra_services::media::MediaServer;
 

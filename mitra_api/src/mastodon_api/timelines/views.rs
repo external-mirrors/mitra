@@ -14,6 +14,7 @@ use mitra_activitypub::authority::Authority;
 use mitra_adapters::dynamic_config::get_dynamic_config;
 use mitra_config::Config;
 use mitra_models::{
+    accounts::types::Permission,
     custom_feeds::queries::get_custom_feed,
     database::{get_database_client, DatabaseConnectionPool},
     groups::queries::get_group_timeline,
@@ -24,7 +25,6 @@ use mitra_models::{
         get_posts_by_tag,
         get_public_timeline,
     },
-    users::types::Permission,
 };
 
 use crate::http::get_request_base_url;

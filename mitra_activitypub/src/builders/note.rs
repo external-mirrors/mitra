@@ -433,11 +433,11 @@ mod tests {
     use serde_json::json;
     use uuid::uuid;
     use mitra_models::{
+        accounts::types::User,
         conversations::types::Conversation,
         polls::types::{Poll, PollResult, PollResults},
         posts::types::RelatedPosts,
         profiles::types::{DbActor, DbActorProfile},
-        users::types::User,
     };
     use super::*;
 

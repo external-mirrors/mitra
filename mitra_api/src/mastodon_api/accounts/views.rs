@@ -68,6 +68,15 @@ use mitra_config::{
     RegistrationType,
 };
 use mitra_models::{
+    accounts::{
+        queries::{
+            create_user,
+            get_user_by_did,
+            is_valid_invite_code,
+            set_shared_client_config,
+        },
+        types::UserCreateData,
+    },
     custom_feeds::queries::get_custom_feeds_by_source,
     database::{
         db_client_await,
@@ -100,13 +109,6 @@ use mitra_models::{
         unmute,
     },
     subscriptions::queries::get_incoming_subscriptions,
-    users::queries::{
-        create_user,
-        get_user_by_did,
-        is_valid_invite_code,
-        set_shared_client_config,
-    },
-    users::types::UserCreateData,
 };
 use mitra_services::{
     ethereum::eip4361::verify_eip4361_signature,
@@ -118,9 +120,9 @@ use mitra_utils::{
     passwords::hash_password,
 };
 use mitra_validators::{
+    accounts::validate_local_username,
     errors::ValidationError,
     profiles::{clean_profile_update_data, validate_identity_proofs},
-    users::validate_local_username,
 };
 
 use crate::{

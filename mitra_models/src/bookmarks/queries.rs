@@ -112,9 +112,9 @@ pub(crate) async fn find_bookmarked_by_user(
 mod tests {
     use serial_test::serial;
     use crate::{
+        accounts::test_utils::create_test_user,
         database::test_utils::create_test_database,
         posts::test_utils::create_test_local_post,
-        users::test_utils::create_test_user,
     };
     use super::*;
 

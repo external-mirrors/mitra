@@ -3,12 +3,12 @@ use uuid::Uuid;
 
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::User,
     database::{DatabaseClient, DatabaseError},
     emojis::types::{CustomEmoji as DbCustomEmoji},
     posts::types::{PostDetailed, Visibility},
     profiles::types::DbActorProfile,
     reactions::types::ReactionDetailed,
-    users::types::User,
 };
 use mitra_services::media::MediaServer;
 

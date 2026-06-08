@@ -10,6 +10,11 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use mitra_adapters::dynamic_config::get_dynamic_config;
 use mitra_config::Config;
 use mitra_models::{
+    accounts::queries::{
+        get_active_user_count,
+        get_admin_user,
+        get_user_count,
+    },
     database::{get_database_client, DatabaseConnectionPool},
     filter_rules::{
         queries::get_filter_rules,
@@ -17,11 +22,6 @@ use mitra_models::{
     },
     instances::queries::{get_peers, get_peer_count},
     posts::queries::get_post_count,
-    users::queries::{
-        get_active_user_count,
-        get_admin_user,
-        get_user_count,
-    },
 };
 use mitra_utils::datetime::days_before_now;
 
