@@ -336,6 +336,37 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_is_safe_addr_ipv4_private_networks() {
+        let addresses = [
+            "0.0.0.0",
+            "10.0.0.1",
+            "127.0.0.1",
+            "169.254.0.1",
+            "172.16.0.1",
+            "192.168.0.1",
+        ];
+        for address in addresses {
+            let address = address.parse::<IpAddr>().unwrap();
+            assert_eq!(is_safe_addr(address), false);
+        };
+    }
+
+    #[test]
+    fn test_is_safe_addr_ipv6_private_networks() {
+        let addresses = [
+            "::1",
+            "::",
+            "::ffff:0.0.0.0",
+            "fc00::",
+            "fe80::",
+        ];
+        for address in addresses {
+            let address = address.parse::<IpAddr>().unwrap();
+            assert_eq!(is_safe_addr(address), false);
+        };
+    }
+
+    #[test]
     fn test_is_safe_url() {
         assert_eq!(is_safe_url("https://server.example/test"), true);
         assert_eq!(is_safe_url("http://bq373nez4.onion/test"), true);
@@ -343,6 +374,7 @@ mod tests {
         assert_eq!(is_safe_url("file:///etc/passwd"), false);
         assert_eq!(is_safe_url("http://127.0.0.1:5941/test"), false);
         assert_eq!(is_safe_url("http://[::1]:5941/test"), false);
+        // These are supposed to be checked by the custom DNS resolver
         assert_eq!(is_safe_url("http://localhost:5941/test"), true);
         assert_eq!(is_safe_url("https://server.local/test"), true);
     }
