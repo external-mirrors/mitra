@@ -28,6 +28,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Don't strip query parameters from 'ap' URIs when using `fetch-object` command.
 
+### Security
+
+- Block requests to shared and benchmarking IP addresses.
+
 ## [5.4.0] - 2026-05-27
 
 ### Added

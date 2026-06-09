@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Deprecated `parse_url` function.
 
+### Security
+
+- Block requests to shared and benchmarking IP addresses.
+
 ## [0.25.0] - 2026-05-30
 
 ### Added
