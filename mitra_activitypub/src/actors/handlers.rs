@@ -30,7 +30,9 @@ use mitra_models::{
     activitypub::queries::save_actor,
     database::{
         get_database_client,
+        DatabaseClient,
         DatabaseConnectionPool,
+        DatabaseError,
     },
     filter_rules::types::FilterAction,
     media::types::{MediaInfo, PartialMediaInfo},
@@ -75,6 +77,7 @@ use crate::{
     importers::ApClient,
     keys::{Multikey, PublicKeyPem},
     ownership::is_same_origin,
+    queues::FetcherJobData,
     utils::parse_id_from_db,
     vocabulary::{
         APPLICATION,
@@ -660,6 +663,19 @@ async fn parse_tags(
     Ok(emojis)
 }
 
+async fn fetch_affiliations(
+    db_client: &impl DatabaseClient,
+    profile: &DbActorProfile,
+) -> Result<(), DatabaseError> {
+    if profile.is_group() {
+        let actor_id = profile.expect_remote_actor_id();
+        FetcherJobData::Affiliations { actor_id: actor_id.to_owned() }
+            .into_job(db_client)
+            .await?;
+    };
+    Ok(())
+}
+
 pub async fn create_remote_profile(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
@@ -726,6 +742,8 @@ pub async fn create_remote_profile(
     clean_profile_create_data(&mut profile_data)?;
     let db_client = &mut **get_database_client(db_pool).await?;
     let profile = create_profile(db_client, profile_data).await?;
+    // Load affiliations
+    fetch_affiliations(db_client, &profile).await?;
     // Save actor object
     let actor_id = parse_id_from_db(profile.expect_remote_actor_id())?;
     save_actor(
@@ -807,6 +825,8 @@ pub async fn update_remote_profile(
         update_profile(db_client, profile.id, profile_data).await?;
     // Delete orphaned images after update
     deletion_queue.into_job(db_client).await?;
+    // Load affiliations
+    fetch_affiliations(db_client, &profile).await?;
     // Save actor object
     let actor_id = parse_id_from_db(profile.expect_remote_actor_id())?;
     save_actor(

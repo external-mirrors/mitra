@@ -12,7 +12,7 @@ use crate::{
     profiles::types::DbActorProfile,
 };
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RelationshipType {
     Follow,
     FollowRequest, // follow_request table

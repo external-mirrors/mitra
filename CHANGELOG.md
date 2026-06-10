@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Accept portable `Delete(Person)` activities.
 - Forward `EncryptedActivity` activities.
 - Added `/api/v1/groups/{group_id}/members` API endpoint.
+- Load `affiliations` collection and FEP-1b12 "moderators" when importing a group actor.
 
 ### Changed
 

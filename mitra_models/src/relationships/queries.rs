@@ -46,6 +46,32 @@ pub(crate) async fn create_relationship(
     Ok(())
 }
 
+pub(crate) async fn delete_relationship(
+    db_client: &impl DatabaseClient,
+    source_id: Uuid,
+    target_id: Uuid,
+    relationship_type: RelationshipType,
+) -> Result<(), DatabaseError> {
+    let deleted_count = db_client.execute(
+        "
+        DELETE FROM relationship
+        WHERE
+            source_id = $1
+            AND target_id = $2
+            AND relationship_type = $3
+        ",
+        &[
+            &source_id,
+            &target_id,
+            &relationship_type,
+        ],
+    ).await?;
+    if deleted_count == 0 {
+        return Err(DatabaseError::NotFound("relationship"));
+    };
+    Ok(())
+}
+
 pub async fn get_relationships(
     db_client: &impl DatabaseClient,
     source_id: Uuid,
