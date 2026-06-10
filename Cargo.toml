@@ -38,7 +38,7 @@ version = "5.5.1-dev"
 license = "AGPL-3.0-only"
 
 edition = "2021"
-rust-version = "1.81.0"
+rust-version = "1.82.0"
 
 publish = false
 
@@ -51,7 +51,7 @@ edition_2024_expr_fragment_specifier = "allow"
 #if_let_rescope = "warn"
 impl_trait_overcaptures = "warn"
 keyword_idents_2024 = "warn"
-#missing_unsafe_on_extern = "warn"
+missing_unsafe_on_extern = "warn"
 never_type_fallback_flowing_into_unsafe = "warn"
 rust_2024_guarded_string_incompatible_syntax = "warn"
 rust_2024_incompatible_pat = "warn"

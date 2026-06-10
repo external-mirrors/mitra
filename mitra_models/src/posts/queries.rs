@@ -1317,8 +1317,8 @@ pub async fn get_conversation_items(
     let root = match &posts[..] {
         [] => return Err(DatabaseError::NotFound("conversation")),
         [root, ..] => {
-            if !root.conversation.as_ref()
-                .is_some_and(|conversation| conversation.root_id == root.id)
+            if root.conversation.as_ref()
+                .is_none_or(|conversation| conversation.root_id != root.id)
             {
                 // Consistency check: unexpected root
                 return Err(DatabaseTypeError.into());

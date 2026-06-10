@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `NonCanonicalUri` type to `url::canonical` module.
 
+### Changed
+
+- Changed MSRV to 1.82.0.
+
 ### Deprecated
 
 - Deprecated `parse_url` function.
