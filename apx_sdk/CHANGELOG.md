@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `NonCanonicalUri` type to `url::canonical` module.
+
+### Deprecated
+
+- Deprecated `parse_url` function.
+
 ## [0.25.0] - 2026-05-30
 
 ### Added

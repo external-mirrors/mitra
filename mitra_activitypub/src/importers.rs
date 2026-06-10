@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+#[expect(deprecated)]
 use apx_core::{
     crypto::{
         eddsa::generate_ed25519_key,
@@ -125,6 +126,7 @@ impl From<&DbActor> for FetcherContext {
 
 impl FetcherContext {
     pub fn prepare_object_id(&mut self, object_id: &str) -> Result<String, FetchError> {
+        #[expect(deprecated)]
         let (canonical_object_id, maybe_gateway) = parse_url(object_id)
             .map_err(|_| FetchError::UrlError)?;
         if let Some(gateway) = maybe_gateway {
