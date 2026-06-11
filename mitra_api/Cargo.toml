@@ -12,7 +12,7 @@ publish.workspace = true
 [dependencies]
 # Used to handle incoming HTTP requests
 # Disabled features: compression, cookies and http2
-actix-web = { version = "=4.10.2", default-features = false, features = ["compat", "macros", "unicode"] }
+actix-web = { version = "~4.11.0", default-features = false, features = ["compat", "macros", "unicode"] }
   actix-cors = "0.7.1"
   actix-files = "0.6.10"
   # actix-governor 0.8 + fixes
@@ -43,7 +43,7 @@ serde_qs = { version = "0.15", features = ["actix4"] }
 # Used for creating error types
 thiserror = "2.0.18"
 # Async runtime
-tokio = { version = "~1.42.0", features = ["macros"] }
+tokio = { version = "~1.46.0", features = ["macros"] }
 # Used to work with URLs
 url = "2.4.1"
 # Used to work with UUIDs
