@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Changed MSRV to 1.82.0.
+- Treat scheduled outgoing activities where Ed25519 key is not included as invalid.
 
 ## [5.5.0] - 2026-06-10
 

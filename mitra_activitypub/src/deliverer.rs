@@ -81,28 +81,22 @@ fn serialize_rsa_secret_key<S>(
 
 fn deserialize_ed25519_secret_key<'de, D>(
     deserializer: D,
-) -> Result<Option<Ed25519SecretKey>, D::Error>
+) -> Result<Ed25519SecretKey, D::Error>
     where D: Deserializer<'de>
 {
-    let maybe_secret_key_bytes: Option<Vec<u8>> =
-        Option::deserialize(deserializer)?;
-    let maybe_secret_key = if let Some(secret_key_bytes) = maybe_secret_key_bytes {
-        let secret_key = ed25519_secret_key_from_bytes(&secret_key_bytes)
-            .map_err(DeserializerError::custom)?;
-        Some(secret_key)
-    } else {
-        None
-    };
-    Ok(maybe_secret_key)
+    let secret_key_bytes: Vec<u8> = Vec::deserialize(deserializer)?;
+    let secret_key = ed25519_secret_key_from_bytes(&secret_key_bytes)
+        .map_err(DeserializerError::custom)?;
+    Ok(secret_key)
 }
 
 fn serialize_ed25519_secret_key<S>(
-    maybe_secret_key: &Option<Ed25519SecretKey>,
+    secret_key: &Ed25519SecretKey,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
     where S: Serializer,
 {
-    Option::serialize(maybe_secret_key, serializer)
+    Ed25519SecretKey::serialize(secret_key, serializer)
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -120,8 +114,8 @@ pub struct Sender {
         deserialize_with = "deserialize_ed25519_secret_key",
         serialize_with = "serialize_ed25519_secret_key",
     )]
-    ed25519_secret_key: Option<Ed25519SecretKey>,
-    ed25519_key_id: Option<String>,
+    ed25519_secret_key: Ed25519SecretKey,
+    ed25519_key_id: String,
 }
 
 impl Sender {
@@ -141,8 +135,8 @@ impl Sender {
         Self {
             rsa_secret_key: user.rsa_secret_key.clone(),
             rsa_key_id: rsa_key_id,
-            ed25519_secret_key: Some(user.ed25519_secret_key),
-            ed25519_key_id: Some(ed25519_key_id),
+            ed25519_secret_key: user.ed25519_secret_key,
+            ed25519_key_id: ed25519_key_id,
         }
     }
 
@@ -170,8 +164,8 @@ impl Sender {
         let sender = Self {
             rsa_secret_key: user.rsa_secret_key.clone(),
             rsa_key_id: http_rsa_key_id,
-            ed25519_secret_key: Some(user.ed25519_secret_key),
-            ed25519_key_id: Some(http_ed25519_key_id),
+            ed25519_secret_key: user.ed25519_secret_key,
+            ed25519_key_id: http_ed25519_key_id,
         };
         Some(sender)
     }
@@ -416,12 +410,12 @@ mod tests {
         let sender = Sender {
             rsa_secret_key: rsa_secret_key.clone(),
             rsa_key_id: "https://social.example/rsa-key".to_string(),
-            ed25519_secret_key: Some(ed25519_secret_key),
-            ed25519_key_id: Some("https://social.example/ed25519-key".to_string()),
+            ed25519_secret_key: ed25519_secret_key,
+            ed25519_key_id: "https://social.example/ed25519-key".to_string(),
         };
         let value = serde_json::to_value(sender).unwrap();
         let sender: Sender = serde_json::from_value(value).unwrap();
         assert_eq!(sender.rsa_secret_key, rsa_secret_key);
-        assert_eq!(sender.ed25519_secret_key, Some(ed25519_secret_key));
+        assert_eq!(sender.ed25519_secret_key, ed25519_secret_key);
     }
 }
