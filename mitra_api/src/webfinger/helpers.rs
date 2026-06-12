@@ -139,6 +139,13 @@ pub async fn get_jrd(
                 remote_interaction_link,
                 fep_3b86_object_intent_link,
             ]
+        } else if profile.has_automated_account() && profile.is_group() {
+            let actor_id = local_actor_id(
+                instance.uri_str(),
+                &profile.username,
+            );
+            let actor_link = Link::actor(&actor_id);
+            vec![actor_link]
         } else if profile.has_portable_account() {
             let actor_id = profile.expect_remote_actor_id();
             let compatible_actor_id = db_url_to_http_url(actor_id, instance.uri_str())

@@ -5,6 +5,8 @@ use std::fmt;
 use serde::{
     Deserialize,
     Deserializer,
+    Serialize,
+    Serializer,
     de::Error as DeserializerError,
 };
 use thiserror::Error;
@@ -106,6 +108,7 @@ fn parse_compatible_ap_uri(
     Ok((ap_uri, gateway))
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub enum NonCanonicalUri {
     Http(HttpUri),
     Ap((Option<HttpUri>, ApUri)),
@@ -177,6 +180,15 @@ impl<'de> Deserialize<'de> for CanonicalUri {
     {
         let value: String = Deserialize::deserialize(deserializer)?;
         Self::parse(&value).map_err(DeserializerError::custom)
+    }
+}
+
+impl Serialize for NonCanonicalUri {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        let uri_string = self.to_string();
+        serializer.serialize_str(&uri_string)
     }
 }
 

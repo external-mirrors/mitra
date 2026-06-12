@@ -13,6 +13,7 @@ pub(crate) mod delete_note;
 pub(crate) mod delete_person;
 pub mod emoji;
 pub mod follow;
+pub(crate) mod group_announce;
 pub mod like;
 pub mod move_person;
 pub mod note;

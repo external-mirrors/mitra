@@ -33,6 +33,7 @@ use super::types::{
     AutomatedAccountData,
     AutomatedAccountDetailed,
     AutomatedAccountType,
+    BoxedManagedAccount,
     ClientConfig,
     DbClientConfig,
     DbInviteCode,
@@ -595,6 +596,47 @@ pub async fn get_anonymous_system_account_id(
     };
     let account_id = row.try_get("id")?;
     Ok(Some(account_id))
+}
+
+pub async fn get_group_account_by_id(
+    db_client: &impl DatabaseClient,
+    account_id: Uuid,
+) -> Result<AutomatedAccountDetailed, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT automated_account, actor_profile
+        FROM automated_account JOIN actor_profile USING (id)
+        WHERE id = $1 AND account_type = $2
+        ",
+        &[&account_id, &AutomatedAccountType::Group],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("account"))?;
+    let db_account: AutomatedAccount = row.try_get("automated_account")?;
+    let db_profile: DbActorProfile = row.try_get("actor_profile")?;
+    let account = AutomatedAccountDetailed::new(db_account, db_profile)?;
+    Ok(account)
+}
+
+pub async fn get_managed_account_by_username(
+    db_client: &impl DatabaseClient,
+    username: &str,
+) -> Result<BoxedManagedAccount, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT
+            user_account,
+            automated_account,
+            actor_profile
+        FROM actor_profile
+        LEFT JOIN user_account USING (id)
+        LEFT JOIN automated_account USING (id)
+        WHERE actor_profile.acct = $1
+        ",
+        &[&username],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("account"))?;
+    let account = BoxedManagedAccount::try_from(&row)?;
+    Ok(account)
 }
 
 pub async fn create_portable_user(

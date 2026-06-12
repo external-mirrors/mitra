@@ -145,7 +145,7 @@ pub fn local_conversation_history_collection(
     )
 }
 
-fn local_activity_id_canonical(
+pub fn local_activity_id_canonical(
     authority_root: &AuthorityRoot,
     activity_type: &str,
     internal_id: Uuid,
@@ -386,7 +386,7 @@ impl IdBuilder {
         Self { http_base_uri, prefer_compatible }
     }
 
-    fn build(&self, canonical_id: &CanonicalUri) -> NonCanonicalUri {
+    pub fn build(&self, canonical_id: &CanonicalUri) -> NonCanonicalUri {
         match canonical_id {
             CanonicalUri::Http(http_uri) =>
                 NonCanonicalUri::Http(http_uri.clone()),
@@ -401,7 +401,7 @@ impl IdBuilder {
         }
     }
 
-    fn build_unchecked(&self, canonical_id: &str) -> NonCanonicalUri {
+    pub fn build_unchecked(&self, canonical_id: &str) -> NonCanonicalUri {
         let canonical_id = CanonicalUri::parse_canonical(canonical_id)
             .expect("URI should be valid");
         self.build(&canonical_id)

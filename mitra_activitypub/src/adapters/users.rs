@@ -1,6 +1,6 @@
 use mitra_config::Config;
 use mitra_models::{
-    accounts::types::User,
+    accounts::types::{ManagedAccount, User},
     activitypub::queries::save_actor,
     database::{DatabaseClient, DatabaseError},
     profiles::{
@@ -34,7 +34,7 @@ pub fn get_actor_data(
 pub async fn create_or_update_local_actor(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    account: &User,
+    account: &impl ManagedAccount,
 ) -> Result<(), DatabaseError> {
     let authority = Authority::from(&config.instance());
     let media_server = MediaServer::new(config);
@@ -42,7 +42,7 @@ pub async fn create_or_update_local_actor(
         .map_err(|_| DatabaseError::type_error())?;
     let actor_json = serde_json::to_value(&actor)
         .expect("actor should be serializable");
-    save_actor(db_client, &actor.id, &actor_json, account.id).await?;
+    save_actor(db_client, &actor.id, &actor_json, account.id()).await?;
     Ok(())
 }
 

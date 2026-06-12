@@ -201,7 +201,6 @@ impl Default for SharedClientConfig {
 json_from_sql!(SharedClientConfig);
 json_to_sql!(SharedClientConfig);
 
-#[expect(dead_code)]
 #[derive(FromSql)]
 #[postgres(name = "user_account")]
 pub struct DbUser {
@@ -211,10 +210,12 @@ pub struct DbUser {
     login_address_monero: Option<String>,
     rsa_private_key: String,
     ed25519_private_key: Vec<u8>,
+    #[expect(dead_code)]
     invite_code: Option<String>,
     user_role: Role,
     client_config: DbClientConfig,
     shared_client_config: SharedClientConfig,
+    #[expect(dead_code)]
     created_at: DateTime<Utc>,
 }
 
@@ -483,6 +484,84 @@ pub struct AutomatedAccountData {
     pub account_type: AutomatedAccountType,
     pub rsa_secret_key: RsaSecretKey,
     pub ed25519_secret_key: Ed25519SecretKey,
+}
+
+pub trait ManagedAccount {
+    fn profile(&self) -> &DbActorProfile;
+    fn rsa_secret_key(&self) -> &RsaSecretKey;
+    fn ed25519_secret_key(&self) -> Ed25519SecretKey;
+
+    fn id(&self) -> Uuid {
+        self.profile().id
+    }
+}
+
+impl ManagedAccount for User {
+    fn profile(&self) -> &DbActorProfile {
+        &self.profile
+    }
+
+    fn rsa_secret_key(&self) -> &RsaSecretKey {
+        &self.rsa_secret_key
+    }
+
+    fn ed25519_secret_key(&self) -> Ed25519SecretKey {
+        self.ed25519_secret_key
+    }
+}
+
+impl ManagedAccount for AutomatedAccountDetailed {
+    fn profile(&self) -> &DbActorProfile {
+        &self.profile
+    }
+
+    fn rsa_secret_key(&self) -> &RsaSecretKey {
+        &self.rsa_secret_key
+    }
+
+    fn ed25519_secret_key(&self) -> Ed25519SecretKey {
+        self.ed25519_secret_key
+    }
+}
+
+// `Send` is required for using the box in async functions
+pub type BoxedManagedAccount = Box<dyn ManagedAccount + Send>;
+
+impl TryFrom<&Row> for BoxedManagedAccount {
+
+    type Error = DatabaseError;
+
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        let profile: DbActorProfile = row.try_get("actor_profile")?;
+        let maybe_user_account: Option<DbUser> =
+            row.try_get("user_account")?;
+        let maybe_automated_account: Option<AutomatedAccount> =
+            row.try_get("automated_account")?;
+        let account: Box<dyn ManagedAccount + Send> = if let Some(user_account) = maybe_user_account {
+            let account = User::new(user_account, profile)?;
+            Box::new(account)
+        } else if let Some(automated_account) = maybe_automated_account {
+            let account = AutomatedAccountDetailed::new(automated_account, profile)?;
+            Box::new(account)
+        } else {
+            return Err(DatabaseError::NotFound("account"));
+        };
+        Ok(account)
+    }
+}
+
+impl ManagedAccount for BoxedManagedAccount {
+    fn profile(&self) -> &DbActorProfile {
+        (**self).profile()
+    }
+
+    fn rsa_secret_key(&self) -> &RsaSecretKey {
+        (**self).rsa_secret_key()
+    }
+
+    fn ed25519_secret_key(&self) -> Ed25519SecretKey {
+        (**self).ed25519_secret_key()
+    }
 }
 
 #[derive(FromSql)]

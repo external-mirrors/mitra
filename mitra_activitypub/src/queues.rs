@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use mitra_config::Config;
 use mitra_models::{
-    accounts::types::{PortableUser, User},
+    accounts::types::{ManagedAccount, PortableUser},
     activitypub::queries::{
         save_activity,
         add_object_to_collection,
@@ -232,7 +232,7 @@ impl OutgoingActivityJobData {
 
     pub(super) fn new(
         instance_uri: &str,
-        sender: &User,
+        sender: &impl ManagedAccount,
         activity: impl Serialize,
         mut recipients: Vec<Recipient>,
     ) -> Self {
@@ -240,7 +240,7 @@ impl OutgoingActivityJobData {
         let recipients = Self::sort_recipients(recipients);
         let activity = serde_json::to_value(activity)
             .expect("activity should be serializable");
-        let sender = Sender::from_user(instance_uri, sender);
+        let sender = Sender::from_account(instance_uri, sender);
         let activity_signed = sign_activity(
             &sender,
             activity,
@@ -663,6 +663,7 @@ pub async fn fetcher_queue_executor(
 #[cfg(test)]
 mod tests {
     use serde_json::json;
+    use mitra_models::accounts::types::User;
     use super::*;
 
     #[test]

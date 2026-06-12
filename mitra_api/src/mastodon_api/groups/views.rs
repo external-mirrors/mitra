@@ -13,7 +13,10 @@ use apx_sdk::core::crypto::{
 };
 
 use mitra_activitypub::{
-    adapters::follow_requests::accept_and_add_follower,
+    adapters::{
+        follow_requests::accept_and_add_follower,
+        users::create_or_update_local_actor,
+    },
     authority::Authority,
 };
 use mitra_config::Config;
@@ -75,6 +78,7 @@ async fn create_group_view(
         rsa_secret_key,
         ed25519_secret_key,
     ).await?;
+    create_or_update_local_actor(&config, db_client, &group).await?;
     let follow_request = create_follow_request(
         db_client,
         current_user.id,

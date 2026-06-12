@@ -851,6 +851,10 @@ impl DbActorProfile {
         self.user_id.is_some()
     }
 
+    pub fn has_automated_account(&self) -> bool {
+        self.automated_account_id.is_some()
+    }
+
     pub fn has_portable_account(&self) -> bool {
         self.portable_user_id.is_some()
     }
