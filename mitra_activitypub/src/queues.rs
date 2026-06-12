@@ -240,14 +240,14 @@ impl OutgoingActivityJobData {
         let recipients = Self::sort_recipients(recipients);
         let activity = serde_json::to_value(activity)
             .expect("activity should be serializable");
+        let sender = Sender::from_user(instance_uri, sender);
         let activity_signed = sign_activity(
-            instance_uri,
-            sender,
+            &sender,
             activity,
         ).expect("activity should be valid");
         Self {
             activity: activity_signed,
-            sender: Sender::from_user(instance_uri, sender),
+            sender: sender,
             recipients: recipients,
             failure_count: 0,
         }

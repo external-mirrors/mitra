@@ -239,25 +239,16 @@ impl Recipient {
 }
 
 pub(super) fn sign_activity(
-    instance_uri: &str,
-    sender: &User,
+    sender: &Sender,
     activity: JsonValue,
 ) -> Result<JsonValue, JsonSignatureError> {
-    let actor_id = local_actor_id(
-        instance_uri,
-        &sender.profile.username,
-    );
     let activity_signed = if is_object_signed(&activity) {
         log::warn!("activity is already signed");
         activity
     } else {
-        let ed25519_key_id = local_actor_key_id(
-            &actor_id,
-            PublicKeyType::Ed25519,
-        );
         sign_object(
             &sender.ed25519_secret_key,
-            &ed25519_key_id,
+            &sender.ed25519_key_id,
             &activity,
         )?
     };
