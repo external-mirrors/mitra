@@ -880,15 +880,15 @@ mod tests {
         let rsa_secret_key = generate_weak_rsa_key().unwrap();
         let ed25519_secret_key = generate_ed25519_key();
         let actor_public_key =
-            PublicKeyPem::build(actor_id, &rsa_secret_key).unwrap();
+            PublicKeyPem::new_local(actor_id, &rsa_secret_key).unwrap();
         let actor_multikey_1 =
-            Multikey::build_rsa(actor_id, &rsa_secret_key).unwrap();
+            Multikey::new_rsa_local(actor_id, &rsa_secret_key).unwrap();
         let actor_multikey_2 =
-            Multikey::build_ed25519(actor_id, &ed25519_secret_key);
-        let actor_multikey_3 = Multikey::build_ed25519(
+            Multikey::new_ed25519_local(actor_id, &ed25519_secret_key).unwrap();
+        let actor_multikey_3 = Multikey::new_ed25519_local(
             "https://test.example/users/2",
             &ed25519_secret_key,
-        );
+        ).unwrap();
         let actor = ValidatedActor {
             id: actor_id.to_string(),
             public_key: Some(actor_public_key),

@@ -21,7 +21,8 @@ pub async fn create_or_update_local_actor(
 ) -> Result<(), DatabaseError> {
     let authority = Authority::from(&config.instance());
     let media_server = MediaServer::new(config);
-    let actor = build_local_actor(&authority, &media_server, account)?;
+    let actor = build_local_actor(&authority, &media_server, account)
+        .map_err(|_| DatabaseError::type_error())?;
     let actor_json = serde_json::to_value(&actor)
         .expect("actor should be serializable");
     save_actor(db_client, &actor.id, &actor_json, account.id).await?;

@@ -1,5 +1,5 @@
 use apx_core::{
-    crypto::rsa::RsaSerializationError,
+    crypto::common::KeySerializationError,
 };
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
@@ -9,7 +9,6 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Instance;
 use mitra_models::{
     accounts::types::User,
-    database::{DatabaseError, DatabaseTypeError},
     profiles::types::{DbActor, DbActorProfile, IdentityProofType},
 };
 use mitra_services::media::MediaServer;
@@ -222,7 +221,7 @@ pub fn build_local_actor(
     authority: &Authority,
     media_server: &MediaServer,
     user: &User,
-) -> Result<Actor, DatabaseError> {
+) -> Result<Actor, KeySerializationError> {
     let id_builder = authority.id_builder();
     let server_uri = authority.expect_server_uri();
     let username = &user.profile.username;
@@ -231,12 +230,11 @@ pub fn build_local_actor(
     // TODO: add to actor data?
     let following = LocalActorCollection::Following.of(&actor_data.id);
 
-    let public_key = PublicKeyPem::build(&actor_id, &user.rsa_secret_key)
-        .map_err(|_| DatabaseTypeError)?;
+    let public_key_pem =
+        PublicKeyPem::new_local(&actor_id, &user.rsa_secret_key)?;
     let verification_methods = vec![
-        Multikey::build_rsa(&actor_id, &user.rsa_secret_key)
-            .map_err(|_| DatabaseTypeError)?,
-        Multikey::build_ed25519(&actor_id, &user.ed25519_secret_key),
+        Multikey::new_rsa_local(&actor_id, &user.rsa_secret_key)?,
+        Multikey::new_ed25519_local(&actor_id, &user.ed25519_secret_key)?,
     ];
     let avatar = match &user.profile.avatar {
         Some(image) => {
@@ -332,7 +330,7 @@ pub fn build_local_actor(
             .as_ref()
             .map(|uri| id_builder.build_string_unchecked(uri)),
         assertion_method: verification_methods,
-        public_key,
+        public_key: public_key_pem,
         implements: vec![],
         generator: Some(Application::new()),
         icon: avatar,
@@ -354,14 +352,15 @@ pub fn build_local_actor(
 
 pub fn build_instance_actor(
     instance: &Instance,
-) -> Result<Actor, RsaSerializationError> {
+) -> Result<Actor, KeySerializationError> {
     let actor_id = local_instance_actor_id(instance.uri_str());
     let actor_inbox = LocalActorCollection::Inbox.of(&actor_id);
     let actor_outbox = LocalActorCollection::Outbox.of(&actor_id);
-    let public_key = PublicKeyPem::build(&actor_id, &instance.rsa_secret_key)?;
+    let public_key_pem =
+        PublicKeyPem::new_local(&actor_id, &instance.rsa_secret_key)?;
     let verification_methods = vec![
-        Multikey::build_rsa(&actor_id, &instance.rsa_secret_key)?,
-        Multikey::build_ed25519(&actor_id, &instance.ed25519_secret_key),
+        Multikey::new_rsa_local(&actor_id, &instance.rsa_secret_key)?,
+        Multikey::new_ed25519_local(&actor_id, &instance.ed25519_secret_key)?,
     ];
     let actor = Actor {
         _context: build_actor_context(),
@@ -376,7 +375,7 @@ pub fn build_instance_actor(
         subscribers: None,
         featured: None,
         assertion_method: verification_methods,
-        public_key,
+        public_key: public_key_pem,
         implements: Application::new().implements,
         generator: None,
         icon: None,

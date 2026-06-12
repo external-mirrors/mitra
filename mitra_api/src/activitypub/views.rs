@@ -191,7 +191,7 @@ async fn actor_view(
         &authority,
         &media_server,
         &user,
-    )?;
+    ).map_err(|_| DatabaseError::type_error())?;
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
         .json(actor);
