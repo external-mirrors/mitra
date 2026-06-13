@@ -58,7 +58,7 @@ pub struct PublicKeyPem {
 }
 
 impl PublicKeyPem {
-    fn new(
+    pub fn new(
         key_id: String,
         owner_id: String,
         public_key: PublicKey,
@@ -103,7 +103,7 @@ pub struct Multikey {
 
 // FEP-521a
 impl Multikey {
-    fn new(
+    pub fn new(
         key_id: String,
         owner_id: String,
         public_key: PublicKey,
