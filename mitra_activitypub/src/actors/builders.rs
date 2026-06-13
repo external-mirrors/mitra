@@ -41,6 +41,24 @@ use super::attachments::{
     attach_payment_option,
 };
 
+#[cfg(feature = "mini")]
+use {
+    apx_sdk::core::{
+        crypto::{
+            common::PublicKey,
+            eddsa::{
+                ed25519_public_key_from_bytes,
+                ed25519_public_key_from_secret_key,
+            },
+            rsa::{
+                rsa_public_key_from_pkcs1_der,
+                RsaPublicKey,
+            },
+        },
+    },
+    mitra_models::profiles::types::PublicKeyType,
+};
+
 pub fn build_actor_context() -> Context {
     Context {
         vec: vec![
@@ -231,12 +249,69 @@ pub fn build_local_actor(
     // TODO: add to actor data?
     let following = LocalActorCollection::Following.of(&actor_data.id);
 
+    #[cfg(not(feature = "mini"))]
     let public_key_pem =
         PublicKeyPem::new_local(&actor_id, &user.rsa_secret_key)?;
+    #[cfg(not(feature = "mini"))]
+    let maybe_public_key_pem = Some(public_key_pem);
+    #[cfg(not(feature = "mini"))]
     let verification_methods = vec![
         Multikey::new_rsa_local(&actor_id, &user.rsa_secret_key)?,
         Multikey::new_ed25519_local(&actor_id, &user.ed25519_secret_key)?,
     ];
+
+    #[cfg(feature = "mini")]
+    let mut maybe_public_key_pem = None;
+    #[cfg(feature = "mini")]
+    let mut verification_methods = vec![
+        // Client keys
+        Multikey::new(
+            format!("{}#main-key", actor_data.id),
+            id_builder.build_string_unchecked(&actor_data.id),
+            PublicKey::Rsa(RsaPublicKey::from(&user.rsa_secret_key)),
+        )?,
+        Multikey::new(
+            format!("{}#ed25519-key", actor_data.id),
+            id_builder.build_string_unchecked(&actor_data.id),
+            PublicKey::Ed25519(ed25519_public_key_from_secret_key(&user.ed25519_secret_key)),
+        )?,
+    ];
+    #[cfg(feature = "mini")]
+    if let Some(gateway_rsa_actor_key) = user.profile.public_keys.inner()
+        .iter()
+        .find(|db_key| db_key.key_type == PublicKeyType::RsaPkcs1)
+    {
+        // TODO: store hostname of each key to support multiple gateways
+        let gateway_rsa_public_key =
+            rsa_public_key_from_pkcs1_der(&gateway_rsa_actor_key.key_data)?;
+        let public_key_pem = PublicKeyPem::new(
+            id_builder.build_string_unchecked(&gateway_rsa_actor_key.id),
+            id_builder.build_string_unchecked(&actor_data.id),
+            PublicKey::Rsa(gateway_rsa_public_key.clone()),
+        )?;
+        maybe_public_key_pem = Some(public_key_pem);
+        let multikey_gateway_rsa = Multikey::new(
+            id_builder.build_string_unchecked(&gateway_rsa_actor_key.id),
+            id_builder.build_string_unchecked(&actor_data.id),
+            PublicKey::Rsa(gateway_rsa_public_key),
+        )?;
+        verification_methods.push(multikey_gateway_rsa);
+    };
+    #[cfg(feature = "mini")]
+    if let Some(gateway_ed25519_actor_key) = user.profile.public_keys.inner()
+        .iter()
+        .find(|db_key| db_key.key_type == PublicKeyType::Ed25519)
+    {
+        let gateway_ed25519_public_key =
+            ed25519_public_key_from_bytes(&gateway_ed25519_actor_key.key_data)?;
+        let multikey_gateway_ed25519 = Multikey::new(
+            id_builder.build_string_unchecked(&gateway_ed25519_actor_key.id),
+            id_builder.build_string_unchecked(&actor_data.id),
+            PublicKey::Ed25519(gateway_ed25519_public_key),
+        )?;
+        verification_methods.push(multikey_gateway_ed25519);
+    };
+
     let avatar = match &user.profile.avatar {
         Some(image) => {
             // Media is expected to be local (verified on database read)
@@ -331,7 +406,7 @@ pub fn build_local_actor(
             .as_ref()
             .map(|uri| id_builder.build_string_unchecked(uri)),
         assertion_method: verification_methods,
-        public_key: Some(public_key_pem),
+        public_key: maybe_public_key_pem,
         implements: vec![],
         generator: Some(Application::new()),
         icon: avatar,
