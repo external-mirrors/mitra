@@ -186,12 +186,14 @@ pub struct Actor {
     gateways: Vec<String>,
 }
 
+// All identifiers are canonical
 pub(crate) fn local_actor_data(
     authority: &Authority,
     profile: &DbActorProfile,
 ) -> DbActor {
+    let authority = authority.and_prefer_canonical();
     let actor_id = local_actor_id_unified(
-        authority,
+        &authority,
         profile.id,
         &profile.username,
     );
@@ -221,18 +223,20 @@ pub fn build_local_actor(
     media_server: &MediaServer,
     user: &User,
 ) -> Result<Actor, DatabaseError> {
+    let id_builder = authority.id_builder();
     let server_uri = authority.expect_server_uri();
     let username = &user.profile.username;
     let actor_data = local_actor_data(authority, &user.profile);
+    let actor_id = id_builder.build_string_unchecked(&actor_data.id);
     // TODO: add to actor data?
     let following = LocalActorCollection::Following.of(&actor_data.id);
 
-    let public_key = PublicKeyPem::build(&actor_data.id, &user.rsa_secret_key)
+    let public_key = PublicKeyPem::build(&actor_id, &user.rsa_secret_key)
         .map_err(|_| DatabaseTypeError)?;
     let verification_methods = vec![
-        Multikey::build_rsa(&actor_data.id, &user.rsa_secret_key)
+        Multikey::build_rsa(&actor_id, &user.rsa_secret_key)
             .map_err(|_| DatabaseTypeError)?,
-        Multikey::build_ed25519(&actor_data.id, &user.ed25519_secret_key),
+        Multikey::build_ed25519(&actor_id, &user.ed25519_secret_key),
     ];
     let avatar = match &user.profile.avatar {
         Some(image) => {
@@ -311,16 +315,22 @@ pub fn build_local_actor(
         .unwrap_or_default();
     let actor = Actor {
         _context: build_actor_context(),
-        id: actor_data.id,
+        id: actor_id,
         object_type: actor_data.object_type,
         name: user.profile.display_name.clone(),
         preferred_username: username.clone(),
-        inbox: actor_data.inbox,
-        outbox: actor_data.outbox,
-        followers: actor_data.followers,
-        following: Some(following),
-        subscribers: actor_data.subscribers,
-        featured: actor_data.featured,
+        inbox: id_builder.build_string_unchecked(&actor_data.inbox),
+        outbox: id_builder.build_string_unchecked(&actor_data.outbox),
+        followers: actor_data.followers
+            .as_ref()
+            .map(|uri| id_builder.build_string_unchecked(uri)),
+        following: Some(id_builder.build_string_unchecked(&following)),
+        subscribers: actor_data.subscribers
+            .as_ref()
+            .map(|uri| id_builder.build_string_unchecked(uri)),
+        featured: actor_data.featured
+            .as_ref()
+            .map(|uri| id_builder.build_string_unchecked(uri)),
         assertion_method: verification_methods,
         public_key,
         implements: vec![],
