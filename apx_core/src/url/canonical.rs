@@ -38,7 +38,8 @@ pub fn with_gateway(ap_uri: &ApUri, gateway_base: &str) -> String {
 impl CanonicalUri {
     /// Parses and canonicalizes URI
     pub fn parse(value: &str) -> Result<Self, CanonicalUriError> {
-        let (canonical_uri, _) = parse_url(value)?;
+        let canonical_uri = NonCanonicalUri::parse(value)?
+            .into_canonical();
         Ok(canonical_uri)
     }
 
@@ -90,39 +91,83 @@ impl fmt::Display for CanonicalUri {
     }
 }
 
-fn get_canonical_ap_uri(
+fn parse_compatible_ap_uri(
     http_uri: HttpUri,
-) -> Result<(ApUri, String), CanonicalUriError> {
+) -> Result<(ApUri, HttpUri), CanonicalUriError> {
     let relative_http_uri = http_uri.to_relative();
     let did_url = relative_http_uri
         .strip_prefix(GATEWAY_PATH_PREFIX)
         .ok_or(CanonicalUriError("invalid gateway URI"))?;
     let ap_uri = ApUri::from_did_url(did_url)
-        .map_err(CanonicalUriError)?
-        .without_query();
-    let gateway = http_uri.base();
+        .map_err(CanonicalUriError)?;
+    let gateway_string = http_uri.base();
+    let gateway = HttpUri::parse(&gateway_string)
+        .map_err(CanonicalUriError)?;
     Ok((ap_uri, gateway))
 }
 
+pub enum NonCanonicalUri {
+    Http(HttpUri),
+    Ap((Option<HttpUri>, ApUri)),
+}
+
+impl NonCanonicalUri {
+    pub fn parse(value: &str) -> Result<Self, CanonicalUriError> {
+        let uri = if is_ap_uri(value) {
+            let ap_uri = ApUri::parse(value)
+                .map_err(CanonicalUriError)?;
+            NonCanonicalUri::Ap((None, ap_uri))
+        } else {
+            let http_uri = HttpUri::parse(value).map_err(CanonicalUriError)?;
+            if http_uri.path().starts_with(GATEWAY_PATH_PREFIX) {
+                let (ap_uri, gateway) = parse_compatible_ap_uri(http_uri)?;
+                NonCanonicalUri::Ap((Some(gateway), ap_uri))
+            } else {
+                NonCanonicalUri::Http(http_uri)
+            }
+        };
+        Ok(uri)
+    }
+
+    pub fn into_canonical(self) -> CanonicalUri {
+        match self {
+            Self::Http(http_uri) => CanonicalUri::Http(http_uri),
+            Self::Ap((_maybe_gateway, ap_uri)) => {
+                let canonical_ap_uri = ap_uri.without_query();
+                CanonicalUri::Ap(canonical_ap_uri)
+            },
+        }
+    }
+}
+
+impl fmt::Display for NonCanonicalUri {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Http(http_uri) => write!(formatter, "{}", http_uri),
+            Self::Ap((maybe_gateway, ap_uri)) => {
+                if let Some(gateway) = maybe_gateway {
+                    let compatible_ap_uri =
+                        with_gateway(ap_uri, &gateway.to_string());
+                    write!(formatter, "{}", compatible_ap_uri)
+                } else {
+                    write!(formatter, "{}", ap_uri)
+                }
+            }
+        }
+    }
+}
+
+#[deprecated]
 pub fn parse_url(
     value: &str,
 ) -> Result<(CanonicalUri, Option<String>), CanonicalUriError> {
-    let mut maybe_gateway = None;
-    let canonical_uri = if is_ap_uri(value) {
-        let ap_uri = ApUri::parse(value)
-            .map_err(CanonicalUriError)?
-            .without_query();
-        CanonicalUri::Ap(ap_uri)
+    let uri = NonCanonicalUri::parse(value)?;
+    let maybe_gateway = if let NonCanonicalUri::Ap((maybe_gateway, _)) = &uri {
+        maybe_gateway.as_ref().map(|http_uri| http_uri.to_string())
     } else {
-        let http_uri = HttpUri::parse(value).map_err(CanonicalUriError)?;
-        if http_uri.path().starts_with(GATEWAY_PATH_PREFIX) {
-            let (ap_uri, gateway) = get_canonical_ap_uri(http_uri)?;
-            maybe_gateway = Some(gateway);
-            CanonicalUri::Ap(ap_uri)
-        } else {
-            CanonicalUri::Http(http_uri)
-        }
+        None
     };
+    let canonical_uri = uri.into_canonical();
     Ok((canonical_uri, maybe_gateway))
 }
 
@@ -182,6 +227,38 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_uri_http() {
+        let url = "https://social.example/users/test";
+        let uri = NonCanonicalUri::parse(url).unwrap();
+        assert!(matches!(uri, NonCanonicalUri::Http(_)));
+        assert_eq!(uri.to_string(), url);
+    }
+
+    #[test]
+    fn test_parse_uri_ap() {
+        let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let uri = NonCanonicalUri::parse(url).unwrap();
+        assert!(matches!(uri, NonCanonicalUri::Ap((None, _))));
+        assert_eq!(uri.to_string(), url);
+    }
+
+    #[test]
+    fn test_parse_uri_ap_with_gateway() {
+        let url = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let uri = NonCanonicalUri::parse(url).unwrap();
+        assert!(matches!(uri, NonCanonicalUri::Ap((Some(_), _))));
+        assert_eq!(uri.to_string(), url);
+    }
+
+    #[test]
+    fn test_parse_uri_ap_with_gateway_and_query_params() {
+        let url = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/collection?page=1&test=true";
+        let uri = NonCanonicalUri::parse(url).unwrap();
+        assert_eq!(uri.to_string(), url);
+    }
+
+    #[test]
+    #[expect(deprecated)]
     fn test_parse_url_https() {
         let url = "https://social.example/users/test";
         let (canonical_uri, maybe_gateway) = parse_url(url).unwrap();
@@ -191,6 +268,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(deprecated)]
     fn test_parse_url_https_with_fragment() {
         let url = "https://www.w3.org/ns/activitystreams#Public";
         let (canonical_uri, maybe_gateway) = parse_url(url).unwrap();
@@ -200,6 +278,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(deprecated)]
     fn test_parse_url_i2p() {
         let url = "http://social.example.i2p/users/test";
         let (canonical_uri, maybe_gateway) = parse_url(url).unwrap();
@@ -209,6 +288,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(deprecated)]
     fn test_parse_url_localhost() {
         let url = "http://127.0.0.1:8380/users/test";
         let (canonical_uri, maybe_gateway) = parse_url(url).unwrap();
@@ -218,6 +298,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(deprecated)]
     fn test_parse_url_ap() {
         let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let (canonical_uri, maybe_gateway) = parse_url(url).unwrap();
@@ -227,6 +308,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(deprecated)]
     fn test_parse_url_ap_with_gateway() {
         let url = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let (canonical_uri, maybe_gateway) = parse_url(url).unwrap();
@@ -237,6 +319,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(deprecated)]
     fn test_parse_url_ap_with_gateway_unsupported_did() {
         let url = "https://social.example/.well-known/apgateway/did:example:123456";
         let error = parse_url(url).err().unwrap();

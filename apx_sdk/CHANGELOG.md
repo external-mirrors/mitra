@@ -8,6 +8,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Added `NonCanonicalUri` type to `url::canonical` module.
+
+### Changed
+
+- Changed MSRV to 1.82.0.
+
+### Deprecated
+
+- Deprecated `parse_url` function.
+
+### Security
+
+- Block requests to shared and benchmarking IP addresses.
+
+## [0.25.0] - 2026-05-30
+
+### Added
+
 - Re-exported `Host` from `http_url_whatwg` module.
 - Added `no_proxy` parameter to `FederationAgent`.
 - Implemented `Debug` and `PartialEq` for `PublicKey` type.

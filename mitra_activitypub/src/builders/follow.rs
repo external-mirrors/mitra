@@ -3,6 +3,7 @@ use uuid::Uuid;
 
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::User,
     database::{DatabaseClient, DatabaseError},
     notifications::helpers::create_follow_request_notification,
     profiles::types::{DbActor, DbActorProfile},
@@ -10,7 +11,6 @@ use mitra_models::{
         helpers::create_follow_request,
         queries::follow,
     },
-    users::types::User,
 };
 
 use crate::{

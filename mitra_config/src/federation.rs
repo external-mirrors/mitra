@@ -16,6 +16,7 @@ const fn default_deliverer_log_response_length() -> usize { 75 }
 const fn default_fep_1b12_full_enabled() -> bool { true }
 const fn default_fep_ef61_gateway_enabled() -> bool { false }
 const fn default_fep_171b_public_enabled() -> bool { false }
+const fn default_activitypub_c2s_enabled() -> bool { false }
 
 #[derive(Clone, Deserialize)]
 pub struct FederationConfig {
@@ -65,6 +66,9 @@ pub struct FederationConfig {
     #[serde(default = "default_fep_171b_public_enabled")]
     pub fep_171b_public_enabled: bool,
 
+    #[serde(default = "default_activitypub_c2s_enabled")]
+    pub activitypub_c2s_enabled: bool,
+
     #[cfg(feature = "mini")]
     pub p2p_shared_outbox: Option<PathBuf>,
 }
@@ -89,6 +93,7 @@ impl Default for FederationConfig {
             fep_1b12_full_enabled: default_fep_1b12_full_enabled(),
             fep_ef61_gateway_enabled: default_fep_ef61_gateway_enabled(),
             fep_171b_public_enabled: default_fep_171b_public_enabled(),
+            activitypub_c2s_enabled: default_activitypub_c2s_enabled(),
             #[cfg(feature = "mini")]
             p2p_shared_outbox: None,
         }

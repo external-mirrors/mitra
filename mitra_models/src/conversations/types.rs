@@ -18,6 +18,7 @@ use crate::{
 pub struct Conversation {
     pub id: Uuid,
     pub root_id: Uuid,
+    pub group_id: Option<Uuid>,
     // Conversation is managed when the root is managed
     pub is_managed: bool,
     // "object_id" is None when the conversation is managed (local),

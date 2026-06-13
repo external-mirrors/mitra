@@ -31,6 +31,7 @@ use mitra_adapters::{
 };
 use mitra_config::Config;
 use mitra_models::{
+    accounts::helpers::get_user_by_id_or_name,
     attachments::queries::create_attachment,
     database::{
         db_client_await,
@@ -50,7 +51,6 @@ use mitra_models::{
         types::{PostContext, PostCreateData, Visibility},
     },
     profiles::types::Origin::Local,
-    users::helpers::get_user_by_id_or_name,
 };
 use mitra_services::media::{MediaServer, MediaStorage};
 use mitra_utils::{
@@ -143,6 +143,7 @@ impl CreatePost {
         let post_data = PostCreateData {
             id: Some(post_id),
             context: PostContext::Top {
+                group_id: None,
                 object_id: None,
                 audience: Some(AP_PUBLIC.to_owned()),
             },

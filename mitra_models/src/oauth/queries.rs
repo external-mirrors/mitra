@@ -1,13 +1,15 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::database::{
-    catch_unique_violation,
-    DatabaseClient,
-    DatabaseError,
+use crate::{
+    accounts::types::{DbUser, User},
+    database::{
+        catch_unique_violation,
+        DatabaseClient,
+        DatabaseError,
+    },
+    profiles::types::DbActorProfile,
 };
-use crate::profiles::types::DbActorProfile;
-use crate::users::types::{DbUser, User};
 
 use super::{
     types::{OauthApp, OauthAppData, OauthToken},
@@ -274,8 +276,8 @@ mod tests {
     use chrono::TimeDelta;
     use serial_test::serial;
     use crate::{
+        accounts::test_utils::create_test_user,
         database::test_utils::create_test_database,
-        users::test_utils::create_test_user,
     };
     use super::*;
 

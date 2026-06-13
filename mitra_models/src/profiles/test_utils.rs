@@ -7,8 +7,8 @@ use apx_core::{
 use uuid::Uuid;
 
 use crate::{
+    accounts::test_utils::create_test_user,
     database::DatabaseClient,
-    users::test_utils::create_test_user,
 };
 
 use super::{

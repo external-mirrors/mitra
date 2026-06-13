@@ -2,10 +2,10 @@ use serde::Serialize;
 
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::User,
     database::{DatabaseError, DatabaseTypeError},
     invoices::types::Invoice,
     profiles::types::{DbActor, MoneroSubscription},
-    users::types::User,
 };
 use mitra_utils::id::generate_ulid;
 

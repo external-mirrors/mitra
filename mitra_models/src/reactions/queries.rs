@@ -249,12 +249,12 @@ pub async fn get_reactions(
 mod tests {
     use serial_test::serial;
     use crate::{
+        accounts::test_utils::create_test_user,
         database::test_utils::create_test_database,
         posts::{
             queries::{create_post, get_post_by_id},
             types::{PostCreateData, Visibility},
         },
-        users::test_utils::create_test_user,
     };
     use super::*;
 

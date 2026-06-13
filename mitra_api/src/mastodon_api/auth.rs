@@ -1,7 +1,7 @@
 use mitra_models::{
+    accounts::types::User,
     database::{DatabaseClient, DatabaseError},
     oauth::queries::get_user_by_oauth_token,
-    users::types::User,
 };
 
 use super::errors::MastodonError;

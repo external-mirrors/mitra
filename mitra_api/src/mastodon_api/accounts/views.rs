@@ -47,6 +47,7 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    adapters::users::create_or_update_local_actor,
     authority::Authority,
     builders::{
         follow::follow_or_create_request,
@@ -68,6 +69,15 @@ use mitra_config::{
     RegistrationType,
 };
 use mitra_models::{
+    accounts::{
+        queries::{
+            create_user,
+            get_user_by_did,
+            is_valid_invite_code,
+            set_shared_client_config,
+        },
+        types::UserCreateData,
+    },
     custom_feeds::queries::get_custom_feeds_by_source,
     database::{
         db_client_await,
@@ -100,13 +110,6 @@ use mitra_models::{
         unmute,
     },
     subscriptions::queries::get_incoming_subscriptions,
-    users::queries::{
-        create_user,
-        get_user_by_did,
-        is_valid_invite_code,
-        set_shared_client_config,
-    },
-    users::types::UserCreateData,
 };
 use mitra_services::{
     ethereum::eip4361::verify_eip4361_signature,
@@ -118,9 +121,9 @@ use mitra_utils::{
     passwords::hash_password,
 };
 use mitra_validators::{
+    accounts::validate_local_username,
     errors::ValidationError,
     profiles::{clean_profile_update_data, validate_identity_proofs},
-    users::validate_local_username,
 };
 
 use crate::{
@@ -279,6 +282,7 @@ pub async fn create_account(
             return Err(ValidationError("user already exists").into()),
         Err(other_error) => return Err(other_error.into()),
     };
+    create_or_update_local_actor(&config, db_client, &user).await?;
     create_signup_notifications(db_client, user.id).await?;
     log::warn!("created user {}", user);
     let base_url = get_request_base_url(connection_info);
@@ -354,6 +358,7 @@ async fn update_credentials(
         profile_data,
     ).await?;
     current_user.profile = updated_profile;
+    create_or_update_local_actor(&config, db_client, &current_user).await?;
     // Delete orphaned images after update
     deletion_queue.into_job(db_client).await?;
 
@@ -560,6 +565,7 @@ async fn create_identity_proof(
         profile_data,
     ).await?;
     current_user.profile = updated_profile;
+    create_or_update_local_actor(&config, db_client, &current_user).await?;
 
     // Federate
     let media_server = MediaServer::new(&config);
@@ -601,6 +607,7 @@ async fn delete_identity_proof(
         profile_data,
     ).await?;
     current_user.profile = updated_profile;
+    create_or_update_local_actor(&config, db_client, &current_user).await?;
 
     // Federate
     let media_server = MediaServer::new(&config);

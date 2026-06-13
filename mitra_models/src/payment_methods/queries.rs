@@ -102,9 +102,9 @@ pub async fn get_payment_methods(
 mod tests {
     use serial_test::serial;
     use crate::{
+        accounts::test_utils::create_test_user,
         database::test_utils::create_test_database,
         payment_methods::types::PaymentType,
-        users::test_utils::create_test_user,
     };
     use super::*;
 

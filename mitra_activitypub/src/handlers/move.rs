@@ -3,6 +3,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use mitra_models::{
+    accounts::queries::get_user_by_id,
     database::{
         get_database_client,
         DatabaseConnectionPool,
@@ -13,7 +14,6 @@ use mitra_models::{
         get_followers,
         unfollow,
     },
-    users::queries::get_user_by_id,
 };
 use mitra_validators::errors::ValidationError;
 

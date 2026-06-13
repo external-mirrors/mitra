@@ -797,12 +797,14 @@ pub async fn get_mutes_paginated(
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
-    use crate::database::{
-        test_utils::create_test_database,
-        DatabaseError,
+    use crate::{
+        accounts::test_utils::create_test_user,
+        database::{
+            test_utils::create_test_database,
+            DatabaseError,
+        },
+        profiles::test_utils::create_test_remote_profile,
     };
-    use crate::profiles::test_utils::create_test_remote_profile;
-    use crate::users::test_utils::create_test_user;
     use super::*;
 
     #[tokio::test]

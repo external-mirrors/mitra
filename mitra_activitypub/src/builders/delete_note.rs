@@ -2,10 +2,10 @@ use serde::Serialize;
 
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::User,
     database::{DatabaseClient, DatabaseError},
     posts::helpers::add_related_posts,
     posts::types::PostDetailed,
-    users::types::User,
 };
 use mitra_services::media::MediaServer;
 

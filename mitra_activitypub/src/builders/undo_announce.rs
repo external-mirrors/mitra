@@ -3,10 +3,10 @@ use uuid::Uuid;
 
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::User,
     database::{DatabaseClient, DatabaseError},
     posts::types::{PostDetailed, Repost, Visibility},
     profiles::types::DbActorProfile,
-    users::types::User,
 };
 
 use crate::{

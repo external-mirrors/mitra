@@ -6,6 +6,7 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
+    accounts::queries::get_user_by_id,
     database::{
         get_database_client,
         DatabaseConnectionPool,
@@ -17,7 +18,6 @@ use mitra_models::{
             find_unreachable,
         },
     },
-    users::queries::get_user_by_id,
 };
 use mitra_utils::datetime::days_before_now;
 

@@ -16,6 +16,8 @@ use apx_core::{
 
 use mitra_config::Instance;
 
+use crate::identifiers::IdBuilder;
+
 fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> DidKey {
     DidKey::from_ed25519_key(public_key)
 }
@@ -149,6 +151,10 @@ impl Authority {
                 Some(fep_ef61_identity(public_key))
             },
         }
+    }
+
+    pub fn id_builder(&self) -> IdBuilder {
+        IdBuilder::new(self.http_base_uri.clone())
     }
 }
 

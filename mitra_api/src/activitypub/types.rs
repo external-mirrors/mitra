@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use mitra_activitypub::keys::Multikey;
-use mitra_models::users::types::PortableUser;
+use mitra_models::accounts::types::PortableUser;
 
 #[derive(Deserialize)]
 pub struct CollectionQueryParams {
@@ -29,9 +29,10 @@ impl PortableActorKeys {
     pub fn new(user: PortableUser) -> Self {
         let actor_id = user.profile.expect_remote_actor_id();
         let assertion_method = vec![
-            Multikey::build_rsa(actor_id, &user.rsa_secret_key)
+            Multikey::new_rsa_local(actor_id, &user.rsa_secret_key)
                 .expect("RSA key should be serializable"),
-            Multikey::build_ed25519(actor_id, &user.ed25519_secret_key),
+            Multikey::new_ed25519_local(actor_id, &user.ed25519_secret_key)
+                .expect("Ed25519 key should be serializable"),
         ];
         Self { assertion_method }
     }

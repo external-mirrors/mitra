@@ -1,6 +1,6 @@
 use apx_core::{
     url::{
-        canonical::{parse_url, CanonicalUri},
+        canonical::{CanonicalUri, NonCanonicalUri},
         http_uri::HttpUri,
     },
 };
@@ -18,9 +18,10 @@ fn _validate_any_object_id(
     if object_id.len() > OBJECT_ID_SIZE_MAX {
         return Err(ValidationError("object ID is too long"));
     };
-    let (canonical_object_id, maybe_gateway) = parse_url(object_id)
+    let parsed_object_id = NonCanonicalUri::parse(object_id)
         .map_err(|_| ValidationError("invalid object ID"))?;
-    if maybe_gateway.is_some() {
+    let canonical_object_id = parsed_object_id.into_canonical();
+    if canonical_object_id.to_string() != object_id {
         return Err(ValidationError("object ID is not canonical"));
     };
     if !allow_ap && matches!(canonical_object_id, CanonicalUri::Ap(_)) {
@@ -107,7 +108,7 @@ mod tests {
     fn test_validate_object_id_ftp() {
         let object_id = "ftp://ftp.social.example/";
         let result = validate_object_id(object_id);
-        assert!(result.is_err());
+        assert_eq!(result.err().unwrap().0, "invalid object ID");
     }
 
     #[test]

@@ -342,6 +342,7 @@ mod tests {
     use chrono::{TimeZone, Utc};
     use serial_test::serial;
     use crate::{
+        accounts::test_utils::create_test_user,
         database::test_utils::create_test_database,
         polls::{
             test_utils::create_test_local_poll,
@@ -349,7 +350,6 @@ mod tests {
         },
         posts::test_utils::create_test_local_post,
         profiles::test_utils::create_test_remote_profile,
-        users::test_utils::create_test_user,
     };
     use super::*;
 

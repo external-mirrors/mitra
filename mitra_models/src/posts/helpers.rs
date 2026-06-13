@@ -1,6 +1,7 @@
 use uuid::Uuid;
 
 use crate::{
+    accounts::types::{Permission, User},
     bookmarks::queries::find_bookmarked_by_user,
     conversations::queries::{
         find_tracking_statuses_by_user,
@@ -14,7 +15,6 @@ use crate::{
         queries::has_relationship,
         types::RelationshipType,
     },
-    users::types::{Permission, User},
 };
 
 use super::queries::{
@@ -235,6 +235,10 @@ pub async fn get_post_by_id_for_view(
 mod tests {
     use serial_test::serial;
     use crate::{
+        accounts::{
+            test_utils::create_test_user,
+            types::{Role, User},
+        },
         database::test_utils::create_test_database,
         posts::{
             queries::create_post,
@@ -244,10 +248,6 @@ mod tests {
         profiles::test_utils::create_test_remote_profile,
         reactions::test_utils::create_test_local_reaction,
         relationships::queries::{follow, subscribe},
-        users::{
-            test_utils::create_test_user,
-            types::{Role, User},
-        },
     };
     use super::*;
 
@@ -495,6 +495,7 @@ mod tests {
         follow(db_client, root_follower.id, root_author.id).await.unwrap();
         let root_data = PostCreateData {
             context: PostContext::Top {
+                group_id: None,
                 object_id: None,
                 audience: Some("https://local/op/followers".to_owned()),
             },

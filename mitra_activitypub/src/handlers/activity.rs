@@ -12,6 +12,10 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_models::{
+    accounts::queries::{
+        get_portable_user_by_actor_id,
+        get_portable_user_by_id,
+    },
     activitypub::queries::{
         add_object_to_collection,
         save_activity,
@@ -20,10 +24,6 @@ use mitra_models::{
         get_database_client,
         DatabaseConnectionPool,
         DatabaseError,
-    },
-    users::queries::{
-        get_portable_user_by_actor_id,
-        get_portable_user_by_id,
     },
 };
 use mitra_validators::errors::ValidationError;
@@ -48,7 +48,10 @@ use super::{
     create::handle_create,
     delete::handle_delete,
     follow::handle_follow,
-    like::handle_like,
+    like::{
+        handle_like,
+        handle_like_c2s,
+    },
     r#move::handle_move,
     note::normalize_audience,
     offer::handle_offer,
@@ -311,6 +314,39 @@ pub async fn handle_activity(
         );
     };
     Ok(canonical_activity_id.to_string())
+}
+
+// Assumes that activity is trusted
+pub async fn handle_activity_c2s(
+    ap_client: &ApClient,
+    db_pool: &DatabaseConnectionPool,
+    activity: &JsonValue,
+) -> Result<(), HandlerError> {
+    let activity_actor = object_to_id(&activity["actor"])
+        .map_err(|_| ValidationError("invalid actor property"))?;
+    let activity_type = activity["type"].as_str()
+        .ok_or(ValidationError("type property is missing"))?
+        .to_owned();
+    verify_activity_owner(activity)?;
+    let activity = activity.clone();
+    let maybe_descriptor = match activity_type.as_str() {
+        LIKE => {
+            handle_like_c2s(ap_client, db_pool, activity).await?
+        },
+        _ => {
+            log::warn!("activity type is not supported: {}", activity);
+            None
+        },
+    };
+    if let Some(descriptor) = maybe_descriptor {
+        log::info!(
+            "processed {}({}) from {}",
+            activity_type,
+            descriptor,
+            activity_actor,
+        );
+    };
+    Ok(())
 }
 
 #[cfg(test)]

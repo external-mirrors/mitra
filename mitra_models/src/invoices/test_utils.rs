@@ -1,10 +1,10 @@
 use apx_core::caip2::ChainId;
 
 use crate::{
+    accounts::test_utils::create_test_user,
     database::DatabaseClient,
     payment_methods::types::PaymentType,
     profiles::test_utils::create_test_local_profile,
-    users::test_utils::create_test_user,
 };
 
 use super::{

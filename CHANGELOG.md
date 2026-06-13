@@ -8,7 +8,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- Changed MSRV to 1.82.0.
+
+## [5.5.0] - 2026-06-10
+
+### Added
+
+- Added `/api/v1/groups/followed` API endpoint.
+- Added `/api/v1/timelines/group/{group_id}` API endpoint.
+- Added `use_context` parameter to `/api/v1/statuses/{status_id}/load_conversation` API method.
+- Allow admins to push `Like` activities to C2S outbox.
+- Added `group_id` parameter to `/api/v1/statuses` form data.
+
+### Changed
+
 - Changed MSRV to 1.81.0.
+- Add actors from `audience` field to post audience.
+- Associate group posts with group actors.
+- Preserve order of targets when forwarding portable activities.
+- Made `recipient` argument optional for `send-activity` command.
+- Allow to use `create-activity` command for creating `Like` activities where `object` is local post.
+- Save actor JSON representation to database when creating or updating local user.
+
+### Fixed
+
+- Don't strip query parameters from 'ap' URIs when using `fetch-object` command.
+
+### Security
+
+- Block requests to shared and benchmarking IP addresses.
 
 ## [5.4.0] - 2026-05-27
 

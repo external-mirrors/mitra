@@ -16,7 +16,7 @@ use mitra_config::{
     RegistrationType,
     SoftwareMetadata,
 };
-use mitra_models::users::types::User;
+use mitra_models::accounts::types::User;
 use mitra_utils::markdown::markdown_to_html;
 use mitra_validators::{
     polls::{POLL_OPTION_COUNT_MAX, POLL_OPTION_NAME_LENGTH_MAX},

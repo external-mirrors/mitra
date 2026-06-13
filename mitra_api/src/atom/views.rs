@@ -2,9 +2,9 @@ use actix_web::{web, HttpResponse, Responder, Scope};
 
 use mitra_config::Config;
 use mitra_models::{
+    accounts::queries::get_user_by_name,
     database::{get_database_client, DatabaseConnectionPool},
     posts::queries::get_posts_by_author,
-    users::queries::get_user_by_name,
 };
 
 use crate::{

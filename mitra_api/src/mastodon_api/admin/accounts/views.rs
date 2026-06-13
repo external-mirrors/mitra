@@ -12,12 +12,12 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
-    database::{get_database_client, DatabaseConnectionPool},
-    profiles::queries::{delete_profile, get_profile_by_id},
-    users::{
+    accounts::{
         queries::get_user_by_id,
         types::Permission,
     },
+    database::{get_database_client, DatabaseConnectionPool},
+    profiles::queries::{delete_profile, get_profile_by_id},
 };
 
 use crate::mastodon_api::{

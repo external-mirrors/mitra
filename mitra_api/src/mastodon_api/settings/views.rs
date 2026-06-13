@@ -11,7 +11,10 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::Utc;
 
 use mitra_activitypub::{
-    adapters::users::delete_user,
+    adapters::users::{
+        create_or_update_local_actor,
+        delete_user,
+    },
     authority::Authority,
     builders::{
         follow::follow_or_create_request,
@@ -22,6 +25,14 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
+    accounts::{
+        queries::{
+            get_user_by_id,
+            set_user_password,
+            update_client_config,
+        },
+        types::ClientConfig,
+    },
     database::{
         get_database_client,
         DatabaseConnectionPool,
@@ -40,19 +51,13 @@ use mitra_models::{
     },
     profiles::types::ProfileUpdateData,
     relationships::queries::{get_followers, unfollow},
-    users::queries::{
-        get_user_by_id,
-        set_user_password,
-        update_client_config,
-    },
-    users::types::ClientConfig,
 };
 use mitra_services::media::MediaServer;
 use mitra_utils::passwords::hash_password;
 use mitra_validators::{
+    accounts::validate_client_config_update,
     errors::ValidationError,
     profiles::validate_aliases,
-    users::validate_client_config_update,
 };
 use mitra_workers::importer::ImporterJobData;
 
@@ -212,6 +217,7 @@ async fn add_alias_view(
         profile_data,
     ).await?;
     current_user.profile = updated_profile;
+    create_or_update_local_actor(&config, db_client, &current_user).await?;
     let media_server = MediaServer::new(&config);
     prepare_update_person(
         db_client,
@@ -254,6 +260,7 @@ async fn remove_alias_view(
         profile_data,
     ).await?;
     current_user.profile = updated_profile;
+    create_or_update_local_actor(&config, db_client, &current_user).await?;
     let media_server = MediaServer::new(&config);
     prepare_update_person(
         db_client,

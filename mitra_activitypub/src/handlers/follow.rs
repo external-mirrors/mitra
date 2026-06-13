@@ -3,6 +3,7 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use mitra_models::{
+    accounts::queries::get_user_by_id,
     database::{
         get_database_client,
         DatabaseConnectionPool,
@@ -13,7 +14,6 @@ use mitra_models::{
         create_remote_follow_request_opt,
         follow_request_accepted,
     },
-    users::queries::get_user_by_id,
 };
 use mitra_validators::{
     activitypub::validate_any_object_id,

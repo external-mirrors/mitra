@@ -25,6 +25,7 @@ use super::types::{
 pub async fn create_conversation(
     db_client: &impl DatabaseClient,
     root_id: Uuid,
+    group_id: Option<Uuid>,
     is_managed: bool,
     object_id: Option<&str>,
     audience: Option<&str>,
@@ -35,16 +36,18 @@ pub async fn create_conversation(
         INSERT INTO conversation (
             id,
             root_id,
+            group_id,
             is_managed,
             object_id,
             audience
         )
-        VALUES ($1, $2, $3, $4, $5)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING conversation
         ",
         &[
             &conversation_id,
             &root_id,
+            &group_id,
             &is_managed,
             &object_id,
             &audience,
@@ -266,6 +269,7 @@ pub(crate) async fn find_tracking_statuses_by_user(
 mod tests {
     use serial_test::serial;
     use crate::{
+        accounts::test_utils::create_test_user,
         database::test_utils::create_test_database,
         posts::{
             queries::create_post,
@@ -273,7 +277,6 @@ mod tests {
             types::{PostContext, PostCreateData},
         },
         profiles::test_utils::create_test_local_profile,
-        users::test_utils::create_test_user,
     };
     use super::*;
 
@@ -284,7 +287,11 @@ mod tests {
         let sender = create_test_user(db_client, "sender").await;
         let recipient = create_test_user(db_client, "recipient").await;
         let post_data_1 = PostCreateData {
-            context: PostContext::Top { object_id: None, audience: None },
+            context: PostContext::Top {
+                group_id: None,
+                object_id: None,
+                audience: None,
+            },
             content: "test".to_string(),
             visibility: Visibility::Direct,
             mentions: vec![recipient.id],

@@ -1,18 +1,17 @@
 use apx_core::{
     crypto::{
-        common::PublicKey,
+        common::{
+            KeySerializationError,
+            PublicKey,
+        },
         eddsa::{
             ed25519_public_key_from_secret_key,
-            ed25519_public_key_to_multikey,
             Ed25519SecretKey,
         },
         rsa::{
-            rsa_public_key_to_multikey,
             rsa_public_key_to_pkcs1_der,
-            rsa_public_key_to_pkcs8_pem,
             RsaPublicKey,
             RsaSecretKey,
-            RsaSerializationError,
         },
     },
 };
@@ -59,18 +58,26 @@ pub struct PublicKeyPem {
 }
 
 impl PublicKeyPem {
-    pub fn build(
+    fn new(
+        key_id: String,
+        owner_id: String,
+        public_key: PublicKey,
+    ) -> Result<Self, KeySerializationError> {
+        let public_key_pem = Self {
+            id: key_id,
+            owner: owner_id,
+            public_key_pem: public_key.to_pem()?,
+        };
+        Ok(public_key_pem)
+    }
+
+    pub fn new_local(
         actor_id: &str,
         secret_key: &RsaSecretKey,
-    ) -> Result<Self, RsaSerializationError> {
+    ) -> Result<Self, KeySerializationError> {
         let public_key = RsaPublicKey::from(secret_key);
-        let public_key_pem = rsa_public_key_to_pkcs8_pem(&public_key)?;
-        let public_key_obj = Self {
-            id: local_actor_key_id(actor_id, PublicKeyType::RsaPkcs1),
-            owner: actor_id.to_string(),
-            public_key_pem: public_key_pem,
-        };
-        Ok(public_key_obj)
+        let key_id = local_actor_key_id(actor_id, PublicKeyType::RsaPkcs1);
+        Self::new(key_id, actor_id.to_owned(), PublicKey::Rsa(public_key))
     }
 
     pub fn public_key(&self) -> Result<PublicKey, ValidationError> {
@@ -96,33 +103,36 @@ pub struct Multikey {
 
 // FEP-521a
 impl Multikey {
-    pub fn build_ed25519(
-        actor_id: &str,
-        secret_key: &Ed25519SecretKey,
-    ) -> Self {
-        let public_key = ed25519_public_key_from_secret_key(secret_key);
-        let public_key_multibase = ed25519_public_key_to_multikey(&public_key);
-        Self {
-            id: local_actor_key_id(actor_id, PublicKeyType::Ed25519),
-            object_type: MULTIKEY.to_string(),
-            controller: actor_id.to_string(),
-            public_key_multibase,
-        }
-    }
-
-    pub fn build_rsa(
-        actor_id: &str,
-        secret_key: &RsaSecretKey,
-    ) -> Result<Self, RsaSerializationError> {
-        let public_key = RsaPublicKey::from(secret_key);
-        let public_key_multibase = rsa_public_key_to_multikey(&public_key)?;
+    fn new(
+        key_id: String,
+        owner_id: String,
+        public_key: PublicKey,
+    ) -> Result<Self, KeySerializationError> {
         let multikey = Self {
-            id: local_actor_key_id(actor_id, PublicKeyType::RsaPkcs1),
-            object_type: MULTIKEY.to_string(),
-            controller: actor_id.to_string(),
-            public_key_multibase,
+            id: key_id,
+            object_type: MULTIKEY.to_owned(),
+            controller: owner_id,
+            public_key_multibase: public_key.to_multikey()?,
         };
         Ok(multikey)
+    }
+
+    pub fn new_ed25519_local(
+        actor_id: &str,
+        secret_key: &Ed25519SecretKey,
+    ) -> Result<Self, KeySerializationError> {
+        let public_key = ed25519_public_key_from_secret_key(secret_key);
+        let key_id = local_actor_key_id(actor_id, PublicKeyType::Ed25519);
+        Self::new(key_id, actor_id.to_owned(), PublicKey::Ed25519(public_key))
+    }
+
+    pub fn new_rsa_local(
+        actor_id: &str,
+        secret_key: &RsaSecretKey,
+    ) -> Result<Self, KeySerializationError> {
+        let public_key = RsaPublicKey::from(secret_key);
+        let key_id = local_actor_key_id(actor_id, PublicKeyType::RsaPkcs1);
+        Self::new(key_id, actor_id.to_owned(), PublicKey::Rsa(public_key))
     }
 
     pub fn public_key(&self) -> Result<PublicKey, ValidationError> {
@@ -170,7 +180,7 @@ mod tests {
     fn test_public_key_pem() {
         let actor_id = "https://test.example/users/1";
         let secret_key = generate_weak_rsa_key().unwrap();
-        let public_key_pem = PublicKeyPem::build(actor_id, &secret_key).unwrap();
+        let public_key_pem = PublicKeyPem::new_local(actor_id, &secret_key).unwrap();
         assert_eq!(public_key_pem.id, "https://test.example/users/1#main-key");
         assert_eq!(public_key_pem.owner, actor_id);
         let db_key = public_key_pem.to_db_key().unwrap();
@@ -184,7 +194,7 @@ mod tests {
     fn test_multikey_ed25519() {
         let actor_id = "https://test.example/users/1";
         let secret_key = generate_ed25519_key();
-        let multikey = Multikey::build_ed25519(actor_id, &secret_key);
+        let multikey = Multikey::new_ed25519_local(actor_id, &secret_key).unwrap();
         assert_eq!(multikey.id, "https://test.example/users/1#ed25519-key");
         assert_eq!(multikey.controller, actor_id);
         let db_key = multikey.to_db_key().unwrap();

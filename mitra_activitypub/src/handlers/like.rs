@@ -10,6 +10,7 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use mitra_models::{
+    accounts::queries::get_user_by_id,
     database::{
         db_client_await,
         get_database_client,
@@ -20,7 +21,7 @@ use mitra_models::{
     profiles::types::DbActor,
     reactions::{
         queries::create_reaction,
-        types::ReactionData,
+        types::{ReactionData, ReactionDetailed},
     },
 };
 use mitra_utils::unicode::is_single_character;
@@ -30,19 +31,24 @@ use mitra_validators::{
 };
 
 use crate::{
+    actors::builders::local_actor_data,
     authority::Authority,
     builders::add_context_activity::sync_conversation,
+    deliverer::Recipient,
     filter::get_moderation_domain,
+    forwarder::get_activity_recipients,
     identifiers::canonicalize_id,
     importers::{
         get_post_by_object_id,
         ActorIdResolver,
         ApClient,
     },
+    queues::OutgoingActivityJobData,
     vocabulary::DISLIKE,
 };
 
 use super::{
+    activity::get_activity_audience,
     emoji::handle_emoji,
     note::normalize_audience,
     Descriptor,
@@ -185,5 +191,85 @@ pub async fn handle_like(
         Err(DatabaseError::AlreadyExists(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
+    Ok(Some(Descriptor::object("Object")))
+}
+
+pub async fn handle_like_c2s(
+    ap_client: &ApClient,
+    db_pool: &DatabaseConnectionPool,
+    activity: JsonValue,
+) -> HandlerResult {
+    let like: Like = serde_json::from_value(activity.clone())?;
+    let instance = &ap_client.instance;
+    let author = ActorIdResolver::default().resolve(
+        ap_client,
+        db_pool,
+        &like.actor,
+    ).await?;
+    let authority = Authority::from(instance);
+    let canonical_object_id = canonicalize_id(&like.object)?;
+    let post = match get_post_by_object_id(
+        db_client_await!(db_pool),
+        &authority,
+        &canonical_object_id,
+    ).await {
+        Ok(post) => post,
+        // Ignore like if post is not found locally
+        Err(DatabaseError::NotFound(_)) => return Ok(None),
+        Err(other_error) => return Err(other_error.into()),
+    };
+    let visibility = get_visibility(
+        &local_actor_data(&authority, &author),
+        &like.to,
+        &like.cc,
+    )?;
+    // TODO: store activity ID even when reaction is local
+    let reaction_data = ReactionData {
+        author_id: author.id,
+        post_id: post.id,
+        content: None,
+        emoji_id: None,
+        visibility: visibility,
+        activity_id: None,
+    };
+    validate_reaction_data(&reaction_data)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
+    let reaction = match create_reaction(db_client, reaction_data).await {
+        Ok(reaction) => {
+            let reaction = ReactionDetailed
+                ::new(reaction, author.clone(), None)
+                .map_err(DatabaseError::from)?;
+            reaction
+        },
+        // Ignore activity if reaction is already saved
+        Err(DatabaseError::AlreadyExists(_)) => return Ok(None),
+        Err(other_error) => return Err(other_error.into()),
+    };
+
+    // Federate
+    let audience = get_activity_audience(&activity, None)?;
+    let recipients = get_activity_recipients(
+        db_client,
+        &audience,
+    ).await?
+        .into_iter()
+        .filter_map(|profile| profile.actor_json)
+        .flat_map(|actor_data| Recipient::for_inbox(&actor_data))
+        .collect();
+    let account = get_user_by_id(db_client, author.id).await?;
+    let job_data = OutgoingActivityJobData::new(
+        instance.uri_str(),
+        &account,
+        &activity,
+        recipients,
+    );
+    job_data.save_and_enqueue(db_client).await?;
+    sync_conversation(
+        db_client,
+        instance,
+        post.expect_conversation(),
+        activity,
+        reaction.visibility,
+    ).await?;
     Ok(Some(Descriptor::object("Object")))
 }

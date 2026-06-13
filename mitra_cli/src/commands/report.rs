@@ -3,8 +3,11 @@ use clap::Parser;
 
 use mitra_config::Config;
 use mitra_models::{
-    background_jobs::queries::get_job_count,
-    background_jobs::types::JobType,
+    accounts::queries::get_user_count,
+    background_jobs::{
+        queries::get_job_count,
+        types::JobType,
+    },
     database::{get_database_client, DatabaseConnectionPool},
     invoices::{
         queries::get_invoice_summary,
@@ -15,7 +18,6 @@ use mitra_models::{
         get_active_subscription_count,
         get_expired_subscription_count,
     },
-    users::queries::get_user_count,
 };
 use mitra_services::{
     monero::{

@@ -3,10 +3,10 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::User,
     database::DatabaseError,
     polls::types::PollVote,
     profiles::types::{DbActor, DbActorProfile},
-    users::types::User,
 };
 use mitra_utils::id::generate_ulid;
 

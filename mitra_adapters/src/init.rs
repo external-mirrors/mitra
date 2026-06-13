@@ -70,7 +70,7 @@ pub fn initialize_app(
     config
 }
 
-extern "C" {
+unsafe extern "C" {
     fn geteuid() -> u32;
 }
 

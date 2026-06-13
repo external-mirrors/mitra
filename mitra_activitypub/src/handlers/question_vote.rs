@@ -3,6 +3,7 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_models::{
+    accounts::queries::get_user_by_id,
     database::{
         get_database_client,
         DatabaseConnectionPool,
@@ -14,7 +15,6 @@ use mitra_models::{
         can_view_post,
         get_local_post_by_id,
     },
-    users::queries::get_user_by_id,
 };
 use mitra_services::media::MediaServer;
 use mitra_validators::errors::ValidationError;

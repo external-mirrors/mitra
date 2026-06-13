@@ -19,6 +19,10 @@ use log::Level;
 
 use mitra_config::Config;
 use mitra_models::{
+    accounts::queries::{
+        get_user_by_name,
+        get_user_by_login_address,
+    },
     caip122::queries::is_valid_caip122_nonce,
     database::{
         get_database_client,
@@ -31,10 +35,6 @@ use mitra_models::{
         get_oauth_app_by_client_id,
         get_user_by_authorization_code,
         save_oauth_token,
-    },
-    users::queries::{
-        get_user_by_name,
-        get_user_by_login_address,
     },
 };
 use mitra_services::{

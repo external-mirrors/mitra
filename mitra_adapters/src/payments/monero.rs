@@ -8,6 +8,7 @@ use mitra_config::{
     MoneroConfig,
 };
 use mitra_models::{
+    accounts::queries::get_user_by_id,
     database::{DatabaseClient, DatabaseError},
     invoices::helpers::local_invoice_reopened,
     invoices::queries::{
@@ -19,7 +20,6 @@ use mitra_models::{
         helpers::get_payment_method_by_type_and_chain_id,
         types::{PaymentMethod, PaymentType},
     },
-    users::queries::get_user_by_id,
 };
 use mitra_services::monero::{
     light_wallet::LightWalletError,

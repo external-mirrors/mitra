@@ -6,7 +6,7 @@ use apx_core::{
         rsa::generate_rsa_key,
     },
     url::{
-        canonical::{parse_url, CanonicalUri},
+        canonical::{CanonicalUri, NonCanonicalUri},
         http_uri::HttpUri,
     },
 };
@@ -35,6 +35,16 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::{Config, Instance, Limits, RegistrationType};
 use mitra_models::{
+    accounts::{
+        queries::{
+            create_portable_user,
+            get_portable_user_by_actor_id,
+            get_user_by_id,
+            get_user_by_name,
+            is_valid_invite_code,
+        },
+        types::{PortableUser, PortableUserData, User},
+    },
     database::{
         db_client_await,
         get_database_client,
@@ -56,14 +66,6 @@ use mitra_models::{
         get_remote_profile_by_actor_id,
     },
     profiles::types::{DbActor, DbActorProfile},
-    users::queries::{
-        create_portable_user,
-        get_portable_user_by_actor_id,
-        get_user_by_id,
-        get_user_by_name,
-        is_valid_invite_code,
-    },
-    users::types::{PortableUser, PortableUserData, User},
 };
 use mitra_services::media::MediaStorage;
 use mitra_validators::{
@@ -131,20 +133,25 @@ impl From<&DbActor> for FetcherContext {
 
 impl FetcherContext {
     pub fn prepare_object_id(&mut self, object_id: &str) -> Result<String, FetchError> {
-        let (canonical_object_id, maybe_gateway) = parse_url(object_id)
+        let mut object_id = NonCanonicalUri::parse(object_id)
             .map_err(|_| FetchError::UrlError)?;
-        if let Some(gateway) = maybe_gateway {
+        if let NonCanonicalUri::Ap((Some(ref gateway), _)) = object_id {
+            let gateway = gateway.to_string();
             if !self.gateways.contains(&gateway) {
                 self.gateways.insert(0, gateway);
             };
         };
-        // TODO: FEP-EF61: use random gateway
-        let maybe_gateway = self.gateways.first()
-            .map(|gateway| gateway.as_str());
-        // TODO: FEP-EF61: remove CanonicalUri::to_http_uri
-        let http_uri = canonical_object_id
-            .to_http_uri(maybe_gateway)
-            .ok_or(FetchError::NoGateway)?;
+        if let NonCanonicalUri::Ap((ref mut maybe_gateway, _)) = object_id {
+            // TODO: FEP-EF61: use random gateway
+            if let Some(gateway) = self.gateways.first() {
+                let gateway = HttpUri::parse(gateway.as_str())
+                    .map_err(|_| FetchError::UrlError)?;
+                maybe_gateway.replace(gateway);
+            } else {
+                return Err(FetchError::NoGateway);
+            };
+        };
+        let http_uri = object_id.to_string();
         Ok(http_uri)
     }
 }
@@ -1173,6 +1180,15 @@ mod tests {
             http_url,
             "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/1",
         );
+    }
+
+    #[test]
+    fn test_fetcher_context_prepare_with_query_params() {
+        let gateways = vec![];
+        let page_id = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/collection?page=1";
+        let mut context = FetcherContext::from(gateways);
+        let http_url = context.prepare_object_id(page_id).unwrap();
+        assert_eq!(http_url, page_id);
     }
 
     #[test]

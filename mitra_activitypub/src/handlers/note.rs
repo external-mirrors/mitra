@@ -255,6 +255,8 @@ pub struct AttributedObject {
     to: Vec<String>,
     #[serde(default, deserialize_with = "deserialize_into_id_array")]
     cc: Vec<String>,
+    #[serde(default, deserialize_with = "deserialize_into_id_array")]
+    audience: Vec<String>,
 
     pub published: Option<DateTime<Utc>>,
     pub updated: Option<DateTime<Utc>>,
@@ -286,7 +288,10 @@ impl AttributedObject {
     }
 
     pub fn audience(&self) -> Vec<&String> {
-        self.to.iter().chain(self.cc.iter()).collect()
+        self.to.iter()
+            .chain(self.cc.iter())
+            .chain(self.audience.iter())
+            .collect()
     }
 
     fn language(&self) -> Option<Language> {
@@ -858,6 +863,7 @@ fn get_object_visibility(
     context_id: Option<&CanonicalUri>,
     audience: &[String],
     maybe_in_reply_to: Option<&PostDetailed>,
+    maybe_group_id: Option<Uuid>,
 ) -> (Visibility, PostContext) {
     let actor = author.expect_actor_data();
     if let Some(in_reply_to) = maybe_in_reply_to {
@@ -913,6 +919,7 @@ fn get_object_visibility(
             Visibility::Direct
         };
         let context = PostContext::Top {
+            group_id: maybe_group_id,
             object_id: context_id.map(|id| id.to_string()),
             audience: conversation_audience,
         };
@@ -1001,11 +1008,11 @@ pub async fn create_remote_post(
     })?;
     let author_hostname = get_moderation_domain(author.expect_actor_data())?;
 
+    let authority = Authority::from(&ap_client.instance);
     let maybe_in_reply_to = match object.in_reply_to {
         Some(ref object_id) => {
             let object_id = redirects.get(object_id).unwrap_or(object_id);
             let canonical_object_id = canonicalize_id(object_id)?;
-            let authority = Authority::from(&ap_client.instance);
             let in_reply_to = get_post_by_object_id(
                 db_client_await!(db_pool),
                 &authority,
@@ -1052,6 +1059,30 @@ pub async fn create_remote_post(
         redirects,
     ).await?;
 
+    let maybe_group_id = if let Some(actor_id) = object.audience.first() {
+        match ActorIdResolver::default().only_remote().resolve(
+            ap_client,
+            db_pool,
+            actor_id,
+        ).await {
+            Ok(profile) => {
+                if profile.is_group() {
+                    log::info!("post addressed to group {profile}");
+                    Some(profile.id)
+                } else {
+                    None
+                }
+            },
+            Err(error) if is_actor_importer_error(&error) => {
+                log::warn!("failed to import group {actor_id}: {error}");
+                None
+            },
+            Err(other_error) => return Err(other_error),
+        }
+    } else {
+        None
+    };
+
     // TODO: use on local posts too
     let db_client = &mut **get_database_client(db_pool).await?;
     let mentions = filter_mentions(
@@ -1074,6 +1105,7 @@ pub async fn create_remote_post(
         maybe_canonical_context_id.as_ref(),
         &audience,
         maybe_in_reply_to.as_ref(),
+        maybe_group_id,
     );
     let is_sensitive =
         object.sensitive.unwrap_or(false) ||
@@ -1406,10 +1438,35 @@ mod tests {
             Some(&canonical_context_id),
             &audience,
             None,
+            None,
         );
         assert_eq!(visibility, Visibility::Public);
-        let PostContext::Top { object_id, audience } = context else { unreachable!() };
+        let PostContext::Top { object_id, audience, .. } =
+            context else { unreachable!() };
         assert_eq!(object_id.unwrap(), context_id);
+        assert_eq!(audience.unwrap(), AP_PUBLIC);
+    }
+
+    #[test]
+    fn test_get_object_visibility_public_in_group() {
+        let author =
+            DbActorProfile::remote_for_test("test", "https://social.example");
+        let group = DbActorProfile::remote_for_test(
+            "group",
+            "https://social.example/group",
+        );
+        let audience = vec![AP_PUBLIC.to_string()];
+        let (visibility, context) = get_object_visibility(
+            &author,
+            None,
+            &audience,
+            None,
+            Some(group.id),
+        );
+        assert_eq!(visibility, Visibility::Public);
+        let PostContext::Top { group_id, audience, .. } =
+            context else { unreachable!() };
+        assert_eq!(group_id, Some(group.id));
         assert_eq!(audience.unwrap(), AP_PUBLIC);
     }
 
@@ -1425,6 +1482,7 @@ mod tests {
             None,
             &audience,
             Some(&in_reply_to),
+            None,
         );
         assert_eq!(visibility, Visibility::Public);
         assert!(matches!(context, PostContext::Reply { .. }));
@@ -1448,9 +1506,11 @@ mod tests {
             None,
             &audience,
             None,
+            None,
         );
         assert_eq!(visibility, Visibility::Followers);
-        let PostContext::Top { object_id, audience } = context else { unreachable!() };
+        let PostContext::Top { object_id, audience, .. } =
+            context else { unreachable!() };
         assert_eq!(object_id, None);
         assert_eq!(audience.unwrap(), author_followers);
     }
@@ -1475,6 +1535,7 @@ mod tests {
             None,
             &audience,
             Some(&in_reply_to),
+            None,
         );
         assert_eq!(visibility, Visibility::Conversation);
         assert!(matches!(context, PostContext::Reply { .. }));
@@ -1503,6 +1564,7 @@ mod tests {
             None,
             &audience,
             Some(&in_reply_to),
+            None,
         );
         assert_eq!(visibility, Visibility::Conversation);
         assert!(matches!(context, PostContext::Reply { .. }));
@@ -1528,9 +1590,11 @@ mod tests {
             None,
             &audience,
             None,
+            None,
         );
         assert_eq!(visibility, Visibility::Subscribers);
-        let PostContext::Top { object_id, audience } = context else { unreachable!() };
+        let PostContext::Top { object_id, audience, .. } =
+            context else { unreachable!() };
         assert_eq!(object_id, None);
         assert_eq!(audience.unwrap(), author_subscribers);
     }
@@ -1544,9 +1608,11 @@ mod tests {
             None,
             &audience,
             None,
+            None,
         );
         assert_eq!(visibility, Visibility::Direct);
-        let PostContext::Top { object_id, audience } = context else { unreachable!() };
+        let PostContext::Top { object_id, audience, .. } =
+            context else { unreachable!() };
         assert_eq!(object_id, None);
         assert!(audience.is_none());
     }

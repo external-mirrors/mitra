@@ -19,6 +19,7 @@ use mitra_models::{
         queries::get_post_author,
         types::{PostDetailed, Visibility},
     },
+    profiles::queries::get_profile_by_id,
     relationships::queries::{get_followers, get_subscribers},
 };
 use mitra_services::media::MediaServer;
@@ -155,6 +156,8 @@ pub struct Note {
 
     pub to: Vec<String>,
     pub cc: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    audience: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     quote: Option<String>,
@@ -199,6 +202,7 @@ pub fn build_note(
 
     let mut primary_audience = vec![];
     let mut secondary_audience = vec![];
+    let mut group_audience = None;
     let followers_collection_id =
         LocalActorCollection::Followers.of(&actor_id);
     let subscribers_collection_id =
@@ -252,6 +256,10 @@ pub fn build_note(
         let actor_id = compatible_profile_actor_id(authority, profile);
         if !primary_audience.contains(&actor_id) {
             primary_audience.push(actor_id.clone());
+        };
+        // TODO: do not require group mentions
+        if post.group_id.is_some_and(|group_id| group_id == profile.id) {
+            group_audience = Some(actor_id.clone());
         };
         let tag = SimpleTag {
             tag_type: MENTION.to_string(),
@@ -364,6 +372,7 @@ pub fn build_note(
         end_time: end_time,
         to: primary_audience,
         cc: secondary_audience,
+        audience: group_audience,
         quote: maybe_quote_url.clone(),
         quote_url: maybe_quote_url,
         published: post.created_at,
@@ -398,6 +407,10 @@ pub async fn get_note_recipients(
         let in_reply_to_author = get_post_author(db_client, in_reply_to_id).await?;
         primary_audience.push(in_reply_to_author);
     };
+    if let Some(group_id) = post.group_id {
+         let group = get_profile_by_id(db_client, group_id).await?;
+        primary_audience.push(group);
+    };
     primary_audience.extend(post.mentions.clone());
     if let Some(ref poll) = post.poll {
         let voters = get_voters(db_client, poll.id).await?;
@@ -427,11 +440,11 @@ mod tests {
     use serde_json::json;
     use uuid::uuid;
     use mitra_models::{
+        accounts::types::User,
         conversations::types::Conversation,
         polls::types::{Poll, PollResult, PollResults},
         posts::types::RelatedPosts,
         profiles::types::{DbActor, DbActorProfile},
-        users::types::User,
     };
     use super::*;
 

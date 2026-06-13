@@ -183,8 +183,8 @@ pub async fn get_custom_feeds_by_source(
 mod tests {
     use serial_test::serial;
     use crate::{
+        accounts::test_utils::create_test_user,
         database::test_utils::create_test_database,
-        users::test_utils::create_test_user,
     };
     use super::*;
 

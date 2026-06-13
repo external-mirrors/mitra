@@ -4,9 +4,9 @@ use uuid::Uuid;
 
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::User,
     database::{DatabaseClient, DatabaseError},
     relationships::queries::{get_followers, get_following},
-    users::types::User,
 };
 
 use crate::{

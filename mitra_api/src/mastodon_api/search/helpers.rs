@@ -29,6 +29,7 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
+    accounts::types::User,
     database::{
         db_client_await,
         get_database_client,
@@ -48,7 +49,6 @@ use mitra_models::{
     },
     profiles::types::DbActorProfile,
     tags::queries::search_tags,
-    users::types::User,
 };
 use mitra_services::{
     ethereum::utils::validate_ethereum_address,

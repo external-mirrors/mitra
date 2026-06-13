@@ -202,13 +202,13 @@ pub async fn get_expired_subscription_count(
 mod tests {
     use serial_test::serial;
     use crate::{
+        accounts::test_utils::create_test_user,
         database::test_utils::create_test_database,
         profiles::test_utils::create_test_remote_profile,
         relationships::{
             queries::has_relationship,
             types::RelationshipType,
         },
-        users::test_utils::create_test_user,
     };
     use super::*;
 

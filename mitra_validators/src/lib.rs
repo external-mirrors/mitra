@@ -1,3 +1,4 @@
+pub mod accounts;
 pub mod activitypub;
 pub mod custom_feeds;
 pub mod emojis;
@@ -11,4 +12,3 @@ pub mod posts;
 pub mod profiles;
 pub mod reactions;
 pub mod tags;
-pub mod users;

@@ -1,5 +1,5 @@
 use apx_core::{
-    crypto::rsa::RsaSerializationError,
+    crypto::common::KeySerializationError,
 };
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
@@ -8,9 +8,8 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
 use mitra_models::{
-    database::{DatabaseError, DatabaseTypeError},
-    profiles::types::IdentityProofType,
-    users::types::User,
+    accounts::types::User,
+    profiles::types::{DbActor, DbActorProfile, IdentityProofType},
 };
 use mitra_services::media::MediaServer;
 
@@ -187,32 +186,56 @@ pub struct Actor {
     pub gateways: Vec<String>,
 }
 
-pub fn build_local_actor(
+// All identifiers are canonical
+pub(crate) fn local_actor_data(
     authority: &Authority,
-    media_server: &MediaServer,
-    user: &User,
-) -> Result<Actor, DatabaseError> {
-    let server_uri = authority.expect_server_uri();
-    let username = &user.profile.username;
-    let actor_id = local_actor_id_unified(authority, user.id, username);
-    let actor_type = if user.profile.is_automated {
+    profile: &DbActorProfile,
+) -> DbActor {
+    let authority = authority.and_prefer_canonical();
+    let actor_id = local_actor_id_unified(
+        &authority,
+        profile.id,
+        &profile.username,
+    );
+    let actor_type = if profile.is_automated {
         SERVICE
     } else {
         PERSON
     };
-    let inbox = LocalActorCollection::Inbox.of(&actor_id);
-    let outbox = LocalActorCollection::Outbox.of(&actor_id);
-    let followers = LocalActorCollection::Followers.of(&actor_id);
-    let following = LocalActorCollection::Following.of(&actor_id);
-    let subscribers = LocalActorCollection::Subscribers.of(&actor_id);
-    let featured = LocalActorCollection::Featured.of(&actor_id);
+    DbActor {
+        object_type: actor_type.to_owned(),
+        id: actor_id.clone(),
+        inbox: LocalActorCollection::Inbox.of(&actor_id),
+        shared_inbox: None,
+        outbox: LocalActorCollection::Outbox.of(&actor_id),
+        followers: Some(LocalActorCollection::Followers.of(&actor_id)),
+        subscribers: Some(LocalActorCollection::Subscribers.of(&actor_id)),
+        featured: Some(LocalActorCollection::Featured.of(&actor_id)),
+        url: None,
+        gateways: vec![],
+        #[expect(deprecated)]
+        public_key: None,
+    }
+}
 
-    let public_key_pem = PublicKeyPem::build(&actor_id, &user.rsa_secret_key)
-        .map_err(|_| DatabaseTypeError)?;
+pub fn build_local_actor(
+    authority: &Authority,
+    media_server: &MediaServer,
+    user: &User,
+) -> Result<Actor, KeySerializationError> {
+    let id_builder = authority.id_builder();
+    let server_uri = authority.expect_server_uri();
+    let username = &user.profile.username;
+    let actor_data = local_actor_data(authority, &user.profile);
+    let actor_id = id_builder.build_string_unchecked(&actor_data.id);
+    // TODO: add to actor data?
+    let following = LocalActorCollection::Following.of(&actor_data.id);
+
+    let public_key_pem =
+        PublicKeyPem::new_local(&actor_id, &user.rsa_secret_key)?;
     let verification_methods = vec![
-        Multikey::build_rsa(&actor_id, &user.rsa_secret_key)
-            .map_err(|_| DatabaseTypeError)?,
-        Multikey::build_ed25519(&actor_id, &user.ed25519_secret_key),
+        Multikey::new_rsa_local(&actor_id, &user.rsa_secret_key)?,
+        Multikey::new_ed25519_local(&actor_id, &user.ed25519_secret_key)?,
     ];
     let avatar = match &user.profile.avatar {
         Some(image) => {
@@ -291,16 +314,22 @@ pub fn build_local_actor(
         .unwrap_or_default();
     let actor = Actor {
         _context: build_actor_context(),
-        id: actor_id.clone(),
-        object_type: actor_type.to_string(),
+        id: actor_id,
+        object_type: actor_data.object_type,
         name: user.profile.display_name.clone(),
         preferred_username: username.clone(),
-        inbox,
-        outbox,
-        followers: Some(followers),
-        following: Some(following),
-        subscribers: Some(subscribers),
-        featured: Some(featured),
+        inbox: id_builder.build_string_unchecked(&actor_data.inbox),
+        outbox: id_builder.build_string_unchecked(&actor_data.outbox),
+        followers: actor_data.followers
+            .as_ref()
+            .map(|uri| id_builder.build_string_unchecked(uri)),
+        following: Some(id_builder.build_string_unchecked(&following)),
+        subscribers: actor_data.subscribers
+            .as_ref()
+            .map(|uri| id_builder.build_string_unchecked(uri)),
+        featured: actor_data.featured
+            .as_ref()
+            .map(|uri| id_builder.build_string_unchecked(uri)),
         assertion_method: verification_methods,
         public_key: Some(public_key_pem),
         implements: vec![],
@@ -324,14 +353,15 @@ pub fn build_local_actor(
 
 pub fn build_instance_actor(
     instance: &Instance,
-) -> Result<Actor, RsaSerializationError> {
+) -> Result<Actor, KeySerializationError> {
     let actor_id = local_instance_actor_id(instance.uri_str());
     let actor_inbox = LocalActorCollection::Inbox.of(&actor_id);
     let actor_outbox = LocalActorCollection::Outbox.of(&actor_id);
-    let public_key_pem = PublicKeyPem::build(&actor_id, &instance.rsa_secret_key)?;
+    let public_key_pem =
+        PublicKeyPem::new_local(&actor_id, &instance.rsa_secret_key)?;
     let verification_methods = vec![
-        Multikey::build_rsa(&actor_id, &instance.rsa_secret_key)?,
-        Multikey::build_ed25519(&actor_id, &instance.ed25519_secret_key),
+        Multikey::new_rsa_local(&actor_id, &instance.rsa_secret_key)?,
+        Multikey::new_ed25519_local(&actor_id, &instance.ed25519_secret_key)?,
     ];
     let actor = Actor {
         _context: build_actor_context(),

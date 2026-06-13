@@ -1,15 +1,18 @@
 use apx_sdk::{
     constants::AP_PUBLIC,
-    core::url::http_uri::HttpUri,
+    core::{
+        crypto::common::KeySerializationError,
+        url::http_uri::HttpUri,
+    },
 };
 use serde::Serialize;
 
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::User,
     database::{DatabaseClient, DatabaseError},
     profiles::helpers::find_declared_aliases,
     relationships::queries::get_followers,
-    users::types::User,
 };
 use mitra_services::media::MediaServer;
 use mitra_utils::id::generate_ulid;
@@ -47,7 +50,7 @@ fn build_update_person(
     instance_uri: &HttpUri,
     media_server: &MediaServer,
     user: &User,
-) -> Result<UpdatePerson, DatabaseError> {
+) -> Result<UpdatePerson, KeySerializationError> {
     let authority = Authority::server(instance_uri);
     let actor = build_local_actor(
         &authority,
@@ -106,7 +109,7 @@ pub async fn prepare_update_person(
         instance.uri(),
         media_server,
         user,
-    )?;
+    ).map_err(|_| DatabaseError::type_error())?;
     let recipients = get_update_person_recipients(db_client, user).await?;
     Ok(OutgoingActivityJobData::new(
         instance.uri_str(),

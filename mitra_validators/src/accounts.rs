@@ -1,7 +1,7 @@
 use regex::Regex;
 
 use mitra_models::{
-    users::types::ClientConfig,
+    accounts::types::ClientConfig,
 };
 
 use super::errors::ValidationError;

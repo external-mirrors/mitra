@@ -8,13 +8,16 @@ use actix_web::{
     Scope,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
+use uuid::Uuid;
 
 use mitra_activitypub::authority::Authority;
 use mitra_adapters::dynamic_config::get_dynamic_config;
 use mitra_config::Config;
 use mitra_models::{
+    accounts::types::Permission,
     custom_feeds::queries::get_custom_feed,
     database::{get_database_client, DatabaseConnectionPool},
+    groups::queries::get_group_timeline,
     posts::queries::{
         get_custom_feed_timeline,
         get_direct_timeline,
@@ -22,7 +25,6 @@ use mitra_models::{
         get_posts_by_tag,
         get_public_timeline,
     },
-    users::types::Permission,
 };
 
 use crate::http::get_request_base_url;
@@ -238,6 +240,41 @@ async fn list_timeline(
     Ok(response)
 }
 
+#[get("/group/{group_id}")]
+async fn group_timeline(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    request_uri: Uri,
+    group_id: web::Path<Uuid>,
+    query_params: web::Query<TimelineQueryParams>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let posts = get_group_timeline(
+        db_client,
+        group_id.into_inner(),
+        current_user.id,
+        query_params.max_id,
+        query_params.limit.inner(),
+    ).await?;
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
+    let authority = Authority::from(&config.instance());
+    let response = get_paginated_status_list(
+        db_client,
+        &base_url,
+        &authority,
+        &media_server,
+        &request_uri,
+        Some(&current_user),
+        posts,
+        &query_params.limit,
+    ).await?;
+    Ok(response)
+}
+
 pub fn timeline_api_scope() -> Scope {
     web::scope("/v1/timelines")
         .service(home_timeline)
@@ -245,4 +282,5 @@ pub fn timeline_api_scope() -> Scope {
         .service(direct_timeline)
         .service(hashtag_timeline)
         .service(list_timeline)
+        .service(group_timeline)
 }

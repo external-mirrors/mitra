@@ -521,11 +521,13 @@ pub async fn get_remote_profiles_by_actor_ids(
     db_client: &impl DatabaseClient,
     actors_ids: &[String],
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
+    // Preserves order
     let rows = db_client.query(
         "
         SELECT actor_profile
-        FROM actor_profile
-        WHERE actor_id = ANY($1)
+        FROM unnest($1::text[]) WITH ORDINALITY AS ranked(actor_id, rank)
+        JOIN actor_profile USING (actor_id)
+        ORDER BY rank
         ",
         &[&actors_ids],
     ).await?;
@@ -1042,6 +1044,11 @@ mod tests {
     use serde_json::json;
     use serial_test::serial;
     use crate::{
+        accounts::{
+            queries::create_user,
+            test_utils::create_test_portable_user,
+            types::UserCreateData,
+        },
         database::test_utils::create_test_database,
         emojis::queries::create_or_update_local_emoji,
         media::types::MediaInfo,
@@ -1062,11 +1069,6 @@ mod tests {
                 IdentityProofType,
                 PaymentOption,
             },
-        },
-        users::{
-            queries::create_user,
-            test_utils::create_test_portable_user,
-            types::UserCreateData,
         },
     };
     use super::*;

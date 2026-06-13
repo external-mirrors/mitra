@@ -3,8 +3,8 @@ use apx_sdk::agent::{FederationAgent, HttpSigner};
 
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::User,
     profiles::types::PublicKeyType,
-    users::types::User,
 };
 
 use super::{

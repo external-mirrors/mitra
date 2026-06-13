@@ -14,6 +14,7 @@ use mitra_activitypub::builders::{
 };
 use mitra_config::Config;
 use mitra_models::{
+    accounts::queries::get_user_by_id,
     database::{
         get_database_client,
         DatabaseConnectionPool,
@@ -21,7 +22,6 @@ use mitra_models::{
     },
     polls::queries::vote,
     posts::helpers::{add_related_posts, get_post_by_id_for_view},
-    users::queries::get_user_by_id,
 };
 use mitra_services::media::MediaServer;
 

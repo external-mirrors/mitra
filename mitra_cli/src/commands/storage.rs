@@ -13,6 +13,7 @@ use mitra_adapters::{
 };
 use mitra_config::Config;
 use mitra_models::{
+    accounts::queries::get_user_by_id,
     activitypub::queries::get_object_ids,
     attachments::queries::delete_unused_attachments,
     database::{get_database_client, DatabaseConnectionPool},
@@ -29,7 +30,6 @@ use mitra_models::{
         find_empty_profiles,
         get_profile_by_id,
     },
-    users::queries::get_user_by_id,
 };
 use mitra_services::media::MediaStorage;
 use mitra_utils::datetime::days_before_now;

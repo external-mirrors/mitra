@@ -45,8 +45,8 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::{PortableUser, User},
     profiles::types::{DbActor, PublicKeyType},
-    users::types::{PortableUser, User},
 };
 
 use crate::{

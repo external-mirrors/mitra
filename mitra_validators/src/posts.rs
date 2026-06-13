@@ -100,7 +100,7 @@ pub fn validate_post_create_data(
     post_data: &PostCreateData,
 ) -> Result<(), ValidationError> {
     match post_data.context {
-        PostContext::Top { ref object_id, ref audience } => {
+        PostContext::Top { ref object_id, ref audience, .. } => {
             if post_data.visibility == Visibility::Conversation {
                 return Err(ValidationError("top-level post can't have conversation visibility"));
             };
@@ -204,7 +204,7 @@ pub fn validate_reply(
     visibility: Visibility,
     mentions: &[Uuid],
 ) -> Result<(), ValidationError> {
-     if in_reply_to.repost_of_id.is_some() {
+    if in_reply_to.repost_of_id.is_some() {
         return Err(ValidationError("can't reply to repost"));
     };
     let is_same_author = author_id == in_reply_to.author.id;

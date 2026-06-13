@@ -28,8 +28,11 @@ use mitra_activitypub::{
         like::build_like,
     },
     deliverer::{Recipient, Sender},
+    forwarder::get_activity_recipients,
+    handlers::activity::get_activity_audience,
     identifiers::canonicalize_id,
     importers::{
+        get_post_by_object_id,
         get_user_by_actor_id,
         import_activity,
         import_actor,
@@ -45,6 +48,7 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
+    accounts::queries::get_user_by_name,
     database::{
         db_client_await,
         get_database_client,
@@ -52,14 +56,8 @@ use mitra_models::{
     },
     posts::queries::{
         get_post_by_id,
-        get_remote_post_by_object_id,
     },
     profiles::queries::get_remote_profile_by_actor_id,
-    users::{
-        queries::{
-            get_user_by_name,
-        },
-    },
 };
 use mitra_services::media::MediaServer;
 use mitra_utils::id::generate_ulid;
@@ -382,7 +380,12 @@ impl CreateActivity {
             },
             Activity::Like { sender, object } => {
                 let account = get_user_by_name(db_client, &sender).await?;
-                let post = get_remote_post_by_object_id(db_client, &object).await?;
+                let canonical_object_id = canonicalize_id(&object)?;
+                let post = get_post_by_object_id(
+                    db_client,
+                    &authority,
+                    &canonical_object_id,
+                ).await?;
                 let media_server = MediaServer::new(config);
                 let like = build_like(
                     &authority,
@@ -419,7 +422,8 @@ pub struct SendActivity {
     /// JSON value
     activity: String,
     /// Actor ID
-    recipient: String,
+    #[arg(long)]
+    recipient: Option<String>,
     /// Create RFC-9421 signature?
     #[arg(long)]
     rfc9421: bool,
@@ -442,10 +446,23 @@ impl SendActivity {
             &authority,
             &canonical_actor_id,
         ).await?;
-        let recipient = get_remote_profile_by_actor_id(
-            db_client_await!(db_pool),
-            &self.recipient,
-        ).await?;
+
+        let recipient = if let Some(recipient) = self.recipient {
+            get_remote_profile_by_actor_id(
+                db_client_await!(db_pool),
+                &recipient,
+            ).await?
+        } else {
+            let audience = get_activity_audience(&activity, None)?;
+            let recipients = get_activity_recipients(
+                db_client_await!(db_pool),
+                &audience,
+            ).await?;
+            recipients
+                .into_iter()
+                .next()
+                .ok_or(Error::msg("recipient can not be determined"))?
+        };
         let recipient_inbox = Recipient
             ::for_inbox(recipient.expect_actor_data())
             .first()

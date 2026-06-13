@@ -1,13 +1,13 @@
 use mitra_activitypub::identifiers::local_actor_id;
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
-    posts::queries::get_post_count,
-    users::queries::{
+    accounts::queries::{
         get_admin_user,
         get_active_user_count,
         get_user_count,
     },
+    database::{DatabaseClient, DatabaseError},
+    posts::queries::get_post_count,
 };
 use mitra_utils::datetime::days_before_now;
 

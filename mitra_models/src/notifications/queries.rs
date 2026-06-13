@@ -141,10 +141,10 @@ pub async fn delete_notifications(
 mod tests {
     use serial_test::serial;
     use crate::{
+        accounts::test_utils::create_test_user,
         database::test_utils::create_test_database,
         posts::test_utils::create_test_local_post,
         reactions::test_utils::create_test_local_reaction,
-        users::test_utils::create_test_user,
     };
     use super::*;
 

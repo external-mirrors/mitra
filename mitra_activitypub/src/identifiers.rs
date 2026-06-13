@@ -1,8 +1,9 @@
 use apx_core::{
     caip2::ChainId,
     url::{
-        canonical::CanonicalUri,
+        canonical::{CanonicalUri, NonCanonicalUri},
         common::url_encode,
+        http_uri::HttpUri,
     },
 };
 use apx_sdk::identifiers::parse_object_id;
@@ -349,6 +350,35 @@ pub fn canonicalize_id(id: &str) -> Result<CanonicalUri, ValidationError> {
     Ok(canonical_uri)
 }
 
+pub struct IdBuilder {
+    http_base_uri: Option<HttpUri>,
+}
+
+impl IdBuilder {
+    pub fn new(http_base_uri: Option<HttpUri>) -> Self {
+        Self { http_base_uri }
+    }
+
+    fn build(&self, canonical_id: &CanonicalUri) -> NonCanonicalUri {
+        match canonical_id {
+            CanonicalUri::Http(http_uri) =>
+                NonCanonicalUri::Http(http_uri.clone()),
+            CanonicalUri::Ap(ap_uri) =>
+                NonCanonicalUri::Ap((self.http_base_uri.clone(), ap_uri.clone())),
+        }
+    }
+
+    fn build_unchecked(&self, canonical_id: &str) -> NonCanonicalUri {
+        let canonical_id = CanonicalUri::parse_canonical(canonical_id)
+            .expect("URI should be valid");
+        self.build(&canonical_id)
+    }
+
+    pub fn build_string_unchecked(&self, canonical_id: &str) -> String {
+        self.build_unchecked(canonical_id).to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use apx_sdk::{
@@ -652,6 +682,34 @@ mod tests {
         assert_eq!(
             canonical_url.to_string(),
             "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
+        );
+    }
+
+    #[test]
+    fn test_id_builder_http() {
+        let object_id = "https://social.example/objects/1";
+        let id_builder = IdBuilder::new(None);
+        let output = id_builder.build_unchecked(object_id);
+        assert_eq!(output.to_string(), object_id);
+    }
+
+    #[test]
+    fn test_id_builder_ap() {
+        let object_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let id_builder = IdBuilder::new(None);
+        let output = id_builder.build_unchecked(object_id);
+        assert_eq!(output.to_string(), object_id);
+    }
+
+    #[test]
+    fn test_id_builder_ap_with_gateway() {
+        let object_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let gateway = HttpUri::parse("https://social.example").unwrap();
+        let id_builder = IdBuilder::new(Some(gateway));
+        let output = id_builder.build_unchecked(object_id);
+        assert_eq!(
+            output.to_string(),
+            "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
         );
     }
 }

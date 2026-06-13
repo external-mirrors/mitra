@@ -1148,6 +1148,38 @@ paths:
                 $ref: '#/components/schemas/Relationship'
         404:
           description: Follow request not found
+  /api/v1/groups/followed:
+    get:
+      summary: List groups followed by the user.
+      security:
+        - tokenAuth: []
+      parameters:
+        - name: offset
+          in: query
+          description: How many groups to skip before returning results.
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          description: Maximum number of results to return.
+          required: false
+          schema:
+            type: integer
+            default: 40
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: Profile list
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+        400:
+          description: Invalid query parameters.
   /api/v1/instance:
     get:
       summary: Information about the instance.
@@ -1966,6 +1998,11 @@ paths:
                   type: string
                   format: uuid
                   nullable: true
+                group_id:
+                  description: Group to which this post will be addressed.
+                  type: string
+                  format: uuid
+                  nullable: true
                 visibility:
                   allOf:
                     - $ref: '#/components/schemas/Visibility'
@@ -1979,7 +2016,7 @@ paths:
                         - `direct` - visible to mentioned users
                         
                         Default: `direct` when parent post is not public, otherwise `public`.
-                sensitiive:
+                sensitive:
                   description: Mark post and attached media as sensitive?
                   type: boolean
                   default: false
@@ -2082,7 +2119,7 @@ paths:
                   items:
                     type: string
                     format: uuid
-                sensitiive:
+                sensitive:
                   description: Mark post and attached media as sensitive?
                   type: boolean
                   default: false
@@ -2486,11 +2523,20 @@ paths:
           description: Post already saved to IPFS
   /api/v1/statuses/{status_id}/load_conversation:
     post:
-      summary: Load conversation from a remote server.
+      summary: Load replies or full conversation from a remote server.
       security:
         - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/status_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                use_context:
+                  description: Try to load full conversation.
+                  type: boolean
       responses:
         204:
           description: Successful operation
@@ -2871,6 +2917,43 @@ paths:
               schema:
                 type: string
                 example: '<https://social.example/api/v1/timelines/list/18?limit=20&max_id=0187871e-5a09-c6d6-6570-5158ffdcc845>; rel="next"'
+  /api/v1/timelines/group/{group_id}:
+    get:
+      summary: View posts in the given group.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/group_id'
+        - name: max_id
+          in: query
+          description: Return results older than this ID.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Maximum number of results to return.
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: Post list
+                type: array
+                items:
+                  $ref: '#/components/schemas/Status'
+          headers:
+            Link:
+              description: Link to the next page
+              schema:
+                type: string
+                example: '<https://social.example/api/v1/timelines/group/019e81e7-6055-77b2-9c9c-69adcd7c72a4?limit=20&max_id=019e81e7-919e-7750-a35c-e3993c462046>; rel="next"'
   /api/v2/search:
     get:
       summary: Search for profiles or posts
@@ -3053,6 +3136,14 @@ components:
       schema:
         type: string
         format: uuid
+    group_id:
+      name: group_id
+      in: path
+      description: Group ID
+      required: true
+      schema:
+        type: string
+        format: uuid
     list_id:
       name: list_id
       in: path
@@ -3216,8 +3307,9 @@ components:
                   type: string
                   example: null
             role:
-              description: The role assigned to the currently authorized user.
-              $ref: '#/components/schemas/Role'
+              allOf:
+                - description: The role assigned to the currently authorized user.
+                - $ref: '#/components/schemas/Role'
             authentication_methods:
               description: The list of authentication methods.
               type: array
@@ -4134,8 +4226,9 @@ components:
           format: date-time
           nullable: true
         account:
-          description: The user that authored this post.
-          $ref: '#/components/schemas/Account'
+          allOf:
+            - description: The user that authored this post.
+            - $ref: '#/components/schemas/Account'
         content:
           description: HTML-encoded post content.
           type: string
@@ -4144,9 +4237,10 @@ components:
           type: string
           nullable: true
         visibility:
-          description: Visibility of this post.
-          $ref: '#/components/schemas/Visibility'
-        sensitiive:
+          allOf:
+            - description: Visibility of this post.
+            - $ref: '#/components/schemas/Visibility'
+        sensitive:
           description: Is this post marked as sensitive content?
           type: boolean
           example: false

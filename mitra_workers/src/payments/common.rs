@@ -3,6 +3,7 @@ use mitra_activitypub::{
 };
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::queries::get_user_by_id,
     database::{
         get_database_client,
         DatabaseConnectionPool,
@@ -15,7 +16,6 @@ use mitra_models::{
     profiles::queries::get_profile_by_id,
     relationships::queries::unsubscribe,
     subscriptions::queries::get_expired_subscriptions,
-    users::queries::get_user_by_id,
 };
 
 pub async fn update_expired_subscriptions(

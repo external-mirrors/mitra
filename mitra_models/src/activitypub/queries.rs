@@ -455,10 +455,10 @@ mod tests {
     use serde_json::json;
     use serial_test::serial;
     use crate::{
+        accounts::test_utils::create_test_portable_user,
         database::test_utils::create_test_database,
         posts::test_utils::create_test_remote_post,
         profiles::test_utils::create_test_remote_profile,
-        users::test_utils::create_test_portable_user,
     };
     use super::*;
 

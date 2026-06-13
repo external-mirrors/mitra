@@ -20,6 +20,7 @@ use actix_web::{
     HttpResponse,
     Scope,
 };
+use actix_web_httpauth::extractors::bearer::BearerAuth;
 use apx_core::{
     caip2::ChainId,
     hashlink::Hashlink,
@@ -59,12 +60,17 @@ use mitra_activitypub::{
         proposal::build_proposal,
     },
     c2s::authorization::{
+        verify_activity_actor,
+        verify_activity_id,
         verify_embedded_ownership,
         verify_permissions,
         verify_public_keys,
     },
     forwarder::get_activity_recipients,
-    handlers::activity::get_activity_audience,
+    handlers::activity::{
+        get_activity_audience,
+        handle_activity_c2s,
+    },
     identifiers::{
         canonicalize_id,
         compatible_post_object_id,
@@ -85,6 +91,15 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
+    accounts::{
+        queries::{
+            get_portable_user_by_id,
+            get_portable_user_by_inbox_id,
+            get_portable_user_by_outbox_id,
+            get_user_by_name,
+        },
+        types::Role,
+    },
     activitypub::{
         helpers::get_collection_items_json,
         queries::{
@@ -103,6 +118,7 @@ use mitra_models::{
         DatabaseError,
     },
     emojis::queries::get_local_emoji_by_name,
+    oauth::queries::get_user_by_oauth_token,
     posts::helpers::{
         add_related_posts,
         get_post_by_id_for_view,
@@ -115,12 +131,6 @@ use mitra_models::{
     profiles::{
         queries::get_remote_profile_by_actor_id,
         types::PaymentOption,
-    },
-    users::queries::{
-        get_portable_user_by_id,
-        get_portable_user_by_inbox_id,
-        get_portable_user_by_outbox_id,
-        get_user_by_name,
     },
 };
 use mitra_services::media::{MediaServer, MediaStorage};
@@ -181,7 +191,7 @@ async fn actor_view(
         &authority,
         &media_server,
         &user,
-    )?;
+    ).map_err(|_| DatabaseError::type_error())?;
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
         .json(actor);
@@ -321,8 +331,38 @@ async fn outbox(
 }
 
 #[post("/outbox")]
-async fn outbox_client_to_server() -> HttpResponse {
-    HttpResponse::MethodNotAllowed().finish()
+async fn outbox_client_to_server(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    activity: web::Json<JsonValue>,
+) -> Result<HttpResponse, HttpError> {
+    if !config.federation.activitypub_c2s_enabled {
+        return Ok(HttpResponse::MethodNotAllowed().finish());
+    };
+    let (_, account) = get_user_by_oauth_token(
+        db_client_await!(&db_pool),
+        auth.token(),
+    ).await?;
+    // WARNING: C2S API is unsafe
+    // Only admins are allowed to use the outbox
+    if account.role != Role::Admin {
+        return Err(HttpError::PermissionError);
+    };
+    let instance = config.instance();
+    // TODO: remove @context
+    verify_activity_id(&instance, &activity)?;
+    verify_activity_actor(&instance, &account, &activity)?;
+    verify_public_keys(&instance, None, &activity)?;
+    verify_embedded_ownership(&activity)?;
+    verify_permissions(db_client_await!(&db_pool), &activity).await?;
+    let ap_client = ApClient::new_with_pool(&config, &db_pool).await?;
+    handle_activity_c2s(
+        &ap_client,
+        &db_pool,
+        &activity,
+    ).await?;
+    Ok(HttpResponse::Accepted().finish())
 }
 
 #[get("/followers")]

@@ -6,6 +6,7 @@ use uuid::Uuid;
 use mitra_activitypub::authority::Authority;
 use mitra_config::Instance;
 use mitra_models::{
+    accounts::types::User,
     database::{DatabaseClient, DatabaseError},
     emojis::types::{CustomEmoji as DbCustomEmoji},
     posts::{
@@ -13,8 +14,8 @@ use mitra_models::{
         helpers::{add_related_posts, add_user_actions, can_link_post},
         types::{PostDetailed as DbPostDetailed, Visibility},
     },
+    profiles::types::DbActorProfile,
     relationships::queries::get_subscribers,
-    users::types::User,
 };
 use mitra_utils::markdown::markdown_lite_to_html;
 use mitra_validators::{
@@ -178,10 +179,12 @@ pub async fn prepare_mentions(
     author_id: Uuid,
     visibility: Visibility,
     maybe_in_reply_to: Option<&DbPostDetailed>,
+    maybe_group: Option<&DbActorProfile>,
     mut mentions: Vec<Uuid>,
 ) -> Result<Vec<Uuid>, DatabaseError> {
     // Extend mentions
     if let Some(in_reply_to) = maybe_in_reply_to {
+        // TODO: not necessary if maybe_group is not None
         if let Some(group) = in_reply_to.mentions
             .iter()
             .find(|profile| profile.is_group())
@@ -192,6 +195,9 @@ pub async fn prepare_mentions(
             // Mention the author of the parent post
             mentions.insert(0, in_reply_to.author.id);
         };
+    };
+    if let Some(group) = maybe_group {
+        mentions.insert(0, group.id);
     };
     if visibility == Visibility::Subscribers {
         // Mention all subscribers.

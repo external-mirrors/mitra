@@ -172,6 +172,7 @@ pub struct Post {
     pub in_reply_to_id: Option<Uuid>,
     pub repost_of_id: Option<Uuid>,
     repost_has_deprecated_ap_id: bool, // deprecated
+    pub group_id: Option<Uuid>,
     pub visibility: Visibility,
     pub is_sensitive: bool,
     pub is_pinned: bool,
@@ -249,6 +250,7 @@ pub struct PostDetailed {
     pub conversation: Option<Conversation>,
     pub in_reply_to_id: Option<Uuid>,
     pub repost_of_id: Option<Uuid>,
+    pub group_id: Option<Uuid>,
     pub visibility: Visibility,
     pub is_sensitive: bool,
     pub is_pinned: bool,
@@ -309,6 +311,7 @@ impl PostDetailed {
             db_post.is_sensitive ||
             db_post.is_pinned ||
             db_post.in_reply_to_id.is_some() ||
+            db_post.group_id.is_some() ||
             db_post.url.is_some() ||
             db_post.ipfs_cid.is_some() ||
             maybe_poll.is_some() ||
@@ -326,6 +329,9 @@ impl PostDetailed {
                 return Err(DatabaseTypeError);
             };
             if conversation.id != conversation_id {
+                return Err(DatabaseTypeError);
+            };
+            if db_post.group_id != conversation.group_id {
                 return Err(DatabaseTypeError);
             };
             if conversation.is_managed && conversation.object_id.is_some() {
@@ -368,6 +374,7 @@ impl PostDetailed {
             conversation: maybe_conversation,
             in_reply_to_id: db_post.in_reply_to_id,
             repost_of_id: db_post.repost_of_id,
+            group_id: db_post.group_id,
             visibility: db_post.visibility,
             is_sensitive: db_post.is_sensitive,
             is_pinned: db_post.is_pinned,
@@ -461,6 +468,7 @@ impl Default for PostDetailed {
             conversation: Some(Conversation::for_test(post_id)),
             in_reply_to_id: None,
             repost_of_id: None,
+            group_id: None,
             visibility: Visibility::Public,
             is_sensitive: false,
             is_pinned: false,
@@ -546,6 +554,7 @@ impl TryFrom<&Row> for Repost {
 
 pub enum PostContext {
     Top {
+        group_id: Option<Uuid>,
         object_id: Option<String>, // usually a collection
         // Audience is empty if conversation is direct
         audience: Option<String>,
@@ -580,6 +589,7 @@ impl Default for PostContext {
     fn default() -> Self {
         use crate::activitypub::constants::AP_PUBLIC;
         Self::Top {
+            group_id: None,
             object_id: None,
             audience: Some(AP_PUBLIC.to_owned()),
         }
@@ -608,7 +618,7 @@ pub struct PostCreateData {
 
 impl PostCreateData {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
-        if let PostContext::Top { ref object_id, ref audience } = self.context {
+        if let PostContext::Top { ref object_id, ref audience, .. } = self.context {
             if object_id.is_some() && self.object_id.is_none() {
                 return Err(DatabaseTypeError);
             };
