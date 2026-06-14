@@ -30,7 +30,7 @@ use crate::{
 };
 
 #[derive(Serialize)]
-struct UpdatePerson {
+pub struct UpdatePerson {
     #[serde(rename = "@context")]
     _context: Context,
 
@@ -45,7 +45,7 @@ struct UpdatePerson {
     cc: Vec<String>,
 }
 
-fn build_update_person(
+pub fn build_update_person(
     authority: &Authority,
     media_server: &MediaServer,
     user: &User,
