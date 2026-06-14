@@ -2,7 +2,6 @@ use apx_sdk::{
     constants::AP_PUBLIC,
     core::{
         crypto::common::KeySerializationError,
-        url::http_uri::HttpUri,
     },
 };
 use serde::Serialize;
@@ -23,7 +22,7 @@ use crate::{
     contexts::{build_default_context, Context},
     deliverer::Recipient,
     identifiers::{
-        local_activity_id,
+        local_activity_id_unified,
         LocalActorCollection,
     },
     queues::OutgoingActivityJobData,
@@ -47,20 +46,19 @@ struct UpdatePerson {
 }
 
 fn build_update_person(
-    instance_uri: &HttpUri,
+    authority: &Authority,
     media_server: &MediaServer,
     user: &User,
 ) -> Result<UpdatePerson, KeySerializationError> {
-    let authority = Authority::server(instance_uri);
     let actor = build_local_actor(
-        &authority,
+        authority,
         media_server,
         user,
     )?;
     let followers = LocalActorCollection::Followers.of(&actor.id);
     // Update(Person) is idempotent so its ID can be random
-    let activity_id = local_activity_id(
-        instance_uri.as_str(),
+    let activity_id = local_activity_id_unified(
+        authority,
         UPDATE,
         generate_ulid(),
     );
@@ -105,8 +103,9 @@ pub async fn prepare_update_person(
     media_server: &MediaServer,
     user: &User,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
+    let authority = Authority::from(instance);
     let activity = build_update_person(
-        instance.uri(),
+        &authority,
         media_server,
         user,
     ).map_err(|_| DatabaseError::type_error())?;
@@ -121,6 +120,7 @@ pub async fn prepare_update_person(
 
 #[cfg(test)]
 mod tests {
+    use apx_sdk::core::url::http_uri::HttpUri;
     use mitra_models::profiles::types::DbActorProfile;
     use super::*;
 
@@ -129,13 +129,14 @@ mod tests {
     #[test]
     fn test_build_update_person() {
         let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let authority = Authority::server(&instance_uri);
         let media_server = MediaServer::for_test(instance_uri.as_str());
         let user = User {
             profile: DbActorProfile::local_for_test("testuser"),
             ..Default::default()
         };
         let activity = build_update_person(
-            &instance_uri,
+            &authority,
             &media_server,
             &user,
         ).unwrap();
