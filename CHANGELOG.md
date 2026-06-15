@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `is_group` field to Mastodon API `Status` entity.
 - Added API method for creating groups.
 - Added `filter` parameter to `/api/v1/groups/followed` API endpoint.
+- Support `OfferAgreement` and `AcceptAgreement` activities.
 
 ### Changed
 

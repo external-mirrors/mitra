@@ -50,6 +50,8 @@ pub const AGREEMENT: &str = "Agreement";
 pub const COMMITMENT: &str = "Commitment";
 pub const INTENT: &str = "Intent";
 pub const PROPOSAL: &str = "Proposal";
+pub const OFFER_AGREEMENT: &str = "OfferAgreement";
+pub const ACCEPT_AGREEMENT: &str = "AcceptAgreement";
 
 // Misc
 pub const CHAT_MESSAGE: &str = "ChatMessage"; // Pleroma
