@@ -8,6 +8,7 @@ use mitra_models::{
         PostUpdateData,
         Visibility,
     },
+    profiles::types::Origin,
 };
 use mitra_utils::html::{clean_html, clean_html_all, clean_html_strict};
 
@@ -64,15 +65,6 @@ pub fn clean_title(title: &str) -> String {
     }
 }
 
-pub fn validate_content(content: &str) -> Result<(), ValidationError> {
-    // Check content size to not exceed the hard limit
-    // Character limit from config is not enforced at the backend
-    if content.len() > CONTENT_MAX_SIZE {
-        return Err(ValidationError("post is too long"));
-    };
-    Ok(())
-}
-
 pub fn clean_local_content(
     content: &str,
 ) -> String {
@@ -89,6 +81,25 @@ pub fn clean_remote_content(content: &str) -> String {
     clean_html(content, content_allowed_classes())
 }
 
+pub fn validate_content(
+    content: &str,
+    origin: Origin,
+) -> Result<(), ValidationError> {
+    // Check content size to not exceed the hard limit
+    // Character limit from config is not enforced at the backend
+    if content.len() > CONTENT_MAX_SIZE {
+        return Err(ValidationError("post is too long"));
+    };
+    let cleaned_content = match origin {
+        Origin::Local => clean_local_content(content),
+        Origin::Remote => clean_remote_content(content),
+    };
+    if content != cleaned_content {
+        return Err(ValidationError("content has not been sanitized"));
+    };
+    Ok(())
+}
+
 fn validate_url(url: &str) -> Result<(), ValidationError> {
     if url.len() > URL_LENGTH_MAX {
         return Err(ValidationError("post URL is too long"));
@@ -98,6 +109,7 @@ fn validate_url(url: &str) -> Result<(), ValidationError> {
 
 pub fn validate_post_create_data(
     post_data: &PostCreateData,
+    origin: Origin,
 ) -> Result<(), ValidationError> {
     match post_data.context {
         PostContext::Top { ref object_id, ref audience, .. } => {
@@ -116,7 +128,7 @@ pub fn validate_post_create_data(
         },
         _ => (),
     };
-    validate_content(&post_data.content)?;
+    validate_content(&post_data.content, origin)?;
     if post_data.content.is_empty()
         && post_data.attachments.is_empty()
         && post_data.links.is_empty()
@@ -149,8 +161,9 @@ pub fn validate_post_create_data(
 
 pub fn validate_post_update_data(
     post_data: &PostUpdateData,
+    origin: Origin,
 ) -> Result<(), ValidationError> {
-    validate_content(&post_data.content)?;
+    validate_content(&post_data.content, origin)?;
     if post_data.content.is_empty()
         && post_data.attachments.is_empty()
         && post_data.links.is_empty()

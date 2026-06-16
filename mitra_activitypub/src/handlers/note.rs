@@ -402,7 +402,7 @@ pub(super) fn get_object_content(object: &AttributedObject) ->
     };
     let content = format!("{}{}", title, content);
     let content_safe = clean_remote_content(&content);
-    validate_content(&content_safe)?;
+    validate_content(&content_safe, Remote)?;
     Ok(content_safe)
 }
 
@@ -1139,7 +1139,7 @@ pub async fn create_remote_post(
         object_id: Some(canonical_object_id.to_string()),
         created_at,
     };
-    validate_post_create_data(&post_data)?;
+    validate_post_create_data(&post_data, Remote)?;
     validate_post_mentions(&post_data.mentions, post_data.visibility)?;
     if let Some(in_reply_to) = maybe_in_reply_to {
         // TODO: disallow scope widening (see also: get_related_posts)
@@ -1279,7 +1279,7 @@ pub async fn update_remote_post(
         url: maybe_object_url,
         updated_at,
     };
-    validate_post_update_data(&post_data)?;
+    validate_post_update_data(&post_data, Remote)?;
     validate_post_mentions(&post_data.mentions, post.visibility)?;
     if let Some(in_reply_to) = maybe_in_reply_to {
         // TODO: disallow scope widening (see also: get_related_posts)

@@ -162,7 +162,7 @@ impl CreatePost {
             object_id: None,
             created_at: self.created_at,
         };
-        validate_post_create_data(&post_data)?;
+        validate_post_create_data(&post_data, Local)?;
         check_post_limits(&config.limits.posts, &post_data.attachments, Local)?;
         let db_client = &mut **get_database_client(db_pool).await?;
         let post = create_post(db_client, author.id, post_data).await?;
