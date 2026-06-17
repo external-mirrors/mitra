@@ -761,6 +761,10 @@ impl DbActorProfile {
                 };
             },
         };
+        let is_local_acct = self.acct.as_ref() == Some(&self.username);
+        if self.has_account() != is_local_acct {
+            return Err(DatabaseTypeError);
+        };
         let origin = if let Some(ref actor_data) = self.actor_json {
             actor_data.check_consistency()?;
             Origin::Remote
