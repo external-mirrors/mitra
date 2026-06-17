@@ -1,164 +1,24 @@
 // https://webfinger.net/
 use actix_web::{get, web, HttpResponse};
 use apx_sdk::{
-    addresses::WebfingerAddress,
-    jrd::{
-        JsonResourceDescriptor,
-        Link,
-        JRD_MEDIA_TYPE,
-    },
+    jrd::JRD_MEDIA_TYPE,
 };
 use serde::Deserialize;
 
-use mitra_activitypub::{
-    authority::Authority,
-    identifiers::{
-        canonicalize_id,
-        local_actor_id,
-        local_instance_actor_id,
-    },
-    importers::get_profile_by_actor_id,
-    utils::db_url_to_http_url,
-};
-use mitra_config::{Config, Instance};
+use mitra_config::Config;
 use mitra_models::{
-    accounts::queries::{
-        get_portable_user_by_name,
-        is_registered_user,
-    },
     database::{
         get_database_client,
-        DatabaseClient,
         DatabaseConnectionPool,
-        DatabaseError,
     },
-    profiles::types::WebfingerHostname,
 };
 
-use crate::atom::urls::get_user_feed_url;
 use crate::errors::HttpError;
-use crate::web_client::urls::get_search_page_url;
 
-const WEBFINGER_PROFILE_RELATION_TYPE: &str = "http://webfinger.net/rel/profile-page";
-const REMOTE_INTERACTION_RELATION_TYPE: &str = "http://ostatus.org/schema/1.0/subscribe";
-// https://codeberg.org/fediverse/fep/src/commit/78a31a92cb264ca603af24b4fcaae944b62edb9b/fep/3b86/fep-3b86.md#5-1-object-intent
-const FEP_3B86_OBJECT_INTENT_RELATION_TYPE: &str = "https://w3id.org/fep/3b86/Object";
-// Relation type used by Friendica
-const FEED_RELATION_TYPE: &str = "http://schemas.google.com/g/2010#updates-from";
-
-async fn get_jrd(
-    db_client: &impl DatabaseClient,
-    instance: Instance,
-    resource: &str,
-) -> Result<JsonResourceDescriptor, HttpError> {
-    let webfinger_address = if resource.starts_with("acct:") {
-        // NOTE: hostname should not contain Unicode characters
-        WebfingerAddress::from_acct_uri(resource)
-            .map_err(|error| HttpError::ValidationError(error.to_string()))?
-    } else {
-        // Actor ID? (reverse webfinger)
-        let username = if resource == instance.uri_str() ||
-            resource == local_instance_actor_id(instance.uri_str())
-        {
-            instance.webfinger_hostname()
-        } else {
-            let canonical_uri = canonicalize_id(resource)?;
-            let authority = Authority::from(&instance);
-            let profile = get_profile_by_actor_id(
-                db_client,
-                &authority,
-                &canonical_uri,
-            ).await?;
-            match profile.webfinger_hostname() {
-                WebfingerHostname::Local => profile.username, // has account
-                _ => return Err(HttpError::NotFound("user")),
-            }
-        };
-        WebfingerAddress::new_unchecked(&username, &instance.webfinger_hostname())
-    };
-    let webfinger_address = if webfinger_address.hostname() == instance.webfinger_hostname() {
-        webfinger_address
-    } else if webfinger_address.hostname() == instance.uri().hostname().as_str() {
-        // Split-domain setup
-        WebfingerAddress::new_unchecked(
-            webfinger_address.username(),
-            &instance.webfinger_hostname(),
-        )
-    } else {
-        // Wrong instance
-        return Err(HttpError::NotFound("user"));
-    };
-    let links = if webfinger_address.username() == instance.webfinger_hostname() {
-        // Server actor
-        let actor_id = local_instance_actor_id(instance.uri_str());
-        let actor_link = Link::actor(&actor_id);
-        // Add remote interaction template
-        let remote_interaction_template = get_search_page_url(
-            instance.uri_str(),
-            "{uri}",
-        );
-        let remote_interaction_link = Link::new(REMOTE_INTERACTION_RELATION_TYPE)
-            .with_template(&remote_interaction_template);
-        vec![actor_link, remote_interaction_link]
-    } else if is_registered_user(db_client, webfinger_address.username()).await? {
-        let actor_id = local_actor_id(
-            instance.uri_str(),
-            webfinger_address.username(),
-        );
-        // Required by GNU Social
-        let profile_link = Link::new(WEBFINGER_PROFILE_RELATION_TYPE)
-            .with_media_type("text/html")
-            .with_href(&actor_id);
-        // Actor link
-        let actor_link = Link::actor(&actor_id);
-        // Add feed link for users
-        let feed_url = get_user_feed_url(
-            instance.uri_str(),
-            webfinger_address.username(),
-        );
-        let feed_link = Link::new(FEED_RELATION_TYPE)
-            .with_media_type("application/atom+xml")
-            .with_href(&feed_url);
-        // Add remote interaction template
-        let remote_interaction_template = get_search_page_url(
-            instance.uri_str(),
-            "{uri}",
-        );
-        let remote_interaction_link = Link::new(REMOTE_INTERACTION_RELATION_TYPE)
-            .with_template(&remote_interaction_template);
-        let fep_3b86_object_intent_template = get_search_page_url(
-            instance.uri_str(),
-            "{object}",
-        );
-        let fep_3b86_object_intent_link = Link::new(FEP_3B86_OBJECT_INTENT_RELATION_TYPE)
-            .with_template(&fep_3b86_object_intent_template);
-        vec![
-            profile_link,
-            actor_link,
-            feed_link,
-            remote_interaction_link,
-            fep_3b86_object_intent_link,
-        ]
-    } else {
-        let user = get_portable_user_by_name(
-            db_client,
-            webfinger_address.username(),
-        ).await?;
-        let actor_id = user.profile.expect_remote_actor_id();
-        let compatible_actor_id = db_url_to_http_url(actor_id, instance.uri_str())
-            .map_err(DatabaseError::from)?;
-        let actor_link = Link::actor(&compatible_actor_id);
-        vec![actor_link]
-    };
-    let jrd = JsonResourceDescriptor {
-        subject: webfinger_address.to_acct_uri(),
-        links: links,
-    };
-    Ok(jrd)
-}
+use super::helpers::get_jrd;
 
 #[derive(Deserialize)]
-pub struct WebfingerQueryParams {
+struct WebfingerQueryParams {
     resource: String,
 }
 
@@ -178,55 +38,4 @@ pub async fn webfinger_view(
         .content_type(JRD_MEDIA_TYPE)
         .json(jrd);
     Ok(response)
-}
-
-#[cfg(test)]
-mod tests {
-    use serde_json::json;
-    use serial_test::serial;
-    use mitra_models::{
-        accounts::test_utils::create_test_user,
-        database::test_utils::create_test_database,
-    };
-    use super::*;
-
-    #[tokio::test]
-    #[serial]
-    async fn test_get_jrd() {
-        let db_client = &mut create_test_database().await;
-        let instance = Instance::for_test("https://social.example");
-        let _user = create_test_user(db_client, "test").await;
-        let resource = "acct:test@social.example";
-        let jrd = get_jrd(db_client, instance, resource).await.unwrap();
-        let jrd_value = serde_json::to_value(jrd).unwrap();
-        let expected_jrd_value = json!({
-            "subject": "acct:test@social.example",
-            "links": [
-                {
-                    "rel": "http://webfinger.net/rel/profile-page",
-                    "type": "text/html",
-                    "href": "https://social.example/users/test"
-                },
-                {
-                    "rel": "self",
-                    "type": "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"",
-                    "href": "https://social.example/users/test"
-                },
-                {
-                    "rel": "http://schemas.google.com/g/2010#updates-from",
-                    "type": "application/atom+xml",
-                    "href": "https://social.example/feeds/users/test"
-                },
-                {
-                    "rel": "http://ostatus.org/schema/1.0/subscribe",
-                    "template": "https://social.example/search?q={uri}"
-                },
-                {
-                    "rel": "https://w3id.org/fep/3b86/Object",
-                    "template": "https://social.example/search?q={object}"
-                },
-            ]
-        });
-        assert_eq!(jrd_value, expected_jrd_value);
-    }
 }
