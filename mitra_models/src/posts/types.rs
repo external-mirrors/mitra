@@ -670,3 +670,18 @@ pub struct PostUpdateData {
     pub url: Option<String>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_post_is_edited() {
+        let post = PostDetailed {
+            content: "test".to_owned(),
+            ..Default::default()
+        };
+        assert_eq!(post.is_edited("test", None, &[]), false);
+        assert_eq!(post.is_edited("testX", None, &[]), true);
+    }
+}
