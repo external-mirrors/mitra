@@ -377,7 +377,7 @@ impl Default for UserCreateData {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AutomatedAccountType {
     Application,
     Relay,
@@ -410,6 +410,54 @@ impl TryFrom<i16> for AutomatedAccountType {
 
 int_enum_from_sql!(AutomatedAccountType);
 int_enum_to_sql!(AutomatedAccountType);
+
+#[derive(FromSql)]
+#[postgres(name = "automated_account")]
+pub struct AutomatedAccount {
+    id: Uuid,
+    account_type: AutomatedAccountType,
+    rsa_secret_key: Vec<u8>,
+    ed25519_secret_key: Vec<u8>,
+    #[expect(dead_code)]
+    created_at: DateTime<Utc>,
+}
+
+pub struct AutomatedAccountDetailed {
+    pub id: Uuid,
+    pub profile: DbActorProfile,
+    pub account_type: AutomatedAccountType,
+    pub rsa_secret_key: RsaSecretKey,
+    pub ed25519_secret_key: Ed25519SecretKey,
+}
+
+impl AutomatedAccountDetailed {
+    pub fn new(
+        db_account: AutomatedAccount,
+        db_profile: DbActorProfile,
+    ) -> Result<Self, DatabaseTypeError> {
+        db_profile.check_consistency()?;
+        if db_account.id != db_profile.id {
+            return Err(DatabaseTypeError);
+        };
+        if db_profile.automated_account_id != Some(db_account.id) {
+            return Err(DatabaseTypeError);
+        };
+        let rsa_secret_key =
+            rsa_secret_key_from_pkcs1_der(&db_account.rsa_secret_key)
+                .map_err(|_| DatabaseTypeError)?;
+        let ed25519_secret_key =
+            ed25519_secret_key_from_bytes(&db_account.ed25519_secret_key)
+                .map_err(|_| DatabaseTypeError)?;
+        let account = Self {
+            id: db_account.id,
+            profile: db_profile,
+            account_type: db_account.account_type,
+            rsa_secret_key,
+            ed25519_secret_key,
+        };
+        Ok(account)
+    }
+}
 
 pub struct AutomatedAccountData {
     pub username: String,

@@ -28,7 +28,9 @@ use crate::{
 
 use super::types::{
     AccountAdminInfo,
+    AutomatedAccount,
     AutomatedAccountData,
+    AutomatedAccountDetailed,
     AutomatedAccountType,
     ClientConfig,
     DbClientConfig,
@@ -504,7 +506,7 @@ pub async fn get_accounts_for_admin(
 pub async fn create_automated_account(
     db_client: &mut impl DatabaseClient,
     account_data: AutomatedAccountData,
-) -> Result<Uuid, DatabaseError> {
+) -> Result<AutomatedAccountDetailed, DatabaseError> {
     let mut transaction = db_client.transaction().await?;
     // Prevent changes to actor_profile table
     transaction.execute(
@@ -538,7 +540,7 @@ pub async fn create_automated_account(
     let rsa_secret_key_der =
         rsa_secret_key_to_pkcs1_der(&account_data.rsa_secret_key)
             .map_err(|_| DatabaseTypeError)?;
-    transaction.execute(
+    let row = transaction.query_one(
         "
         INSERT INTO automated_account (
             id,
@@ -547,6 +549,7 @@ pub async fn create_automated_account(
             ed25519_secret_key
         )
         VALUES ($1, $2, $3, $4)
+        RETURNING automated_account
         ",
         &[
             &db_profile.id,
@@ -555,17 +558,21 @@ pub async fn create_automated_account(
             &account_data.ed25519_secret_key,
         ],
     ).await.map_err(catch_unique_violation("automated account"))?;
+    let db_account: AutomatedAccount = row.try_get("automated_account")?;
     // Create reverse FK
-    transaction.execute(
+    let row = transaction.query_one(
         "
         UPDATE actor_profile
         SET automated_account_id = actor_profile.id
         WHERE id = $1
+        RETURNING actor_profile
         ",
         &[&db_profile.id],
     ).await?;
+    let db_profile: DbActorProfile = row.try_get("actor_profile")?;
+    let account = AutomatedAccountDetailed::new(db_account, db_profile)?;
     transaction.commit().await?;
-    Ok(db_profile.id)
+    Ok(account)
 }
 
 pub async fn get_anonymous_system_account_id(
@@ -743,7 +750,6 @@ mod tests {
         database::test_utils::create_test_database,
         posts::types::Visibility,
         profiles::{
-            queries::get_profile_by_id,
             types::{
                 DbActor,
                 DbActorKey,
@@ -887,12 +893,13 @@ mod tests {
             rsa_secret_key: generate_weak_rsa_key().unwrap(),
             ed25519_secret_key: generate_weak_ed25519_key(),
         };
-        let account_id = create_automated_account(
+        let account = create_automated_account(
             db_client,
             account_data,
         ).await.unwrap();
 
-        let profile = get_profile_by_id(db_client, account_id).await.unwrap();
+        assert_eq!(account.account_type, AutomatedAccountType::Anonymous);
+        let profile = account.profile;
         assert_eq!(profile.username, "myname");
         assert_eq!(profile.webfinger_hostname(), WebfingerHostname::Local);
         assert_eq!(profile.acct.as_ref().unwrap(), "myname");
@@ -901,7 +908,7 @@ mod tests {
 
         let maybe_account_id =
             get_anonymous_system_account_id(db_client).await.unwrap();
-        assert_eq!(maybe_account_id.unwrap(), account_id);
+        assert_eq!(maybe_account_id.unwrap(), account.id);
     }
 
     #[tokio::test]
