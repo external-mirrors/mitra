@@ -328,20 +328,6 @@ pub async fn get_user_by_name(
     Ok(user)
 }
 
-pub async fn is_registered_user(
-    db_client: &impl DatabaseClient,
-    username: &str,
-) -> Result<bool, DatabaseError> {
-    let maybe_row = db_client.query_opt(
-        "
-        SELECT 1 FROM user_account JOIN actor_profile USING (id)
-        WHERE actor_profile.username = $1
-        ",
-        &[&username],
-    ).await?;
-    Ok(maybe_row.is_some())
-}
-
 pub async fn get_user_by_login_address(
     db_client: &impl DatabaseClient,
     account_id: &ChainAccountId,
@@ -674,25 +660,6 @@ pub async fn get_portable_user_by_id(
         WHERE id = $1
         ",
         &[&user_id],
-    ).await?;
-    let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
-    let db_user: DbPortableUser = row.try_get("portable_user_account")?;
-    let db_profile: DbActorProfile = row.try_get("actor_profile")?;
-    let user = PortableUser::new(db_user, db_profile)?;
-    Ok(user)
-}
-
-pub async fn get_portable_user_by_name(
-    db_client: &impl DatabaseClient,
-    username: &str,
-) -> Result<PortableUser, DatabaseError> {
-    let maybe_row = db_client.query_opt(
-        "
-        SELECT portable_user_account, actor_profile
-        FROM portable_user_account JOIN actor_profile USING (id)
-        WHERE actor_profile.username = $1
-        ",
-        &[&username],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
     let db_user: DbPortableUser = row.try_get("portable_user_account")?;

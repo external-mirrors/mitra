@@ -18,15 +18,14 @@ use mitra_activitypub::{
 };
 use mitra_config::Instance;
 use mitra_models::{
-    accounts::queries::{
-        get_portable_user_by_name,
-        is_registered_user,
-    },
     database::{
         DatabaseClient,
         DatabaseError,
     },
-    profiles::types::WebfingerHostname,
+    profiles::{
+        queries::get_profile_by_acct,
+        types::WebfingerHostname,
+    },
 };
 
 use crate::{
@@ -96,55 +95,59 @@ pub async fn get_jrd(
         let remote_interaction_link = Link::new(REMOTE_INTERACTION_RELATION_TYPE)
             .with_template(&remote_interaction_template);
         vec![actor_link, remote_interaction_link]
-    } else if is_registered_user(db_client, webfinger_address.username()).await? {
-        let actor_id = local_actor_id(
-            instance.uri_str(),
-            webfinger_address.username(),
-        );
-        // Required by GNU Social
-        let profile_link = Link::new(WEBFINGER_PROFILE_RELATION_TYPE)
-            .with_media_type("text/html")
-            .with_href(&actor_id);
-        // Actor link
-        let actor_link = Link::actor(&actor_id);
-        // Add feed link for users
-        let feed_url = get_user_feed_url(
-            instance.uri_str(),
-            webfinger_address.username(),
-        );
-        let feed_link = Link::new(FEED_RELATION_TYPE)
-            .with_media_type("application/atom+xml")
-            .with_href(&feed_url);
-        // Add remote interaction template
-        let remote_interaction_template = get_search_page_url(
-            instance.uri_str(),
-            "{uri}",
-        );
-        let remote_interaction_link = Link::new(REMOTE_INTERACTION_RELATION_TYPE)
-            .with_template(&remote_interaction_template);
-        let fep_3b86_object_intent_template = get_search_page_url(
-            instance.uri_str(),
-            "{object}",
-        );
-        let fep_3b86_object_intent_link = Link::new(FEP_3B86_OBJECT_INTENT_RELATION_TYPE)
-            .with_template(&fep_3b86_object_intent_template);
-        vec![
-            profile_link,
-            actor_link,
-            feed_link,
-            remote_interaction_link,
-            fep_3b86_object_intent_link,
-        ]
-    } else {
-        let user = get_portable_user_by_name(
+    } else  {
+        let profile = get_profile_by_acct(
             db_client,
             webfinger_address.username(),
         ).await?;
-        let actor_id = user.profile.expect_remote_actor_id();
-        let compatible_actor_id = db_url_to_http_url(actor_id, instance.uri_str())
-            .map_err(DatabaseError::from)?;
-        let actor_link = Link::actor(&compatible_actor_id);
-        vec![actor_link]
+        if profile.has_user_account() {
+            let actor_id = local_actor_id(
+                instance.uri_str(),
+                webfinger_address.username(),
+            );
+            // Required by GNU Social
+            let profile_link = Link::new(WEBFINGER_PROFILE_RELATION_TYPE)
+                .with_media_type("text/html")
+                .with_href(&actor_id);
+            // Actor link
+            let actor_link = Link::actor(&actor_id);
+            // Add feed link for users
+            let feed_url = get_user_feed_url(
+                instance.uri_str(),
+                webfinger_address.username(),
+            );
+            let feed_link = Link::new(FEED_RELATION_TYPE)
+                .with_media_type("application/atom+xml")
+                .with_href(&feed_url);
+            // Add remote interaction template
+            let remote_interaction_template = get_search_page_url(
+                instance.uri_str(),
+                "{uri}",
+            );
+            let remote_interaction_link = Link::new(REMOTE_INTERACTION_RELATION_TYPE)
+                .with_template(&remote_interaction_template);
+            let fep_3b86_object_intent_template = get_search_page_url(
+                instance.uri_str(),
+                "{object}",
+            );
+            let fep_3b86_object_intent_link = Link::new(FEP_3B86_OBJECT_INTENT_RELATION_TYPE)
+                .with_template(&fep_3b86_object_intent_template);
+            vec![
+                profile_link,
+                actor_link,
+                feed_link,
+                remote_interaction_link,
+                fep_3b86_object_intent_link,
+            ]
+        } else if profile.has_portable_account() {
+            let actor_id = profile.expect_remote_actor_id();
+            let compatible_actor_id = db_url_to_http_url(actor_id, instance.uri_str())
+                .map_err(DatabaseError::from)?;
+            let actor_link = Link::actor(&compatible_actor_id);
+            vec![actor_link]
+        } else {
+            return Err(HttpError::NotFound("account"));
+        }
     };
     let jrd = JsonResourceDescriptor {
         subject: webfinger_address.to_acct_uri(),
