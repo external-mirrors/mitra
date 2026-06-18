@@ -18,6 +18,7 @@ use crate::{
     profiles::{
         queries::create_profile,
         types::{
+            ActorType,
             DbActorProfile,
             MentionPolicy,
             ProfileCreateData,
@@ -154,6 +155,7 @@ pub async fn create_user(
     };
     // Create profile
     let profile_data = ProfileCreateData {
+        actor_type: ActorType::Person,
         username: user_data.username.clone(),
         hostname: None,
         webfinger_hostname: WebfingerHostname::Local,
@@ -161,7 +163,6 @@ pub async fn create_user(
         bio: None,
         avatar: None,
         banner: None,
-        is_automated: false,
         manually_approves_followers: false,
         mention_policy: MentionPolicy::None,
         public_keys: vec![],
@@ -517,6 +518,7 @@ pub async fn create_automated_account(
     check_local_username_unique(&transaction, &account_data.username).await?;
     // Create profile
     let profile_data = ProfileCreateData {
+        actor_type: ActorType::Automated,
         username: account_data.username.clone(),
         hostname: None,
         webfinger_hostname: WebfingerHostname::Local,
@@ -524,7 +526,6 @@ pub async fn create_automated_account(
         bio: None,
         avatar: None,
         banner: None,
-        is_automated: true,
         manually_approves_followers: false,
         mention_policy: MentionPolicy::None,
         public_keys: vec![],
@@ -900,10 +901,10 @@ mod tests {
 
         assert_eq!(account.account_type, AutomatedAccountType::Anonymous);
         let profile = account.profile;
+        assert_eq!(profile.actor_type, ActorType::Automated);
         assert_eq!(profile.username, "myname");
         assert_eq!(profile.webfinger_hostname(), WebfingerHostname::Local);
         assert_eq!(profile.acct.as_ref().unwrap(), "myname");
-        assert_eq!(profile.is_automated, true);
         assert!(!profile.has_user_account());
 
         let maybe_account_id =

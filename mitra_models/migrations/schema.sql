@@ -29,6 +29,7 @@ CREATE TABLE actor_profile (
     user_id UUID UNIQUE, -- FK is added later
     automated_account_id UUID UNIQUE, -- FK is added later
     portable_user_id UUID UNIQUE, -- FK is added later
+    actor_type SMALLINT NOT NULL,
     username VARCHAR(100) NOT NULL,
     hostname VARCHAR(100) REFERENCES instance (hostname) ON DELETE RESTRICT,
     webfinger_hostname VARCHAR(100),
@@ -44,7 +45,6 @@ CREATE TABLE actor_profile (
     bio_source TEXT,
     avatar JSONB,
     banner JSONB,
-    is_automated BOOLEAN NOT NULL,
     manually_approves_followers BOOLEAN NOT NULL,
     mention_policy SMALLINT NOT NULL,
     public_keys JSONB NOT NULL DEFAULT '[]',

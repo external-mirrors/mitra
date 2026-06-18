@@ -36,6 +36,7 @@ use mitra_models::{
     media::types::{MediaInfo, PartialMediaInfo},
     profiles::queries::{create_profile, update_profile},
     profiles::types::{
+        ActorType,
         DbActor,
         DbActorKey,
         DbActorProfile,
@@ -77,6 +78,7 @@ use crate::{
     vocabulary::{
         APPLICATION,
         EMOJI,
+        GROUP,
         HASHTAG,
         LINK,
         NOTE,
@@ -233,8 +235,12 @@ struct ValidatedActor {
 }
 
 impl ValidatedActor {
-    fn is_automated(&self) -> bool {
-        [APPLICATION, SERVICE].contains(&self.object_type.as_str())
+    fn actor_type(&self) -> ActorType {
+        match self.object_type.as_str() {
+            APPLICATION | SERVICE => ActorType::Automated,
+            GROUP => ActorType::Group,
+            _ => ActorType::Person,
+        }
     }
 
     fn to_db_actor(&self) -> Result<DbActor, ValidationError> {
@@ -697,6 +703,7 @@ pub async fn create_remote_profile(
         &actor,
     ).await?;
     let mut profile_data = ProfileCreateData {
+        actor_type: actor.actor_type(),
         username: actor.preferred_username.clone(),
         hostname: server_hostname,
         webfinger_hostname: webfinger_hostname,
@@ -704,7 +711,6 @@ pub async fn create_remote_profile(
         bio: actor.summary.clone(),
         avatar: maybe_avatar.ok(),
         banner: maybe_banner.ok(),
-        is_automated: actor.is_automated(),
         manually_approves_followers: actor.manually_approves_followers,
         mention_policy: MentionPolicy::None,
         public_keys,
@@ -772,6 +778,7 @@ pub async fn update_remote_profile(
         &actor,
     ).await?;
     let mut profile_data = ProfileUpdateData {
+        actor_type: actor.actor_type(),
         username: actor.preferred_username.clone(),
         hostname: server_hostname,
         webfinger_hostname: webfinger_hostname,
@@ -780,7 +787,6 @@ pub async fn update_remote_profile(
         bio_source: actor.summary.clone(),
         avatar: maybe_avatar.ok_or_default(profile.avatar),
         banner: maybe_banner.ok_or_default(profile.banner),
-        is_automated: actor.is_automated(),
         manually_approves_followers: actor.manually_approves_followers,
         mention_policy: MentionPolicy::None,
         public_keys,

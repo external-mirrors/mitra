@@ -14,7 +14,7 @@ use crate::{
         },
         types::PostDetailed,
     },
-    profiles::types::DbActorProfile,
+    profiles::types::{ActorType, DbActorProfile},
     relationships::types::RelationshipType,
 };
 
@@ -24,7 +24,6 @@ pub async fn get_followed_groups(
     offset: u16,
     limit: u16,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
-    // TODO: include local groups
     let rows = db_client.query(
         "
         SELECT actor_profile
@@ -39,14 +38,15 @@ pub async fn get_followed_groups(
             LIMIT 1
         ) AS latest_post ON TRUE
         WHERE
-            actor_profile.actor_json ->> 'type' = 'Group'
-            AND relationship.source_id = $1
-            AND relationship.relationship_type = $2
+            actor_profile.actor_type = $1
+            AND relationship.source_id = $2
+            AND relationship.relationship_type = $3
         ORDER BY latest_post.created_at DESC NULLS LAST
-        LIMIT $3
-        OFFSET $4
+        LIMIT $4
+        OFFSET $5
         ",
         &[
+            &ActorType::Group,
             &account_id,
             &RelationshipType::Follow,
             &i64::from(limit),
@@ -133,8 +133,7 @@ mod tests {
                 "groups.example",
                 "https://groups.example/123",
             );
-            let actor_data = group_data.actor_json.as_mut().unwrap();
-            actor_data.object_type = "Group".to_owned();
+            group_data.actor_type = ActorType::Group;
             group_data
         };
         let group = create_profile(db_client, group_data).await.unwrap();
@@ -160,8 +159,7 @@ mod tests {
                 "groups.example",
                 "https://groups.example/123",
             );
-            let actor_data = group_data.actor_json.as_mut().unwrap();
-            actor_data.object_type = "Group".to_owned();
+            group_data.actor_type = ActorType::Group;
             group_data
         };
         let group = create_profile(db_client, group_data).await.unwrap();

@@ -9,7 +9,12 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Instance;
 use mitra_models::{
     accounts::types::User,
-    profiles::types::{DbActor, DbActorProfile, IdentityProofType},
+    profiles::types::{
+        ActorType,
+        DbActor,
+        DbActorProfile,
+        IdentityProofType,
+    },
 };
 use mitra_services::media::MediaServer;
 
@@ -195,10 +200,9 @@ pub(crate) fn local_actor_data(
         profile.id,
         &profile.username,
     ).to_string();
-    let actor_type = if profile.is_automated {
-        SERVICE
-    } else {
-        PERSON
+    let actor_type = match profile.actor_type {
+        ActorType::Automated => SERVICE,
+        _ => PERSON,
     };
     // TODO: replace all String fields with CanonicalUri
     DbActor {

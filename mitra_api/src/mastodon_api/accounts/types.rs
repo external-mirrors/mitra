@@ -34,6 +34,7 @@ use mitra_models::{
     media::types::{MediaInfo, PartialMediaInfo},
     posts::types::{DbLanguage, Visibility},
     profiles::types::{
+        ActorType,
         DbActorProfile,
         ExtraField,
         MentionPolicy,
@@ -209,7 +210,6 @@ impl Account {
         let actor_id = profile_actor_id(authority, &profile);
         let profile_url = profile_actor_url(authority, &profile);
         let preferred_handle = profile.preferred_handle().to_owned();
-        let is_group = profile.is_group();
         let mention_policy = mention_policy_to_str(profile.mention_policy);
 
         let avatar_url = profile.avatar
@@ -307,8 +307,8 @@ impl Account {
             header: header_url,
             locked: profile.manually_approves_followers,
             mention_policy: mention_policy.to_string(),
-            bot: profile.is_automated,
-            is_group: is_group,
+            bot: profile.actor_type == ActorType::Automated,
+            is_group: profile.actor_type == ActorType::Group,
             discoverable: true,
             identity_proofs,
             payment_options,
@@ -510,7 +510,11 @@ impl AccountUpdateData {
             media_storage,
         )?;
         if let Some(bot) = self.bot {
-            profile_data.is_automated = bot;
+            profile_data.actor_type = if bot {
+                ActorType::Automated
+            } else {
+                ActorType::Person
+            };
         };
         if let Some(locked) = self.locked {
             profile_data.manually_approves_followers = locked;
