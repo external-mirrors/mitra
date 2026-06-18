@@ -8,12 +8,12 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use uuid::Uuid;
 
 use mitra_activitypub::{
-    adapters::users::delete_user,
+    adapters::users::delete_account,
 };
 use mitra_config::Config;
 use mitra_models::{
     accounts::{
-        queries::get_user_by_id,
+        queries::get_managed_account_by_id,
         types::Permission,
     },
     database::{get_database_client, DatabaseConnectionPool},
@@ -39,12 +39,13 @@ async fn delete_account_view(
         return Err(MastodonError::PermissionError);
     };
     let profile = get_profile_by_id(db_client, *account_id).await?;
-    if profile.has_user_account() {
-        let user = get_user_by_id(db_client, profile.id).await?;
-        delete_user(
+    if profile.is_local() {
+        let account =
+            get_managed_account_by_id(db_client, profile.id).await?;
+        delete_account(
             &config,
             db_client,
-            &user,
+            &account,
         ).await?;
     } else {
         let deletion_queue = delete_profile(db_client, profile.id).await?;
