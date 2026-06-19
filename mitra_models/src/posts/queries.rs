@@ -1963,11 +1963,10 @@ pub async fn search_posts(
         ",
         post_subqueries=post_subqueries(),
     );
-    let db_search_query = format!("%{}%", text);
     let rows = db_client.query(
         &statement,
         &[
-            &db_search_query,
+            &text,
             &current_user_id,
             &i64::from(limit),
             &i64::from(offset),
