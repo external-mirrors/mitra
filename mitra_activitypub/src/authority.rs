@@ -27,7 +27,7 @@ pub enum AuthorityRoot {
 impl fmt::Display for AuthorityRoot {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let base_uri = match self {
-            AuthorityRoot::Server(server_url) => server_url.to_string(),
+            AuthorityRoot::Server(server_uri) => server_uri.to_string(),
             AuthorityRoot::Key(public_key) => {
                 let did = DidKey::from_ed25519_key(public_key);
                 with_ap_prefix(&did.to_string())
@@ -150,7 +150,7 @@ impl Authority {
     }
 
     pub fn id_builder(&self) -> IdBuilder {
-        IdBuilder::new(self.http_base_uri.clone())
+        IdBuilder::new(self.http_base_uri.clone(), self.prefer_compatible)
     }
 }
 

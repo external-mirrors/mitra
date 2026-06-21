@@ -28,7 +28,7 @@ use crate::{
     },
     identifiers::{
         local_actor_id,
-        local_actor_id_unified,
+        local_actor_id_canonical,
         local_instance_actor_id,
         LocalActorCollection,
     },
@@ -187,20 +187,20 @@ pub struct Actor {
 
 // All identifiers are canonical
 pub(crate) fn local_actor_data(
-    authority: &Authority,
+    authority_root: &AuthorityRoot,
     profile: &DbActorProfile,
 ) -> DbActor {
-    let authority = authority.and_prefer_canonical();
-    let actor_id = local_actor_id_unified(
-        &authority,
+    let actor_id = local_actor_id_canonical(
+        authority_root,
         profile.id,
         &profile.username,
-    );
+    ).to_string();
     let actor_type = if profile.is_automated {
         SERVICE
     } else {
         PERSON
     };
+    // TODO: replace all String fields with CanonicalUri
     DbActor {
         object_type: actor_type.to_owned(),
         id: actor_id.clone(),
@@ -225,7 +225,7 @@ pub fn build_local_actor(
     let id_builder = authority.id_builder();
     let server_uri = authority.expect_server_uri();
     let username = &user.profile.username;
-    let actor_data = local_actor_data(authority, &user.profile);
+    let actor_data = local_actor_data(authority.root(), &user.profile);
     let actor_id = id_builder.build_string_unchecked(&actor_data.id);
     // TODO: add to actor data?
     let following = LocalActorCollection::Following.of(&actor_data.id);
