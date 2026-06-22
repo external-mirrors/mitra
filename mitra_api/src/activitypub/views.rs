@@ -27,7 +27,7 @@ use apx_core::{
     http_digest::ContentDigest,
     http_types::{header_map_adapter, method_adapter, uri_adapter},
     url::{
-        ap_uri::with_ap_prefix,
+        ap_uri::ApUri,
         canonical::CanonicalUri,
         common::url_decode,
         http_uri::HttpUri,
@@ -847,7 +847,9 @@ async fn apgateway_view(
     did_url: web::Path<String>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let ap_uri = with_ap_prefix(&did_url);
+    let ap_uri = ApUri::from_did_url(&did_url)
+        .map_err(|_| ValidationError("invalid object ID"))?
+        .to_string();
     let object_value = match get_actor(db_client, &ap_uri).await {
         Ok(actor_value) => actor_value,
         Err(DatabaseError::NotFound(_)) => {
