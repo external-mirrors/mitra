@@ -3,6 +3,7 @@ pub mod activitypub;
 pub mod config;
 pub mod emoji;
 pub mod filter;
+pub mod fts;
 pub mod invoice;
 pub mod monero;
 pub mod post;

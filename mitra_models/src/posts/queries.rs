@@ -35,16 +35,19 @@ use crate::profiles::{
 };
 use crate::relationships::types::RelationshipType;
 
-use super::types::{
-    DbLanguage,
-    Post,
-    PostContext,
-    PostCreateData,
-    PostDetailed,
-    PostReaction,
-    PostUpdateData,
-    Repost,
-    Visibility,
+use super::{
+    constants::PREINSTALLED_FTS_CONFIG,
+    types::{
+        DbLanguage,
+        Post,
+        PostContext,
+        PostCreateData,
+        PostDetailed,
+        PostReaction,
+        PostUpdateData,
+        Repost,
+        Visibility,
+    },
 };
 
 async fn create_post_attachments(
@@ -1913,6 +1916,31 @@ pub async fn delete_repost(
     Ok(())
 }
 
+pub async fn create_fts_index(
+    db_client: &impl DatabaseClient,
+    config_name: &str,
+) -> Result<(), DatabaseError> {
+    // WARNING: config name must be trusted
+    if config_name == PREINSTALLED_FTS_CONFIG {
+        return Err(DatabaseError::type_error());
+    };
+    let index_name = format!("post_content_tsvector_{config_name}_index");
+    let drop_statement = format!("DROP INDEX IF EXISTS {index_name}");
+    db_client.execute(&drop_statement, &[]).await?;
+    let create_statement = format!(
+        "
+        CREATE INDEX {index_name}
+        ON post USING GIN (
+            to_tsvector(
+                '{config_name}',
+                COALESCE(title, '') || ' ' || content
+            )
+        )
+        ");
+    db_client.execute(&create_statement, &[]).await?;
+    Ok(())
+}
+
 pub async fn search_posts(
     db_client: &impl DatabaseClient,
     search_config: &str,
@@ -2030,7 +2058,6 @@ mod tests {
         },
         database::test_utils::create_test_database,
         posts::{
-            constants::PREINSTALLED_FTS_CONFIG,
             test_utils::{
                 create_test_local_post,
                 create_test_remote_post,
@@ -2973,6 +3000,14 @@ mod tests {
             updated_before,
         ).await.unwrap();
         assert_eq!(result, vec![post_2.id]);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_fts_index() {
+        let db_client = &create_test_database().await;
+        let config_name = "english";
+        create_fts_index(db_client, config_name).await.unwrap();
     }
 
     #[tokio::test]

@@ -115,6 +115,7 @@ async fn main() -> Result<(), Error> {
         Command::ListActiveAddresses(cmd) => cmd.execute(&config).await,
         Command::GetPaymentAddress(cmd) => cmd.execute(&config, &db_pool).await,
         Command::InstanceReport(cmd) => cmd.execute(&config, &db_pool).await,
+        Command::CreateFtsIndex(cmd) => cmd.execute(&db_pool).await,
         Command::Completion { .. } => unreachable!(),
     };
     result

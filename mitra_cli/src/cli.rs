@@ -46,6 +46,7 @@ use crate::commands::{
         ListFilterRules,
         RemoveFilterRule,
     },
+    fts::CreateFtsIndex,
     invoice::{
         ReopenInvoice,
         RepairInvoice,
@@ -159,6 +160,7 @@ pub enum Command {
     ListActiveAddresses(ListActiveAddresses),
     GetPaymentAddress(GetPaymentAddress),
     InstanceReport(InstanceReport),
+    CreateFtsIndex(CreateFtsIndex),
 
     /// Generate shell completions
     Completion {
