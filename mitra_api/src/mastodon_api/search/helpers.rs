@@ -27,6 +27,7 @@ use mitra_activitypub::{
         ApClient,
     },
 };
+use mitra_adapters::dynamic_config::get_dynamic_config;
 use mitra_config::Config;
 use mitra_models::{
     accounts::types::User,
@@ -279,10 +280,10 @@ pub async fn search(
     match parse_search_query(search_query) {
         SearchQuery::Text(text) => {
             let db_client = &**get_database_client(db_pool).await?;
-            posts = search_posts(
+            posts = search_posts_only(
+                current_user,
                 db_client,
                 &text,
-                current_user.id,
                 limit,
                 offset,
             ).await?;
@@ -398,8 +399,12 @@ pub async fn search_posts_only(
     limit: u16,
     offset: u16,
 ) -> Result<Vec<PostDetailed>, DatabaseError> {
+    let fts_config = get_dynamic_config(db_client)
+        .await?
+        .default_fts_config;
     search_posts(
         db_client,
+        &fts_config,
         search_query,
         current_user.id,
         limit,

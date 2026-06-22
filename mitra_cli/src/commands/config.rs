@@ -15,6 +15,7 @@ use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
     properties::{
         constants::{
+            DEFAULT_FTS_CONFIG,
             FAVORITE_EMOJIS,
             FEDERATED_TIMELINE_RESTRICTED,
             FILTER_BLOCKLIST_PUBLIC,
@@ -29,6 +30,9 @@ use mitra_models::{
 
 #[derive(Clone, ValueEnum)]
 enum ParameterName {
+    /// Default text search configuration (default: "simple")
+    #[clap(name = DEFAULT_FTS_CONFIG)]
+    DefaultFtsConfig,
     /// Which emojis to show by default in the emoji picker (an array of strings)
     #[clap(name = FAVORITE_EMOJIS)]
     FavoriteEmojis,
@@ -49,6 +53,7 @@ enum ParameterName {
 impl ParameterName {
     fn as_str(&self) -> &'static str {
         let name_str = match self {
+            Self::DefaultFtsConfig => DEFAULT_FTS_CONFIG,
             Self::FavoriteEmojis => FAVORITE_EMOJIS,
             Self::FederatedTimelineRestricted => FEDERATED_TIMELINE_RESTRICTED,
             Self::FilterBlocklistPublic => FILTER_BLOCKLIST_PUBLIC,

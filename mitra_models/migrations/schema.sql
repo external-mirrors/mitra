@@ -209,6 +209,7 @@ CREATE INDEX post_group_id_index ON post (group_id);
 CREATE INDEX post_id_author_id_btree ON post (id, author_id);
 CREATE INDEX post_author_id_is_pinned_btree ON post (author_id, is_pinned);
 CREATE INDEX post_conversation_id_btree ON post (conversation_id);
+-- all post_content_tsvector_*_index names are reserved
 CREATE INDEX post_content_tsvector_simple_index ON post USING GIN (to_tsvector('simple', COALESCE(title, '') || ' ' || content));
 
 CREATE TABLE conversation (
