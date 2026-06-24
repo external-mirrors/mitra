@@ -18,11 +18,9 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    adapters::follow_requests::follow_or_create_request,
     authority::Authority,
-    builders::{
-        follow::follow_or_create_request,
-        undo_follow::prepare_undo_follow,
-    },
+    builders::undo_follow::prepare_undo_follow,
     identifiers::profile_actor_id,
     importers::{ActorIdResolver, ApClient},
 };

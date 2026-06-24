@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    adapters::follow_requests::follow_or_create_request,
     builders::{
-        follow::follow_or_create_request,
         move_person::prepare_move_person,
         undo_follow::prepare_undo_follow,
     },

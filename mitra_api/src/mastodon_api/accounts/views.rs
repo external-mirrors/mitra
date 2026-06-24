@@ -47,10 +47,12 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use mitra_activitypub::{
-    adapters::users::create_or_update_local_actor,
+    adapters::{
+        follow_requests::follow_or_create_request,
+        users::create_or_update_local_actor,
+    },
     authority::Authority,
     builders::{
-        follow::follow_or_create_request,
         reject_follow::prepare_reject_follow,
         undo_follow::prepare_undo_follow,
         update_person::prepare_update_person,
