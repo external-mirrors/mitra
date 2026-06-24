@@ -30,7 +30,10 @@ use crate::notifications::helpers::{
 };
 use crate::polls::queries::{create_poll, reset_votes, update_poll};
 use crate::profiles::{
-    queries::update_post_count,
+    queries::{
+        get_profile_by_id,
+        update_post_count,
+    },
     types::DbActorProfile,
 };
 use crate::relationships::types::RelationshipType;
@@ -233,6 +236,15 @@ pub async fn create_post(
         },
         PostContext::Repost { .. } => None,
     };
+    let maybe_group = if let Some(group_id) = maybe_conversation
+        .as_ref()
+        .and_then(|conversation| conversation.group_id)
+    {
+        let group = get_profile_by_id(&transaction, group_id).await?;
+        Some(group)
+    } else {
+        None
+    };
 
     // Create post
     let insert_statement = format!(
@@ -395,6 +407,7 @@ pub async fn create_post(
         db_post,
         author,
         maybe_conversation,
+        maybe_group,
         maybe_poll,
         db_attachments,
         db_mentions,
@@ -449,6 +462,12 @@ pub async fn update_post(
         &transaction,
         db_post.conversation_id.expect("should not be a repost"),
     ).await?;
+    let maybe_group = if let Some(group_id) = conversation.group_id {
+        let group = get_profile_by_id(&transaction, group_id).await?;
+        Some(group)
+    } else {
+        None
+    };
 
     // Delete and re-create related objects
     let detached_media_rows = transaction.query(
@@ -556,6 +575,7 @@ pub async fn update_post(
         db_post,
         author,
         Some(conversation),
+        maybe_group,
         maybe_poll,
         db_attachments,
         db_mentions,
@@ -578,6 +598,13 @@ const RELATED_CONVERSATION: &str = "
         FROM conversation
         WHERE conversation.id = post.conversation_id
     ) AS conversation";
+
+const RELATED_GROUP: &str = "
+    (
+        SELECT actor_profile
+        FROM actor_profile
+        WHERE actor_profile.id = post.group_id
+    ) AS group";
 
 const RELATED_POLL: &str = "
     (
@@ -641,6 +668,7 @@ const RELATED_REACTIONS: &str = "
 pub(crate) fn post_subqueries() -> String {
     [
         RELATED_CONVERSATION,
+        RELATED_GROUP,
         RELATED_POLL,
         RELATED_ATTACHMENTS,
         RELATED_MENTIONS,
@@ -2114,7 +2142,7 @@ mod tests {
         };
         let post =
             create_post(db_client, author.id, post_data).await.unwrap();
-        assert_eq!(post.group_id, Some(group.id));
+        assert_eq!(post.group.as_ref().unwrap().id, group.id);
         let conversation = post.expect_conversation();
         assert_eq!(conversation.group_id, Some(group.id));
     }

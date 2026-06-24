@@ -213,7 +213,6 @@ async fn create_status(
         current_user.id,
         visibility,
         maybe_in_reply_to.as_ref(),
-        maybe_group.as_ref(),
         mentions,
     ).await?;
 
@@ -482,12 +481,6 @@ async fn edit_status(
     } else {
         None
     };
-    let maybe_group = if let Some(group_id) = post.group_id {
-        let group = get_profile_by_id(db_client, group_id).await?;
-        Some(group)
-    } else {
-        None
-    };
     let instance = config.instance();
     let status_data = status_data.into_inner();
     // Parse content
@@ -504,7 +497,6 @@ async fn edit_status(
         post.author.id,
         post.visibility,
         maybe_in_reply_to.as_ref(),
-        maybe_group.as_ref(),
         mentions,
     ).await?;
 
