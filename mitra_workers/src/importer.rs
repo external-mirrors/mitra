@@ -34,7 +34,13 @@ use mitra_models::{
     profiles::{
         queries::get_remote_profile_by_actor_id,
     },
-    relationships::queries::{follow, unfollow},
+    relationships::{
+        helpers::create_follow_request,
+        queries::{
+            follow_request_accepted,
+            unfollow,
+        },
+    },
 };
 
 #[derive(Serialize, Deserialize)]
@@ -186,8 +192,10 @@ pub async fn import_followers_task(
                     Err(DatabaseError::NotFound(_)) => continue,
                     Err(other_error) => return Err(other_error.into()),
                 };
-                match follow(db_client, follower.id, user.id).await {
-                    Ok(_) => (),
+                match create_follow_request(db_client, follower.id, user.id).await {
+                    Ok(follow_request) => {
+                        follow_request_accepted(db_client, follow_request.id).await?;
+                    },
                     // Ignore if already following
                     Err(DatabaseError::AlreadyExists(_)) => (),
                     Err(other_error) => return Err(other_error.into()),

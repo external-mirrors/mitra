@@ -184,7 +184,6 @@ mod tests {
         database::test_utils::create_test_database,
         relationships::helpers::create_follow_request,
         relationships::queries::{
-            follow,
             follow_request_accepted,
             hide_reposts,
             mute,
@@ -231,7 +230,9 @@ mod tests {
         assert_eq!(relationship.requested_by, false);
         // Mutual follow
         follow_request_accepted(db_client, follow_request.id).await.unwrap();
-        follow(db_client, user_2.id, user_1.id).await.unwrap();
+        let follow_request =
+            create_follow_request(db_client, user_2.id, user_1.id).await.unwrap();
+        follow_request_accepted(db_client, follow_request.id).await.unwrap();
         let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
         assert_eq!(relationship.following, true);
         assert_eq!(relationship.followed_by, true);
@@ -266,7 +267,9 @@ mod tests {
     async fn test_hide_reblogs() {
         let db_client = &mut create_test_database().await;
         let (user_1, user_2) = create_users(db_client).await;
-        follow(db_client, user_1.id, user_2.id).await.unwrap();
+        let follow_request =
+            create_follow_request(db_client, user_1.id, user_2.id).await.unwrap();
+        follow_request_accepted(db_client, follow_request.id).await.unwrap();
         let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
         assert_eq!(relationship.following, true);
         assert_eq!(relationship.showing_reblogs, true);

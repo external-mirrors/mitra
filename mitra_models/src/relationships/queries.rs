@@ -175,7 +175,7 @@ async fn get_related_paginated(
     Ok(related_profiles)
 }
 
-pub async fn follow(
+pub(crate) async fn follow(
     db_client: &mut impl DatabaseClient,
     source_id: Uuid,
     target_id: Uuid,
