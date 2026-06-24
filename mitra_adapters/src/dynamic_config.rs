@@ -3,7 +3,9 @@ use serde_json::{Value as JsonValue};
 
 use mitra_models::{
     database::{DatabaseClient, DatabaseError, DatabaseTypeError},
+    posts::constants::PREINSTALLED_FTS_CONFIG,
     properties::constants::{
+        DEFAULT_FTS_CONFIG,
         FAVORITE_EMOJIS,
         FEDERATED_TIMELINE_RESTRICTED,
         FILTER_BLOCKLIST_PUBLIC,
@@ -18,7 +20,8 @@ use mitra_validators::errors::ValidationError;
 use mitra_utils::unicode::is_single_character;
 
 // Dynamic configuration parameters
-pub const EDITABLE_PROPERTIES: [&str; 5] = [
+pub const EDITABLE_PROPERTIES: [&str; 6] = [
+    DEFAULT_FTS_CONFIG,
     FAVORITE_EMOJIS,
     FEDERATED_TIMELINE_RESTRICTED,
     FILTER_BLOCKLIST_PUBLIC,
@@ -38,6 +41,10 @@ pub fn validate_editable_parameter(
 ) -> Result<(), ValidationError> {
     let value = value.clone();
     match name {
+        DEFAULT_FTS_CONFIG => {
+            let _: String = serde_json::from_value(value)
+                .map_err(|_| ValidationError("invalid value type"))?;
+        },
         FAVORITE_EMOJIS => {
             let emojis: Vec<String> = serde_json::from_value(value)
                 .map_err(|_| ValidationError("invalid value type"))?;
@@ -70,6 +77,7 @@ pub fn validate_editable_parameter(
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
 pub struct DynamicConfig {
+    pub default_fts_config: String,
     pub favorite_emojis: Vec<String>,
     pub federated_timeline_restricted: bool,
     pub filter_blocklist_public: bool,
@@ -80,6 +88,7 @@ pub struct DynamicConfig {
 impl Default for DynamicConfig {
     fn default() -> Self {
         Self {
+            default_fts_config: PREINSTALLED_FTS_CONFIG.to_owned(),
             favorite_emojis: DEFAULT_FAVORITE_EMOJIS
                 .iter()
                 .map(|emoji| emoji.to_string())

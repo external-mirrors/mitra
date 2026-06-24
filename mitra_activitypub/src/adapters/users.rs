@@ -3,15 +3,32 @@ use mitra_models::{
     accounts::types::User,
     activitypub::queries::save_actor,
     database::{DatabaseClient, DatabaseError},
-    profiles::queries::delete_profile,
+    profiles::{
+        queries::delete_profile,
+        types::{DbActor, DbActorProfile},
+    },
 };
 use mitra_services::media::MediaServer;
 
 use crate::{
-    actors::builders::build_local_actor,
-    authority::Authority,
+    actors::builders::{
+        build_local_actor,
+        local_actor_data,
+    },
+    authority::{Authority, AuthorityRoot},
     builders::delete_person::prepare_delete_person,
 };
+
+pub fn get_actor_data(
+    authority_root: &AuthorityRoot,
+    profile: &DbActorProfile,
+) -> DbActor {
+    if let Some(ref actor_data) = profile.actor_json {
+        actor_data.clone()
+    } else {
+        local_actor_data(authority_root, profile)
+    }
+}
 
 // NOTE: not called when emojis are updated
 pub async fn create_or_update_local_actor(

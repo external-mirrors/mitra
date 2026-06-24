@@ -137,7 +137,9 @@ pub struct Note {
 
     pub replies: String,
 
-    pub content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
+    content: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content_map: Option<HashMap<String, String>>,
@@ -359,6 +361,7 @@ pub fn build_note(
         in_reply_to: in_reply_to_object_id,
         context: maybe_context_id,
         replies: replies_collection_id,
+        name: post.title.clone(),
         content: post.content.clone(),
         content_map: post.language
             .and_then(|language| language.to_639_1())

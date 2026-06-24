@@ -219,7 +219,7 @@ pub async fn handle_like_c2s(
         Err(other_error) => return Err(other_error.into()),
     };
     let visibility = get_visibility(
-        &local_actor_data(&authority, &author),
+        &local_actor_data(authority.root(), &author),
         &like.to,
         &like.cc,
     )?;

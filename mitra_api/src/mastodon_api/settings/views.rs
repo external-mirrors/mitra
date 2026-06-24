@@ -11,13 +11,15 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::Utc;
 
 use mitra_activitypub::{
-    adapters::users::{
-        create_or_update_local_actor,
-        delete_user,
+    adapters::{
+        follow_requests::follow_or_create_request,
+        users::{
+            create_or_update_local_actor,
+            delete_user,
+        },
     },
     authority::Authority,
     builders::{
-        follow::follow_or_create_request,
         move_person::prepare_move_person,
         update_person::prepare_update_person,
     },

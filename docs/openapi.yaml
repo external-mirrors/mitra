@@ -1966,6 +1966,10 @@ paths:
                   enum:
                     - text/html
                     - text/markdown
+                title:
+                  description: The title of the post.
+                  type: string
+                  nullable: true
                 language:
                   description: ISO 639-1 language code for this post.
                   type: string
@@ -2108,6 +2112,10 @@ paths:
                   enum:
                     - text/html
                     - text/markdown
+                title:
+                  description: The title of the post.
+                  type: string
+                  nullable: true
                 language:
                   description: ISO 639-1 language code for this post.
                   type: string
@@ -2190,8 +2198,12 @@ paths:
                       - text/markdown
                     example: text/markdown
                   text:
-                    description: The plain text used to compose the post.
+                    description: The source text of the post.
                     type: string
+                  title:
+                    description: The title of the post.
+                    type: string
+                    nullable: true
                   spoiler_text:
                     description: Subject or summary line, below which post content is collapsed until expanded.
                     type: string
@@ -4229,6 +4241,10 @@ components:
           allOf:
             - description: The user that authored this post.
             - $ref: '#/components/schemas/Account'
+        title:
+          description: The title of the post (plain text).
+          type: string
+          nullable: true
         content:
           description: HTML-encoded post content.
           type: string

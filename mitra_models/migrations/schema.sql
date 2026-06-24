@@ -179,6 +179,7 @@ CREATE TABLE follow_request (
 CREATE TABLE post (
     id UUID PRIMARY KEY,
     author_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
+    title TEXT,
     content TEXT NOT NULL,
     content_source TEXT,
     language CHAR(3),
@@ -208,7 +209,8 @@ CREATE INDEX post_group_id_index ON post (group_id);
 CREATE INDEX post_id_author_id_btree ON post (id, author_id);
 CREATE INDEX post_author_id_is_pinned_btree ON post (author_id, is_pinned);
 CREATE INDEX post_conversation_id_btree ON post (conversation_id);
-CREATE INDEX post_content_tsvector_simple_index ON post USING GIN (to_tsvector('simple', content));
+-- all post_content_tsvector_*_index names are reserved
+CREATE INDEX post_content_tsvector_simple_index ON post USING GIN (to_tsvector('simple', COALESCE(title, '') || ' ' || content));
 
 CREATE TABLE conversation (
     id UUID PRIMARY KEY,
@@ -420,6 +422,7 @@ CREATE TABLE activitypub_collection_item (
     owner_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
     collection_id VARCHAR(2000) NOT NULL,
     object_id VARCHAR(2000) NOT NULL REFERENCES activitypub_object (object_id) ON DELETE CASCADE,
+    relationship_id INTEGER REFERENCES relationship (id) ON DELETE CASCADE,
     UNIQUE (collection_id, object_id)
 );
 

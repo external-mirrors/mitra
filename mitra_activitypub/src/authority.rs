@@ -18,10 +18,6 @@ use mitra_config::Instance;
 
 use crate::identifiers::IdBuilder;
 
-fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> DidKey {
-    DidKey::from_ed25519_key(public_key)
-}
-
 #[derive(Clone)]
 pub enum AuthorityRoot {
     Server(HttpUri),
@@ -31,9 +27,9 @@ pub enum AuthorityRoot {
 impl fmt::Display for AuthorityRoot {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let base_uri = match self {
-            AuthorityRoot::Server(server_url) => server_url.to_string(),
+            AuthorityRoot::Server(server_uri) => server_uri.to_string(),
             AuthorityRoot::Key(public_key) => {
-                let did = fep_ef61_identity(public_key);
+                let did = DidKey::from_ed25519_key(public_key);
                 with_ap_prefix(&did.to_string())
             },
         };
@@ -58,7 +54,7 @@ impl fmt::Display for Authority {
             AuthorityRoot::Key(ref public_key) => {
                 match self.http_base_uri {
                     Some(ref http_base_uri) if self.prefer_compatible => {
-                        let did = fep_ef61_identity(public_key);
+                        let did = DidKey::from_ed25519_key(public_key);
                         format!(
                             "{}{}{}",
                             http_base_uri,
@@ -148,13 +144,13 @@ impl Authority {
         match self.root {
             AuthorityRoot::Server(_) => None,
             AuthorityRoot::Key(ref public_key) => {
-                Some(fep_ef61_identity(public_key))
+                Some(DidKey::from_ed25519_key(public_key))
             },
         }
     }
 
     pub fn id_builder(&self) -> IdBuilder {
-        IdBuilder::new(self.http_base_uri.clone())
+        IdBuilder::new(self.http_base_uri.clone(), self.prefer_compatible)
     }
 }
 

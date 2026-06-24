@@ -10,16 +10,15 @@ use mitra_models::{
         DatabaseError,
     },
     notifications::helpers::create_follow_request_notification,
-    relationships::queries::{
-        create_remote_follow_request_opt,
-        follow_request_accepted,
-    },
+    relationships::queries::create_remote_follow_request_opt,
 };
 use mitra_validators::{
     activitypub::validate_any_object_id,
 };
 
 use crate::{
+    adapters::follow_requests::accept_and_add_follower,
+    authority::Authority,
     builders::accept_follow::prepare_accept_follow,
     identifiers::canonicalize_id,
     importers::{ActorIdResolver, ApClient},
@@ -86,7 +85,12 @@ pub async fn handle_follow(
             log::warn!("follow request has already been accepted");
             return Ok(Some(Descriptor::object("Actor")));
         };
-        match follow_request_accepted(db_client, follow_request.id).await {
+        let authority = Authority::from(&ap_client.instance);
+        match accept_and_add_follower(
+            authority.root(),
+            db_client,
+            follow_request.id,
+        ).await {
             Ok(_) => (),
             // Proceed even if relationship already exists
             Err(DatabaseError::AlreadyExists(_)) => (),

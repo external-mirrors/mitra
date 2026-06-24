@@ -8,6 +8,7 @@ use mitra_models::{
         PostUpdateData,
         Visibility,
     },
+    profiles::types::Origin,
 };
 use mitra_utils::html::{clean_html, clean_html_all, clean_html_strict};
 
@@ -52,23 +53,21 @@ fn content_allowed_classes() -> Vec<(&'static str, Vec<&'static str>)> {
     ]
 }
 
+// https://www.w3.org/TR/activitystreams-vocabulary/#dfn-name
 pub fn clean_title(title: &str) -> String {
     let title = clean_html_all(title).trim().to_owned();
+    if title.len() <= TITLE_LENGTH_MAX {
+        return title;
+    };
     let title_truncated: String = title.chars()
-        .take(TITLE_LENGTH_MAX)
+        .take(TITLE_LENGTH_MAX - 3)
         .collect();
-    if title_truncated.len() < title.len() {
-        format!("{title_truncated}...")
-    } else {
-        title_truncated
-    }
+    format!("{title_truncated}...")
 }
 
-pub fn validate_content(content: &str) -> Result<(), ValidationError> {
-    // Check content size to not exceed the hard limit
-    // Character limit from config is not enforced at the backend
-    if content.len() > CONTENT_MAX_SIZE {
-        return Err(ValidationError("post is too long"));
+fn validate_title(title: &str) -> Result<(), ValidationError> {
+    if title.len() > TITLE_LENGTH_MAX {
+        return Err(ValidationError("title is too long"));
     };
     Ok(())
 }
@@ -89,6 +88,25 @@ pub fn clean_remote_content(content: &str) -> String {
     clean_html(content, content_allowed_classes())
 }
 
+pub fn validate_content(
+    content: &str,
+    origin: Origin,
+) -> Result<(), ValidationError> {
+    // Check content size to not exceed the hard limit
+    // Character limit from config is not enforced at the backend
+    if content.len() > CONTENT_MAX_SIZE {
+        return Err(ValidationError("post is too long"));
+    };
+    let cleaned_content = match origin {
+        Origin::Local => clean_local_content(content),
+        Origin::Remote => clean_remote_content(content),
+    };
+    if content != cleaned_content {
+        return Err(ValidationError("content has not been sanitized"));
+    };
+    Ok(())
+}
+
 fn validate_url(url: &str) -> Result<(), ValidationError> {
     if url.len() > URL_LENGTH_MAX {
         return Err(ValidationError("post URL is too long"));
@@ -98,6 +116,7 @@ fn validate_url(url: &str) -> Result<(), ValidationError> {
 
 pub fn validate_post_create_data(
     post_data: &PostCreateData,
+    origin: Origin,
 ) -> Result<(), ValidationError> {
     match post_data.context {
         PostContext::Top { ref object_id, ref audience, .. } => {
@@ -116,7 +135,10 @@ pub fn validate_post_create_data(
         },
         _ => (),
     };
-    validate_content(&post_data.content)?;
+    if let Some(ref title) = post_data.title {
+        validate_title(title)?;
+    };
+    validate_content(&post_data.content, origin)?;
     if post_data.content.is_empty()
         && post_data.attachments.is_empty()
         && post_data.links.is_empty()
@@ -149,8 +171,12 @@ pub fn validate_post_create_data(
 
 pub fn validate_post_update_data(
     post_data: &PostUpdateData,
+    origin: Origin,
 ) -> Result<(), ValidationError> {
-    validate_content(&post_data.content)?;
+    if let Some(ref title) = post_data.title {
+        validate_title(title)?;
+    };
+    validate_content(&post_data.content, origin)?;
     if post_data.content.is_empty()
         && post_data.attachments.is_empty()
         && post_data.links.is_empty()
@@ -256,12 +282,20 @@ mod tests {
     }
 
     #[test]
+    fn test_clean_title_html_chars() {
+        let title = r#"test > "abc" <a>link</a>"#;
+        let cleaned = clean_title(title);
+        assert_eq!(cleaned, r#"test &gt; "abc" link"#);
+    }
+
+    #[test]
     fn test_clean_title_truncate() {
         let title = "x".repeat(400);
         let cleaned = clean_title(&title);
+        assert_eq!(cleaned.len(), TITLE_LENGTH_MAX);
         assert_eq!(
             cleaned,
-            format!("{}...", "x".repeat(300)),
+            format!("{}...", "x".repeat(297)),
         );
     }
 

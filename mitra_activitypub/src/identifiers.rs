@@ -26,6 +26,22 @@ use crate::{
     utils::parse_id_from_db_lenient,
 };
 
+pub fn local_actor_id_canonical(
+    authority_root: &AuthorityRoot,
+    internal_id: Uuid,
+    username: &str,
+) -> CanonicalUri {
+    let path = match authority_root {
+        AuthorityRoot::Server(_) => {
+            // Mastodon and Pleroma use the same path format
+            format!("/users/{username}")
+        },
+        AuthorityRoot::Key(_) => format!("/actors/{internal_id}"),
+    };
+    let id = format!("{}{}", authority_root, path);
+    CanonicalUri::parse_canonical(&id).expect("URI should be valid")
+}
+
 pub enum LocalActorCollection {
     Inbox,
     Outbox,
@@ -50,9 +66,9 @@ impl LocalActorCollection {
     }
 }
 
-// Mastodon and Pleroma use the same actor ID format
 pub fn local_actor_id(instance_uri: &str, username: &str) -> String {
-    format!("{}/users/{}", instance_uri, username)
+    let authority = Authority::server_unchecked(instance_uri);
+    local_actor_id_unified(&authority, Uuid::default(), username)
 }
 
 pub fn local_actor_id_unified(
@@ -60,10 +76,9 @@ pub fn local_actor_id_unified(
     internal_id: Uuid,
     username: &str,
 ) -> String {
-    match authority.root() {
-        AuthorityRoot::Server(_) => local_actor_id(&authority.to_string(), username),
-        AuthorityRoot::Key(_) => format!("{}/actors/{}", authority, internal_id),
-    }
+    let canonical_id =
+        local_actor_id_canonical(authority.root(), internal_id, username);
+    authority.id_builder().build(&canonical_id).to_string()
 }
 
 pub fn local_instance_actor_id(instance_uri: &str) -> String {
@@ -351,20 +366,31 @@ pub fn canonicalize_id(id: &str) -> Result<CanonicalUri, ValidationError> {
 }
 
 pub struct IdBuilder {
+    // FEP-ef61 ID generation options
     http_base_uri: Option<HttpUri>,
+    prefer_compatible: bool,
 }
 
 impl IdBuilder {
-    pub fn new(http_base_uri: Option<HttpUri>) -> Self {
-        Self { http_base_uri }
+    pub fn new(
+        http_base_uri: Option<HttpUri>,
+        prefer_compatible: bool,
+    ) -> Self {
+        Self { http_base_uri, prefer_compatible }
     }
 
     fn build(&self, canonical_id: &CanonicalUri) -> NonCanonicalUri {
         match canonical_id {
             CanonicalUri::Http(http_uri) =>
                 NonCanonicalUri::Http(http_uri.clone()),
-            CanonicalUri::Ap(ap_uri) =>
-                NonCanonicalUri::Ap((self.http_base_uri.clone(), ap_uri.clone())),
+            CanonicalUri::Ap(ap_uri) => {
+                let maybe_gateway = if self.prefer_compatible {
+                    self.http_base_uri.clone()
+                } else {
+                    None
+                };
+                NonCanonicalUri::Ap((maybe_gateway, ap_uri.clone()))
+            },
         }
     }
 
@@ -688,7 +714,7 @@ mod tests {
     #[test]
     fn test_id_builder_http() {
         let object_id = "https://social.example/objects/1";
-        let id_builder = IdBuilder::new(None);
+        let id_builder = IdBuilder::new(None, true);
         let output = id_builder.build_unchecked(object_id);
         assert_eq!(output.to_string(), object_id);
     }
@@ -696,7 +722,7 @@ mod tests {
     #[test]
     fn test_id_builder_ap() {
         let object_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
-        let id_builder = IdBuilder::new(None);
+        let id_builder = IdBuilder::new(None, true);
         let output = id_builder.build_unchecked(object_id);
         assert_eq!(output.to_string(), object_id);
     }
@@ -705,7 +731,16 @@ mod tests {
     fn test_id_builder_ap_with_gateway() {
         let object_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let gateway = HttpUri::parse("https://social.example").unwrap();
-        let id_builder = IdBuilder::new(Some(gateway));
+        let id_builder = IdBuilder::new(Some(gateway), false);
+        let output = id_builder.build_unchecked(object_id);
+        assert_eq!(output.to_string(), object_id);
+    }
+
+    #[test]
+    fn test_id_builder_ap_with_gateway_prefer_compatible() {
+        let object_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let gateway = HttpUri::parse("https://social.example").unwrap();
+        let id_builder = IdBuilder::new(Some(gateway), true);
         let output = id_builder.build_unchecked(object_id);
         assert_eq!(
             output.to_string(),

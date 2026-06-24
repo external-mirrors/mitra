@@ -25,7 +25,8 @@ use super::types::{
     FollowRequestDirection,
     FollowRequestStatus,
     RelatedActorProfile,
-    Relationship,
+    RelationshipDetailed,
+    RelationshipOrFollowRequest,
     RelationshipType,
 };
 
@@ -33,7 +34,7 @@ pub async fn get_relationships(
     db_client: &impl DatabaseClient,
     source_id: Uuid,
     target_id: Uuid,
-) -> Result<Vec<Relationship>, DatabaseError> {
+) -> Result<Vec<RelationshipOrFollowRequest>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT source_id, target_id, relationship_type, created_at
@@ -61,7 +62,7 @@ pub async fn get_relationships(
         ],
     ).await?;
     let relationships = rows.iter()
-        .map(Relationship::try_from)
+        .map(RelationshipOrFollowRequest::try_from)
         .collect::<Result<_, _>>()?;
     Ok(relationships)
 }
@@ -70,7 +71,7 @@ pub async fn get_relationships_many(
     db_client: &impl DatabaseClient,
     source_id: Uuid,
     target_ids: &[Uuid],
-) -> Result<Vec<(Uuid, Vec<Relationship>)>, DatabaseError> {
+) -> Result<Vec<(Uuid, Vec<RelationshipOrFollowRequest>)>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT source_id, target_id, relationship_type, created_at
@@ -98,10 +99,10 @@ pub async fn get_relationships_many(
         ],
     ).await?;
     // No duplicate keys in buckets hashmap
-    let mut buckets: HashMap<Uuid, Vec<Relationship>> =
+    let mut buckets: HashMap<Uuid, Vec<RelationshipOrFollowRequest>> =
         HashMap::from_iter(target_ids.iter().map(|id| (*id, vec![])));
     for row in rows {
-        let relationship = Relationship::try_from(&row)?;
+        let relationship = RelationshipOrFollowRequest::try_from(&row)?;
         let target_id = relationship.with(source_id)?;
         let target_relationships = buckets.get_mut(&target_id)
             .ok_or(DatabaseTypeError)?;
@@ -134,6 +135,25 @@ pub async fn has_relationship(
         ],
     ).await?;
     Ok(maybe_row.is_some())
+}
+
+pub async fn get_relationship_by_id(
+    db_client: &impl DatabaseClient,
+    relationship_id: i32,
+) -> Result<RelationshipDetailed, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT relationship, source, target
+        FROM relationship
+        JOIN actor_profile AS source ON source.id = relationship.source_id
+        JOIN actor_profile AS target ON target.id = relationship.target_id
+        WHERE relationship.id = $1
+        ",
+        &[&relationship_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("relationship"))?;
+    let relationship = RelationshipDetailed::try_from(&row)?;
+    Ok(relationship)
 }
 
 async fn get_related_paginated(
@@ -175,19 +195,21 @@ async fn get_related_paginated(
     Ok(related_profiles)
 }
 
-pub async fn follow(
+pub(crate) async fn follow(
     db_client: &mut impl DatabaseClient,
     source_id: Uuid,
     target_id: Uuid,
-) -> Result<(), DatabaseError> {
+) -> Result<i32, DatabaseError> {
     let transaction = db_client.transaction().await?;
-    transaction.execute(
+    let row = transaction.query_one(
         "
         INSERT INTO relationship (source_id, target_id, relationship_type)
         VALUES ($1, $2, $3)
+        RETURNING relationship.id
         ",
         &[&source_id, &target_id, &RelationshipType::Follow],
     ).await.map_err(catch_unique_violation("relationship"))?;
+    let relationship_id = row.try_get("id")?;
     transaction.execute(
         "
         DELETE FROM relationship
@@ -201,7 +223,7 @@ pub async fn follow(
         create_follow_notification(&transaction, source_id, target_id).await?;
     };
     transaction.commit().await?;
-    Ok(())
+    Ok(relationship_id)
 }
 
 /// Deletes both a relationship and a corresponding follow request
@@ -307,7 +329,7 @@ pub async fn create_remote_follow_request_opt(
 pub async fn follow_request_accepted(
     db_client: &mut impl DatabaseClient,
     request_id: Uuid,
-) -> Result<(), DatabaseError> {
+) -> Result<i32, DatabaseError> {
     let mut transaction = db_client.transaction().await?;
     let maybe_row = transaction.query_opt(
         "
@@ -321,9 +343,10 @@ pub async fn follow_request_accepted(
     let row = maybe_row.ok_or(DatabaseError::NotFound("follow request"))?;
     let source_id: Uuid = row.try_get("source_id")?;
     let target_id: Uuid = row.try_get("target_id")?;
-    follow(&mut transaction, source_id, target_id).await?;
+    let relationship_id =
+        follow(&mut transaction, source_id, target_id).await?;
     transaction.commit().await?;
-    Ok(())
+    Ok(relationship_id)
 }
 
 pub async fn follow_request_rejected(

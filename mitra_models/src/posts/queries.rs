@@ -240,6 +240,7 @@ pub async fn create_post(
         INSERT INTO post (
             id,
             author_id,
+            title,
             content,
             content_source,
             language,
@@ -253,17 +254,17 @@ pub async fn create_post(
             object_id,
             created_at
         )
-        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
         WHERE
         -- don't allow replies to reposts
         NOT EXISTS (
             SELECT 1 FROM post
-            WHERE post.id = $7 AND post.repost_of_id IS NOT NULL
+            WHERE post.id = $8 AND post.repost_of_id IS NOT NULL
         )
         -- don't allow reposts of non-public posts
         AND NOT EXISTS (
             SELECT 1 FROM post
-            WHERE post.id = $8 AND (
+            WHERE post.id = $9 AND (
                 post.repost_of_id IS NOT NULL
                 OR post.visibility != {visibility_public}
             )
@@ -277,6 +278,7 @@ pub async fn create_post(
         &[
             &post_id,
             &author_id,
+            &post_data.title,
             &post_data.content,
             &post_data.content_source,
             &post_data.language.map(DbLanguage::new),
@@ -416,18 +418,20 @@ pub async fn update_post(
         "
         UPDATE post
         SET
-            content = $1,
-            content_source = $2,
-            language = $3,
-            is_sensitive = $4,
-            url = $5,
-            updated_at = $6
-        WHERE id = $7
+            title = $1,
+            content = $2,
+            content_source = $3,
+            language = $4,
+            is_sensitive = $5,
+            url = $6,
+            updated_at = $7
+        WHERE id = $8
             AND repost_of_id IS NULL
             AND ipfs_cid IS NULL
         RETURNING post
         ",
         &[
+            &post_data.title,
             &post_data.content,
             &post_data.content_source,
             &post_data.language.map(DbLanguage::new),
@@ -1911,11 +1915,14 @@ pub async fn delete_repost(
 
 pub async fn search_posts(
     db_client: &impl DatabaseClient,
+    search_config: &str,
     text: &str,
     current_user_id: Uuid,
     limit: u16,
     offset: u16,
 ) -> Result<Vec<PostDetailed>, DatabaseError> {
+    // `&str` can't be directly cast to `regconfig`
+    // https://github.com/rust-postgres/rust-postgres/issues/1041
     let statement = format!(
         "
         SELECT
@@ -1926,43 +1933,47 @@ pub async fn search_posts(
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE
             -- can parse HTML documents
-            to_tsvector('simple', post.content) @@ plainto_tsquery('simple', $1)
+            to_tsvector(
+                $1::text::regconfig,
+                COALESCE(post.title, '') || ' ' || post.content
+            )
+                @@ plainto_tsquery($1::text::regconfig, $2)
             AND repost_of_id IS NULL
             AND (
                 -- posts published by the current user
-                post.author_id = $2
+                post.author_id = $3
                 -- posts bookmarked by the current user
                 OR EXISTS (
                     SELECT 1 FROM bookmark
                     WHERE
                         bookmark.post_id = post.id
-                        AND bookmark.owner_id = $2
+                        AND bookmark.owner_id = $3
                 )
                 -- posts with reactions from the current user
                 OR EXISTS (
                     SELECT 1 FROM post_reaction
                     WHERE
                         post_reaction.post_id = post.id
-                        AND post_reaction.author_id = $2
+                        AND post_reaction.author_id = $3
                 )
                 -- posts where the current user is mentioned
                 OR EXISTS (
                     SELECT 1 FROM post_mention
                     WHERE
                         post_mention.post_id = post.id
-                        AND post_mention.profile_id = $2
+                        AND post_mention.profile_id = $3
                 )
             )
         ORDER BY post.id DESC
-        LIMIT $3 OFFSET $4
+        LIMIT $4 OFFSET $5
         ",
         post_subqueries=post_subqueries(),
     );
-    let db_search_query = format!("%{}%", text);
     let rows = db_client.query(
         &statement,
         &[
-            &db_search_query,
+            &search_config,
+            &text,
             &current_user_id,
             &i64::from(limit),
             &i64::from(offset),
@@ -2018,9 +2029,12 @@ mod tests {
             create_custom_feed,
         },
         database::test_utils::create_test_database,
-        posts::test_utils::{
-            create_test_local_post,
-            create_test_remote_post,
+        posts::{
+            constants::PREINSTALLED_FTS_CONFIG,
+            test_utils::{
+                create_test_local_post,
+                create_test_remote_post,
+            },
         },
         profiles::test_utils::{
             create_test_remote_profile,
@@ -2979,6 +2993,7 @@ mod tests {
         ).await;
         let results = search_posts(
             db_client,
+            PREINSTALLED_FTS_CONFIG,
             "post",
             user.id,
             5,

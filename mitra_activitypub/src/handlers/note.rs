@@ -373,11 +373,10 @@ fn get_object_url(
     Ok(maybe_object_url)
 }
 
-/// Get post content by concatenating name/summary and content
-pub(super) fn get_object_content(object: &AttributedObject) ->
-    Result<String, ValidationError>
-{
-    let title = if object.in_reply_to.is_none() {
+pub(super) fn get_object_content(
+    object: &AttributedObject,
+) -> Result<(Option<String>, String), ValidationError> {
+    let maybe_title = if object.in_reply_to.is_none() {
         // Only top level posts can have titles
         object.name.as_ref()
             // NOTE: Mastodon uses 'summary' for content warnings
@@ -385,10 +384,8 @@ pub(super) fn get_object_content(object: &AttributedObject) ->
             .or(object.summary.as_ref())
             .map(|title| clean_title(title))
             .filter(|title| !title.is_empty())
-            .map(|title| format!("<h1>{}</h1>", title))
-            .unwrap_or("".to_string())
     } else {
-        "".to_string()
+        None
     };
     let content = if let Some(ref content) = object.content {
         if object.media_type == Some("text/markdown".to_string()) {
@@ -400,10 +397,9 @@ pub(super) fn get_object_content(object: &AttributedObject) ->
     } else {
         "".to_string()
     };
-    let content = format!("{}{}", title, content);
     let content_safe = clean_remote_content(&content);
-    validate_content(&content_safe)?;
-    Ok(content_safe)
+    validate_content(&content_safe, Remote)?;
+    Ok((maybe_title, content_safe))
 }
 
 fn create_content_link(url: &str) -> String {
@@ -1023,7 +1019,7 @@ pub async fn create_remote_post(
         None => None,
     };
 
-    let mut content = get_object_content(&object)?;
+    let (maybe_title, mut content) = get_object_content(&object)?;
     let maybe_poll_data = if object.object_type == QUESTION {
         match parse_poll_results(&object) {
             Ok(poll_data) => Some(poll_data),
@@ -1124,6 +1120,7 @@ pub async fn create_remote_post(
     let post_data = PostCreateData {
         id: None,
         context: context,
+        title: maybe_title,
         content: content,
         content_source: None,
         language: object.language(),
@@ -1139,7 +1136,7 @@ pub async fn create_remote_post(
         object_id: Some(canonical_object_id.to_string()),
         created_at,
     };
-    validate_post_create_data(&post_data)?;
+    validate_post_create_data(&post_data, Remote)?;
     validate_post_mentions(&post_data.mentions, post_data.visibility)?;
     if let Some(in_reply_to) = maybe_in_reply_to {
         // TODO: disallow scope widening (see also: get_related_posts)
@@ -1192,7 +1189,7 @@ pub async fn update_remote_post(
         return Err(ValidationError("inReplyTo can't be changed").into());
     };
 
-    let mut content = get_object_content(object)?;
+    let (maybe_title, mut content) = get_object_content(object)?;
     let maybe_poll_data = if object.object_type == QUESTION {
         match parse_poll_results(object) {
             Ok(poll_data) => {
@@ -1254,6 +1251,7 @@ pub async fn update_remote_post(
     };
 
     let is_edited = post.is_edited(
+        maybe_title.as_ref(),
         &content,
         maybe_poll_data.as_ref(),
         // TODO: attachments are always re-created
@@ -1266,6 +1264,7 @@ pub async fn update_remote_post(
     };
 
     let post_data = PostUpdateData {
+        title: maybe_title,
         content,
         content_source: None,
         language: object.language(),
@@ -1279,7 +1278,7 @@ pub async fn update_remote_post(
         url: maybe_object_url,
         updated_at,
     };
-    validate_post_update_data(&post_data)?;
+    validate_post_update_data(&post_data, Remote)?;
     validate_post_mentions(&post_data.mentions, post.visibility)?;
     if let Some(in_reply_to) = maybe_in_reply_to {
         // TODO: disallow scope widening (see also: get_related_posts)
@@ -1373,7 +1372,8 @@ mod tests {
             object_type: NOTE.to_string(),
             ..Default::default()
         };
-        let content = get_object_content(&object).unwrap();
+        let (maybe_title, content) = get_object_content(&object).unwrap();
+        assert!(maybe_title.is_none());
         assert_eq!(content, "test");
     }
 
@@ -1390,12 +1390,13 @@ mod tests {
             }])),
             ..Default::default()
         };
-        let mut content = get_object_content(&object).unwrap();
+        let (maybe_title, mut content) = get_object_content(&object).unwrap();
+        assert_eq!(maybe_title.unwrap(), "test-name");
         let object_url = get_object_url(&object).unwrap().unwrap();
         content += &create_content_link(&object_url);
         assert_eq!(
             content,
-            r#"<h1>test-name</h1>test-content<p><a href="https://example.org/xyz" rel="noopener">https://example.org/xyz</a></p>"#,
+            r#"test-content<p><a href="https://example.org/xyz" rel="noopener">https://example.org/xyz</a></p>"#,
         );
     }
 

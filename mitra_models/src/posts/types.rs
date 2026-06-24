@@ -165,6 +165,7 @@ int_enum_to_sql!(Visibility);
 pub struct Post {
     pub id: Uuid,
     pub author_id: Uuid,
+    pub title: Option<String>,
     pub content: String,
     pub content_source: Option<String>,
     pub language: Option<DbLanguage>,
@@ -244,6 +245,7 @@ impl RelatedPosts {
 pub struct PostDetailed {
     pub id: Uuid,
     pub author: DbActorProfile,
+    pub title: Option<String>,
     pub content: String,
     pub content_source: Option<String>,
     pub language: Option<Language>,
@@ -304,6 +306,7 @@ impl PostDetailed {
             return Err(DatabaseTypeError);
         };
         if db_post.repost_of_id.is_some() && (
+            db_post.title.is_some() ||
             db_post.content.len() != 0 ||
             db_post.content_source.is_some() ||
             db_post.language.is_some() ||
@@ -368,6 +371,7 @@ impl PostDetailed {
         let post = Self {
             id: db_post.id,
             author: db_author,
+            title: db_post.title,
             content: db_post.content,
             content_source: db_post.content_source,
             language: db_post.language.map(|db_lang| db_lang.inner()),
@@ -417,10 +421,12 @@ impl PostDetailed {
 
     pub fn is_edited(
         &self,
+        new_title: Option<&String>,
         new_content: &str,
         new_poll_data: Option<&PollData>,
         new_attachments: &[Uuid],
     ) -> bool {
+        let current_title = self.title.as_ref();
         let current_content = &self.content;
         let current_poll_options: Option<Vec<_>> = self.poll.as_ref()
             .map(|poll| {
@@ -438,9 +444,11 @@ impl PostDetailed {
         let current_attachments: Vec<_> = self.attachments.iter()
             .map(|attachment| attachment.id)
             .collect();
-        let is_not_edited = current_content == new_content &&
-            current_poll_options == new_poll_options &&
-            current_attachments == new_attachments;
+        let is_not_edited =
+            current_title == new_title
+            && current_content == new_content
+            && current_poll_options == new_poll_options
+            && current_attachments == new_attachments;
         !is_not_edited
     }
 
@@ -462,6 +470,7 @@ impl Default for PostDetailed {
         Self {
             id: post_id,
             author: DbActorProfile::default(),
+            title: None,
             content: "".to_string(),
             content_source: None,
             language: None,
@@ -600,6 +609,7 @@ impl Default for PostContext {
 pub struct PostCreateData {
     pub id: Option<Uuid>,
     pub context: PostContext,
+    pub title: Option<String>,
     pub content: String,
     pub content_source: Option<String>,
     pub language: Option<Language>,
@@ -637,6 +647,7 @@ impl PostCreateData {
         Self {
             id: None,
             context: PostContext::Repost { repost_of_id },
+            title: None,
             content: "".to_owned(),
             content_source: None,
             language: None,
@@ -657,6 +668,7 @@ impl PostCreateData {
 
 #[cfg_attr(test, derive(Default))]
 pub struct PostUpdateData {
+    pub title: Option<String>,
     pub content: String,
     pub content_source: Option<String>,
     pub language: Option<Language>,
@@ -669,4 +681,19 @@ pub struct PostUpdateData {
     pub emojis: Vec<Uuid>,
     pub url: Option<String>,
     pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_post_is_edited() {
+        let post = PostDetailed {
+            content: "test".to_owned(),
+            ..Default::default()
+        };
+        assert_eq!(post.is_edited(None, "test", None, &[]), false);
+        assert_eq!(post.is_edited(None, "testX", None, &[]), true);
+    }
 }

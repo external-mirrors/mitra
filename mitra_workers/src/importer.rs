@@ -4,8 +4,12 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    adapters::follow_requests::{
+        accept_and_add_follower,
+        follow_or_create_request,
+    },
+    authority::Authority,
     builders::{
-        follow::follow_or_create_request,
         move_person::prepare_move_person,
         undo_follow::prepare_undo_follow,
     },
@@ -34,7 +38,10 @@ use mitra_models::{
     profiles::{
         queries::get_remote_profile_by_actor_id,
     },
-    relationships::queries::{follow, unfollow},
+    relationships::{
+        helpers::create_follow_request,
+        queries::unfollow,
+    },
 };
 
 #[derive(Serialize, Deserialize)]
@@ -186,8 +193,15 @@ pub async fn import_followers_task(
                     Err(DatabaseError::NotFound(_)) => continue,
                     Err(other_error) => return Err(other_error.into()),
                 };
-                match follow(db_client, follower.id, user.id).await {
-                    Ok(_) => (),
+                match create_follow_request(db_client, follower.id, user.id).await {
+                    Ok(follow_request) => {
+                        let authority = Authority::from(&instance);
+                        accept_and_add_follower(
+                            authority.root(),
+                            db_client,
+                            follow_request.id,
+                        ).await?;
+                    },
                     // Ignore if already following
                     Err(DatabaseError::AlreadyExists(_)) => (),
                     Err(other_error) => return Err(other_error.into()),
