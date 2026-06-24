@@ -58,7 +58,7 @@ impl TryFrom<i16> for RelationshipType {
 int_enum_from_sql!(RelationshipType);
 int_enum_to_sql!(RelationshipType);
 
-pub struct Relationship {
+pub struct RelationshipOrFollowRequest {
     pub source_id: Uuid,
     pub target_id: Uuid,
     pub relationship_type: RelationshipType,
@@ -66,7 +66,7 @@ pub struct Relationship {
     created_at: DateTime<Utc>,
 }
 
-impl Relationship {
+impl RelationshipOrFollowRequest {
     pub fn is_direct(
         &self,
         source_id: Uuid,
@@ -97,7 +97,7 @@ impl Relationship {
     }
 }
 
-impl TryFrom<&Row> for Relationship {
+impl TryFrom<&Row> for RelationshipOrFollowRequest {
 
     type Error = tokio_postgres::Error;
 

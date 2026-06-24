@@ -25,7 +25,7 @@ use super::types::{
     FollowRequestDirection,
     FollowRequestStatus,
     RelatedActorProfile,
-    Relationship,
+    RelationshipOrFollowRequest,
     RelationshipType,
 };
 
@@ -33,7 +33,7 @@ pub async fn get_relationships(
     db_client: &impl DatabaseClient,
     source_id: Uuid,
     target_id: Uuid,
-) -> Result<Vec<Relationship>, DatabaseError> {
+) -> Result<Vec<RelationshipOrFollowRequest>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT source_id, target_id, relationship_type, created_at
@@ -61,7 +61,7 @@ pub async fn get_relationships(
         ],
     ).await?;
     let relationships = rows.iter()
-        .map(Relationship::try_from)
+        .map(RelationshipOrFollowRequest::try_from)
         .collect::<Result<_, _>>()?;
     Ok(relationships)
 }
@@ -70,7 +70,7 @@ pub async fn get_relationships_many(
     db_client: &impl DatabaseClient,
     source_id: Uuid,
     target_ids: &[Uuid],
-) -> Result<Vec<(Uuid, Vec<Relationship>)>, DatabaseError> {
+) -> Result<Vec<(Uuid, Vec<RelationshipOrFollowRequest>)>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT source_id, target_id, relationship_type, created_at
@@ -98,10 +98,10 @@ pub async fn get_relationships_many(
         ],
     ).await?;
     // No duplicate keys in buckets hashmap
-    let mut buckets: HashMap<Uuid, Vec<Relationship>> =
+    let mut buckets: HashMap<Uuid, Vec<RelationshipOrFollowRequest>> =
         HashMap::from_iter(target_ids.iter().map(|id| (*id, vec![])));
     for row in rows {
-        let relationship = Relationship::try_from(&row)?;
+        let relationship = RelationshipOrFollowRequest::try_from(&row)?;
         let target_id = relationship.with(source_id)?;
         let target_relationships = buckets.get_mut(&target_id)
             .ok_or(DatabaseTypeError)?;

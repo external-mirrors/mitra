@@ -12,7 +12,7 @@ use mitra_models::{
         get_relationships as get_relationships_one,
         get_relationships_many,
     },
-    relationships::types::{Relationship, RelationshipType},
+    relationships::types::{RelationshipOrFollowRequest, RelationshipType},
 };
 
 use crate::mastodon_api::{
@@ -50,7 +50,7 @@ pub async fn parse_microsyntaxes(
 fn create_relationship_map(
     source_id: Uuid,
     target_id: Uuid,
-    relationships: Vec<Relationship>,
+    relationships: Vec<RelationshipOrFollowRequest>,
 ) -> Result<RelationshipMap, DatabaseError> {
     let mut relationship_map = RelationshipMap { id: target_id, ..Default::default() };
     for relationship in relationships {
