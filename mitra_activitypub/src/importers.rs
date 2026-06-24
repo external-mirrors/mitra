@@ -207,7 +207,7 @@ impl ApClient {
         object_id: &str,
     ) -> Result<T, HandlerError> {
         let hostname = HttpUri::parse(object_id)
-            .map_err(ValidationError)?
+            .map_err(|_| ValidationError("invalid HTTP URI"))?
             .hostname();
         if self.filter.is_action_required(
             hostname.as_str(),

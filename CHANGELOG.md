@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Treat scheduled outgoing activities where Ed25519 key is not included as invalid.
 - Validate 'ap' URI before making database query when serving portable objects.
 - Add actor to `followers` collection in database when creating follow relationship.
+- Provide better error message when attempting to fetch 'ap' URI.
 
 ## [5.5.0] - 2026-06-10
 
