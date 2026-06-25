@@ -3222,6 +3222,10 @@ components:
           description: Indicates that the account may perform automated actions, may not be monitored, or identifies as a robot.
           type: boolean
           example: false
+        is_group:
+          description: Indicates that the account is a group.
+          type: boolean
+          example: false
         discoverable:
           description: Whether the use has opted into discovery features such as the profile directory.
           type: boolean

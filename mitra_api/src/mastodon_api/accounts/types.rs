@@ -165,7 +165,7 @@ fn mention_policy_to_str(mention_policy: MentionPolicy) -> &'static str {
     }
 }
 
-/// https://docs.joinmastodon.org/entities/account/
+// https://docs.joinmastodon.org/entities/account/
 #[derive(Serialize)]
 pub struct Account {
     pub id: Uuid,
@@ -182,6 +182,7 @@ pub struct Account {
     pub locked: bool,
     pub mention_policy: String,
     pub bot: bool,
+    is_group: bool, // not part of Mastodon API
     discoverable: bool,
     pub identity_proofs: Vec<AccountField>,
     pub payment_options: Vec<AccountPaymentOption>,
@@ -208,6 +209,7 @@ impl Account {
         let actor_id = profile_actor_id(authority, &profile);
         let profile_url = profile_actor_url(authority, &profile);
         let preferred_handle = profile.preferred_handle().to_owned();
+        let is_group = profile.is_group();
         let mention_policy = mention_policy_to_str(profile.mention_policy);
 
         let avatar_url = profile.avatar
@@ -306,6 +308,7 @@ impl Account {
             locked: profile.manually_approves_followers,
             mention_policy: mention_policy.to_string(),
             bot: profile.is_automated,
+            is_group: is_group,
             discoverable: true,
             identity_proofs,
             payment_options,
