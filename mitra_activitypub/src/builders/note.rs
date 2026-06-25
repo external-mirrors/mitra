@@ -875,6 +875,78 @@ mod tests {
     }
 
     #[test]
+    fn test_build_note_group() {
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let group_actor_id = "https://social.example/group";
+        let group = DbActorProfile::remote_for_test(
+            "group",
+            group_actor_id,
+        );
+        let conversation = Conversation {
+            id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),
+            group_id: Some(group.id),
+            ..Conversation::for_test(Default::default())
+        };
+        let post = PostDetailed {
+            id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
+            conversation: Some(conversation),
+            group_id: Some(group.id),
+            mentions: vec![group],
+            created_at: DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
+                .unwrap().with_timezone(&Utc),
+            related_posts: Some(RelatedPosts::default()),
+            ..Default::default()
+        };
+        let authority = Authority::server(&instance_uri);
+        let media_server = MediaServer::for_test(INSTANCE_URI);
+        let note = build_note(
+            INSTANCE_HOSTNAME,
+            &authority,
+            &media_server,
+            &post,
+            true,
+        );
+        let value = serde_json::to_value(note).unwrap();
+        let expected_value = json!({
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+                "https://w3id.org/security/v1",
+                "https://w3id.org/security/data-integrity/v2",
+                {
+                    "Hashtag": "as:Hashtag",
+                    "sensitive": "as:sensitive",
+                    "toot": "http://joinmastodon.org/ns#",
+                    "Emoji": "toot:Emoji"
+                },
+            ],
+            "id": "https://server.example/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
+            "type": "Note",
+            "attributedTo": "https://server.example/users/test",
+            "audience": "https://social.example/group",
+            "context": "https://server.example/collections/conversations/837ffc24-dab2-414b-a9b8-fe47d0a463f2",
+            "content": "",
+            "sensitive": false,
+            "tag": [
+                {
+                    "type": "Mention",
+                    "name": "@group@social.example",
+                    "href": "https://social.example/group",
+                },
+            ],
+            "replies": "https://server.example/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f/replies",
+            "published": "2023-02-24T23:36:38Z",
+            "to": [
+                "https://www.w3.org/ns/activitystreams#Public",
+                "https://social.example/group",
+            ],
+            "cc": [
+                "https://server.example/users/test/followers",
+            ],
+        });
+        assert_eq!(value, expected_value);
+    }
+
+    #[test]
     fn test_build_note_fep_ef61() {
         let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let author = User::for_test({
