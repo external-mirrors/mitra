@@ -617,6 +617,28 @@ pub async fn get_group_account_by_id(
     Ok(account)
 }
 
+pub async fn get_managed_account_by_id(
+    db_client: &impl DatabaseClient,
+    account_id: Uuid,
+) -> Result<BoxedManagedAccount, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT
+            user_account,
+            automated_account,
+            actor_profile
+        FROM actor_profile
+        LEFT JOIN user_account USING (id)
+        LEFT JOIN automated_account USING (id)
+        WHERE actor_profile.id = $1
+        ",
+        &[&account_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("account"))?;
+    let account = BoxedManagedAccount::try_from(&row)?;
+    Ok(account)
+}
+
 pub async fn get_managed_account_by_username(
     db_client: &impl DatabaseClient,
     username: &str,

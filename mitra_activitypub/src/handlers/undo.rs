@@ -62,11 +62,10 @@ async fn handle_undo_follow(
     // Use object because activity ID might not be present
     let target_actor_id = object_to_id(&undo.object["object"])
         .map_err(|_| ValidationError("invalid follow activity object"))?;
-    let target_profile = ActorIdResolver::default().resolve(
-        ap_client,
-        db_pool,
-        &target_actor_id,
-    ).await?;
+    let target_profile = ActorIdResolver::default()
+        .include_automated_accounts()
+        .resolve(ap_client, db_pool, &target_actor_id)
+        .await?;
     let db_client = &mut **get_database_client(db_pool).await?;
     match unfollow(db_client, source_profile.id, target_profile.id).await {
         Ok(_) => {

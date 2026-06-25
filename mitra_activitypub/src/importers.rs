@@ -38,12 +38,19 @@ use mitra_models::{
     accounts::{
         queries::{
             create_portable_user,
+            get_managed_account_by_id,
+            get_managed_account_by_username,
             get_portable_user_by_actor_id,
             get_user_by_id,
             get_user_by_name,
             is_valid_invite_code,
         },
-        types::{PortableUser, PortableUserData, User},
+        types::{
+            BoxedManagedAccount,
+            PortableUser,
+            PortableUserData,
+            User,
+        },
     },
     database::{
         db_client_await,
@@ -272,6 +279,23 @@ pub async fn get_user_by_actor_id(
     }
 }
 
+async fn get_managed_account_by_actor_id(
+    db_client: &impl DatabaseClient,
+    authority: &Authority,
+    actor_id: &CanonicalUri,
+) -> Result<BoxedManagedAccount, DatabaseError> {
+    let actor_id = actor_id.to_string();
+    match parse_local_actor_id(authority, &actor_id) {
+        Ok(UuidOrUsername::Uuid(user_id)) => {
+            get_managed_account_by_id(db_client, user_id).await
+        },
+        Ok(UuidOrUsername::Username(username)) => {
+            get_managed_account_by_username(db_client, &username).await
+        },
+        Err(_) => Err(DatabaseError::NotFound("user")),
+    }
+}
+
 // Actor must be authenticated
 pub async fn import_actor(
     ap_client: &ApClient,
@@ -369,12 +393,18 @@ async fn refresh_remote_profile(
 #[derive(Default)]
 pub struct ActorIdResolver {
     only_remote: bool,
+    include_automated_accounts: bool,
     force_refetch: bool,
 }
 
 impl ActorIdResolver {
     pub fn only_remote(mut self) -> Self {
         self.only_remote = true;
+        self
+    }
+
+    pub fn include_automated_accounts(mut self) -> Self {
+        self.include_automated_accounts = true;
         self
     }
 
@@ -406,12 +436,22 @@ impl ActorIdResolver {
                 return Err(HandlerError::LocalObject);
             };
             let authority = Authority::from(&ap_client.instance);
-            let user = get_user_by_actor_id(
-                db_client_await!(db_pool),
-                &authority,
-                &canonical_actor_id,
-            ).await?;
-            return Ok(user.profile);
+            let profile = if self.include_automated_accounts {
+                let account = get_managed_account_by_actor_id(
+                    db_client_await!(db_pool),
+                    &authority,
+                    &canonical_actor_id,
+                ).await?;
+                account.profile().clone()
+            } else {
+                let account = get_user_by_actor_id(
+                    db_client_await!(db_pool),
+                    &authority,
+                    &canonical_actor_id,
+                ).await?;
+                account.profile
+            };
+            return Ok(profile);
         };
         // Remote ID
         let maybe_profile = get_remote_profile_by_actor_id(
