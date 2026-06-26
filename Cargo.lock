@@ -2937,8 +2937,7 @@ dependencies = [
 [[package]]
 name = "refinery"
 version = "0.8.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ba5d693abf62492c37268512ff35b77655d2e957ca53dab85bf993fe9172d15"
+source = "git+https://github.com/silverpill/refinery?rev=f8a871a6a34e7e999c9a27ae61b6b0aa1c76f326#f8a871a6a34e7e999c9a27ae61b6b0aa1c76f326"
 dependencies = [
  "refinery-core",
  "refinery-macros",
@@ -2947,8 +2946,7 @@ dependencies = [
 [[package]]
 name = "refinery-core"
 version = "0.8.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a83581f18c1a4c3a6ebd7a174bdc665f17f618d79f7edccb6a0ac67e660b319"
+source = "git+https://github.com/silverpill/refinery?rev=f8a871a6a34e7e999c9a27ae61b6b0aa1c76f326#f8a871a6a34e7e999c9a27ae61b6b0aa1c76f326"
 dependencies = [
  "async-trait",
  "cfg-if",
@@ -2966,8 +2964,7 @@ dependencies = [
 [[package]]
 name = "refinery-macros"
 version = "0.8.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72c225407d8e52ef8cf094393781ecda9a99d6544ec28d90a6915751de259264"
+source = "git+https://github.com/silverpill/refinery?rev=f8a871a6a34e7e999c9a27ae61b6b0aa1c76f326#f8a871a6a34e7e999c9a27ae61b6b0aa1c76f326"
 dependencies = [
  "heck 0.5.0",
  "proc-macro2",
