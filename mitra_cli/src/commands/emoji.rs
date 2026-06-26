@@ -210,7 +210,7 @@ impl DeleteEmoji {
 #[derive(Subcommand)]
 pub enum EmojiCommand {
     Create(AddEmoji),
-    Steal(ImportEmoji),
+    Copy(ImportEmoji),
     Delete(DeleteEmoji),
 }
 
@@ -222,7 +222,7 @@ impl EmojiCommand {
     ) -> Result<(), Error> {
         match self {
             Self::Create(command) => command.execute(config, db_pool).await,
-            Self::Steal(command) => command.execute(config, db_pool).await,
+            Self::Copy(command) => command.execute(config, db_pool).await,
             Self::Delete(command) => command.execute(config, db_pool).await,
         }
     }

@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Provide better error message when attempting to fetch 'ap' URI.
 - Reduce number of database queries made when processing webfinger request.
 - Don't automatically insert mention when creating a group post.
+- Renamed `emoji steal` subcommand to `emoji copy`.
 
 ## [5.5.0] - 2026-06-10
 
