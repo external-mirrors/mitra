@@ -771,6 +771,11 @@ impl DbActorProfile {
                 return Err(DatabaseTypeError);
             };
         };
+        let is_local_account = self.has_user_account() || self.has_automated_account();
+        let is_local_acct = self.acct.as_ref() == Some(&self.username);
+        if is_local_account && !is_local_acct {
+            return Err(DatabaseTypeError);
+        };
         match self.webfinger_hostname() {
             WebfingerHostname::Local => {
                 if self.acct.as_ref() != Some(&self.username) {
@@ -794,10 +799,6 @@ impl DbActorProfile {
                     return Err(DatabaseTypeError);
                 };
             },
-        };
-        let is_local_acct = self.acct.as_ref() == Some(&self.username);
-        if self.has_account() != is_local_acct {
-            return Err(DatabaseTypeError);
         };
         let origin = if let Some(ref actor_data) = self.actor_json {
             actor_data.check_consistency()?;
