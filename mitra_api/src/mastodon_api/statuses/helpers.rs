@@ -182,7 +182,9 @@ pub async fn prepare_mentions(
 ) -> Result<Vec<Uuid>, DatabaseError> {
     // Extend mentions
     if let Some(in_reply_to) = maybe_in_reply_to {
-        // TODO: not necessary if maybe_group is not None
+        // TODO: can be removed in the future. This is only useful
+        // for legacy records where association
+        // with a group doesn't exist.
         if let Some(group) = in_reply_to.mentions
             .iter()
             .find(|profile| profile.is_group())
