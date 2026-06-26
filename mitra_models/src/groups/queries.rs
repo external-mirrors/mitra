@@ -33,6 +33,8 @@ use crate::{
     },
 };
 
+use super::types::GroupFilter;
+
 pub async fn create_group(
     db_client: &mut impl DatabaseClient,
     owner_id: Uuid,
@@ -59,12 +61,17 @@ pub async fn create_group(
     Ok(account)
 }
 
-pub async fn get_followed_groups(
+pub async fn get_related_groups(
     db_client: &impl DatabaseClient,
     account_id: Uuid,
+    filter: GroupFilter,
     offset: u16,
     limit: u16,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
+    let relationship_type = match filter {
+        GroupFilter::Following => RelationshipType::Follow,
+        GroupFilter::Moderating => RelationshipType::GroupAdmin,
+    };
     let rows = db_client.query(
         "
         SELECT actor_profile
@@ -89,7 +96,7 @@ pub async fn get_followed_groups(
         &[
             &ActorType::Group,
             &account_id,
-            &RelationshipType::Follow,
+            &relationship_type,
             &i64::from(limit),
             &i64::from(offset),
         ],
@@ -215,9 +222,10 @@ mod tests {
         };
         let group = create_profile(db_client, group_data).await.unwrap();
         follow(db_client, account.id, group.id).await.unwrap();
-        let groups = get_followed_groups(
+        let groups = get_related_groups(
             db_client,
             account.id,
+            GroupFilter::Following,
             0,
             20,
         ).await.unwrap();

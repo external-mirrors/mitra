@@ -27,7 +27,7 @@ use mitra_models::{
     },
     groups::queries::{
         create_group,
-        get_followed_groups,
+        get_related_groups,
     },
     posts::helpers::can_create_post,
     relationships::helpers::create_follow_request,
@@ -100,6 +100,7 @@ async fn create_group_view(
     Ok(HttpResponse::Ok().json(account))
 }
 
+// TODO: use /api/v1/groups
 #[get("/followed")]
 async fn get_followed_groups_view(
     auth: BearerAuth,
@@ -110,9 +111,10 @@ async fn get_followed_groups_view(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let groups = get_followed_groups(
+    let groups = get_related_groups(
         db_client,
         current_user.id,
+        query_params.filter()?,
         query_params.offset,
         query_params.limit.inner(),
     ).await?;

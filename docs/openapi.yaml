@@ -1177,6 +1177,16 @@ paths:
       security:
         - tokenAuth: []
       parameters:
+        - name: filter
+          in: query
+          description: The kind of relationship to a group.
+          required: false
+          schema:
+            type: string
+            enum:
+              - following
+              - moderating
+            default: following
         - name: offset
           in: query
           description: How many groups to skip before returning results.
