@@ -1,0 +1,39 @@
+!/bin/sh
+
+# PROVIDE: mitra
+# REQUIRE: DAEMON
+# KEYWORD: shutdown
+#
+# Add the following lines to /etc/rc.conf to enable mitra:
+#
+# mitra_enable:             Set to "NO" by default.
+#                           Set it to "YES" to enable mitra.
+# mitra_config:             The config file used to run the daemon.
+#                           Default: /usr/local/etc/mitra/config.yaml
+# mitra_run_as:             The user account used to run the daemon.
+#                           Default: _mitra
+#
+
+. /etc/rc.subr
+
+desc="Federated social network"
+name="mitra"
+rcvar="mitra_enable"
+
+load_rc_config ${name}
+
+: ${mitra_enable="NO"}
+: ${mitra_config="/usr/local/etc/mitra/config.yaml"}
+: ${mitra_facility="daemon"}
+: ${mitra_run_as="_mitra"}
+: ${mitra_priority="info"}
+
+export CONFIG_PATH="${mitra_config}"
+
+mitra_command="/usr/local/bin/${name} server"
+log_path="/var/log/${name}.log"
+
+command="/usr/sbin/daemon"
+command_args="-S -l ${mitra_facility} -s ${mitra_priority} -T ${name} -u ${mitra_run_as} -r ${mitra_command}"
+
+run_rc_command "$1"
