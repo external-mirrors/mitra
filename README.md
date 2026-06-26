@@ -14,9 +14,10 @@ Features:
   - Quote posts, custom emojis, reactions, polls and more.
   - Default character limit is 5000.
   - Support for [markdown-style](./docs/post_markup.md) formatting.
+  - Mastodon API.
 - Easy installation and small memory footprint (<50 MB).
 - Interoperable. Can show content from blogs, forums and other types of federated services.
-- Mastodon API.
+- Groups.
 - Content subscription service. Subscriptions provide a way to receive monthly payments from subscribers and to publish private content made exclusively for them.
   - Supported payment methods: [Monero](https://www.getmonero.org/get-started/what-is-monero/), a peer to peer digital cash system where transactions are private by default.
 - Account [migrations](./docs/migrations.md) (from one server to another). Identity can be detached from the server.
