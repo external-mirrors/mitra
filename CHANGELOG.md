@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Accept 'ap' URIs with `ap+ef61` scheme.
 
+### Changed
+
+- Changed MSRV to 1.84.0.
+
 ## [5.6.0] - 2026-06-26
 
 ### Added
