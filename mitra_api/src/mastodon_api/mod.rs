@@ -169,3 +169,31 @@ pub fn mastodon_api_scope(
         .service(subscriptions::views::subscription_api_scope())
         .service(timelines::views::timeline_api_scope())
 }
+
+#[cfg(test)]
+mod tests {
+    use serde::Deserialize;
+    use super::*;
+
+    #[test]
+    fn test_serde_qs_config() {
+        #[derive(Deserialize)]
+        struct Data {
+            ids: Vec<String>,
+        }
+
+        let config = mastodon_qs_config();
+
+        let value = "ids[]=a&ids[]=b";
+        let data = config.deserialize_str::<Data>(value).unwrap();
+        assert_eq!(data.ids, vec!["a", "b"]);
+
+        let value = "ids%5B%5D=a&ids%5B%5D=b";
+        let data = config.deserialize_str::<Data>(value).unwrap();
+        assert_eq!(data.ids, vec!["a", "b"]);
+
+        let value = "ids=a&ids=b";
+        let result = config.deserialize_str::<Data>(value);
+        assert!(result.is_err());
+    }
+}
