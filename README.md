@@ -56,7 +56,7 @@ Demo instance: https://public.mitra.social/ ([invite-only](https://public.mitra.
 
 Minimum system requirements:
 
-- 256 MB RAM (1 GB for building from source)
+- 256 MB RAM (1.5 GB for building from source)
 - 10 GB storage for average single user instance with default configuration
 
 ## Installation

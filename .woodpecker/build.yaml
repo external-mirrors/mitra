@@ -7,7 +7,7 @@ steps:
     image: docker.io/debian:trixie
     environment:
       DEFAULT_CONFIG_PATH: /etc/mitra/config.yaml
-      RUST_VERSION: "1.82.0"
+      RUST_VERSION: "1.85.1"
     commands:
       - apt update
       - apt install --yes build-essential musl-tools rustup

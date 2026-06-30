@@ -348,7 +348,6 @@ pub async fn fetch_media(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-#[expect(impl_trait_overcaptures)]
 pub async fn stream_media(
     agent: &FederationAgent,
     url: &str,
@@ -358,7 +357,7 @@ pub async fn stream_media(
     Result<
         (BodyDataStream<MapErr<
             Limited<Body>,
-            impl FnMut(<Limited<Body> as http_body::Body>::Error) -> FetchError
+            impl FnMut(<Limited<Body> as http_body::Body>::Error) -> FetchError + use<>
         >>, String),
         FetchError
     >
