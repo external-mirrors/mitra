@@ -100,8 +100,7 @@ fn create_error_handlers() -> ErrorHandlers<BoxBody> {
 }
 
 fn mastodon_qs_config() -> QsConfig {
-    // Disable strict mode
-    QsConfig::new(2, false)
+    QsConfig::new().use_form_encoding(true).max_depth(2)
 }
 
 pub fn mastodon_api_scope(
@@ -193,7 +192,7 @@ mod tests {
         assert_eq!(data.ids, vec!["a", "b"]);
 
         let value = "ids=a&ids=b";
-        let result = config.deserialize_str::<Data>(value);
-        assert!(result.is_err());
+        let data = config.deserialize_str::<Data>(value).unwrap();
+        assert_eq!(data.ids, vec!["a", "b"]);
     }
 }
