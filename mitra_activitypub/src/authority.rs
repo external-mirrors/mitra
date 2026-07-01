@@ -88,7 +88,7 @@ impl Authority {
     }
 
     // TODO: make public after removing expect_server_uri()
-    fn public_key(public_key: Ed25519PublicKey) -> Self {
+    pub(super) fn public_key(public_key: Ed25519PublicKey) -> Self {
         let root = AuthorityRoot::Key(public_key);
         Self {
             root,

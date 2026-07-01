@@ -135,10 +135,17 @@ impl Sender {
             &actor_id,
             PublicKeyType::RsaPkcs1,
         );
+        #[cfg(not(feature = "mini"))]
         let ed25519_key_id = local_actor_key_id(
             &actor_id,
             PublicKeyType::Ed25519,
         );
+        #[cfg(feature = "mini")]
+        let ed25519_key_id = {
+            let did_key = authority.as_did_key()
+                .expect("authority should be key-based");
+            did_key.verification_method_id()
+        };
         Self {
             rsa_secret_key: account.rsa_secret_key().clone(),
             rsa_key_id: rsa_key_id,

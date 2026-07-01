@@ -290,7 +290,7 @@ pub async fn get_user_by_actor_id(
     }
 }
 
-async fn get_managed_account_by_actor_id(
+pub async fn get_managed_account_by_actor_id(
     db_client: &impl DatabaseClient,
     authority: &Authority,
     actor_id: &CanonicalUri,

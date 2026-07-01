@@ -238,6 +238,7 @@ impl OutgoingActivityJobData {
         mut recipients: Vec<Recipient>,
     ) -> Self {
         let instance_uri = authority.expect_server_uri().as_str();
+        #[cfg(not(feature = "mini"))]
         Self::mark_local_recipients(instance_uri, &mut recipients);
         let recipients = Self::sort_recipients(recipients);
         let activity = serde_json::to_value(activity)
@@ -314,6 +315,50 @@ impl OutgoingActivityJobData {
             &canonical_activity_id,
             &self.activity,
         ).await?;
+        #[cfg(feature = "mini")]
+        {
+            use apx_sdk::{
+                core::{
+                    did::Did,
+                    url::canonical::CanonicalUri,
+                },
+                utils::CoreType,
+            };
+            use crate::{
+                identifiers::LocalActorCollection,
+                importers::get_managed_account_by_actor_id,
+                ownership::get_owner,
+            };
+            let actor_id = get_owner(&self.activity, CoreType::Activity)
+                .map_err(|_| DatabaseTypeError)?;
+            let canonical_actor_id = canonicalize_id(&actor_id)
+                .map_err(|_| DatabaseTypeError)?;
+            // The authority is known because it is a local actor
+            let authority = {
+                let CanonicalUri::Ap(ref ap_actor_id) = canonical_actor_id else {
+                    unreachable!();
+                };
+                let Did::Key(did_key) = ap_actor_id.authority() else {
+                    unreachable!();
+                };
+                let authority_public_key = did_key.try_ed25519_key()
+                    .expect("did:key should be valid");
+                Authority::public_key(authority_public_key)
+            };
+            let sender = get_managed_account_by_actor_id(
+                db_client,
+                &authority,
+                &canonical_actor_id,
+            ).await?;
+            let canonical_outbox =
+                LocalActorCollection::Outbox.of(&canonical_actor_id.to_string());
+            add_object_to_collection(
+                db_client,
+                sender.id(),
+                &canonical_outbox,
+                &canonical_activity_id.to_string(),
+            ).await?;
+        };
         // TODO: move to process_queued_outgoing_activities and remove .is_local
         // Immediately put into inbox if recipient is local
         for recipient in self.recipients.iter_mut() {

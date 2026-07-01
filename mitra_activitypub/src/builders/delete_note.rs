@@ -110,7 +110,10 @@ pub async fn prepare_delete_note(
         media_server,
         &post,
     );
+    #[cfg(not(feature = "mini"))]
     let recipients = get_note_recipients(db_client, &post).await?;
+    #[cfg(feature = "mini")]
+    let recipients = crate::c2s::audience::get_recipients(instance, author);
     Ok(OutgoingActivityJobData::new(
         &authority,
         author,
