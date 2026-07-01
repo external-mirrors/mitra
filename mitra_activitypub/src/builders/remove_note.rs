@@ -10,6 +10,7 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::{
+    authority::Authority,
     contexts::{build_default_context, Context},
     identifiers::{
         local_activity_id,
@@ -67,6 +68,7 @@ pub async fn prepare_remove_note(
     sender: &User,
     post_id: Uuid,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
+    let authority = Authority::from(instance);
     let activity = build_remove_note(
         instance.uri_str(),
         &sender.profile.username,
@@ -74,7 +76,7 @@ pub async fn prepare_remove_note(
     );
     let recipients = get_add_note_recipients(db_client, sender.id).await?;
     Ok(OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         sender,
         activity,
         recipients,

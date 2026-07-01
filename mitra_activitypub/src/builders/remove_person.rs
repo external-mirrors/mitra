@@ -8,6 +8,7 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::{
+    authority::Authority,
     contexts::{build_default_context, Context},
     deliverer::Recipient,
     identifiers::{
@@ -61,6 +62,7 @@ fn prepare_remove_person(
     person: &DbActor,
     collection: LocalActorCollection,
 ) -> OutgoingActivityJobData {
+    let authority = Authority::from(instance);
     let activity = build_remove_person(
         instance.uri_str(),
         &sender.profile.username,
@@ -69,7 +71,7 @@ fn prepare_remove_person(
     );
     let recipients = Recipient::for_inbox(person);
     OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         sender,
         activity,
         recipients,

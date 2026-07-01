@@ -9,6 +9,7 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::{
+    authority::Authority,
     contexts::{build_default_context, Context},
     deliverer::Recipient,
     identifiers::{
@@ -60,6 +61,7 @@ pub fn prepare_reject_follow(
     source_actor: &DbActor,
     follow_activity_id: &str,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
+    let authority = Authority::from(instance);
     let source_actor_id = compatible_id(source_actor, &source_actor.id)?;
     let follow_activity_id = compatible_id(
         source_actor,
@@ -73,7 +75,7 @@ pub fn prepare_reject_follow(
     );
     let recipients = Recipient::for_inbox(source_actor);
     Ok(OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         sender,
         activity,
         recipients,

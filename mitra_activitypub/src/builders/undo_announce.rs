@@ -102,7 +102,7 @@ pub async fn prepare_undo_announce(
         &post.author,
     );
     Ok(OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         sender,
         activity,
         recipients,

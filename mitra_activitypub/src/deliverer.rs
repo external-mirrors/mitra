@@ -51,6 +51,7 @@ use mitra_models::{
 
 use crate::{
     agent::build_federation_agent_with_key,
+    authority::Authority,
     identifiers::{local_actor_id, local_actor_key_id},
     utils::db_url_to_http_url,
 };
@@ -99,8 +100,10 @@ fn serialize_ed25519_secret_key<S>(
     Ed25519SecretKey::serialize(secret_key, serializer)
 }
 
+// Represents a signer
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Sender {
+    // This key is used for HTTP signatures
     #[serde(
         alias = "rsa_private_key",
         deserialize_with = "deserialize_rsa_secret_key",
@@ -108,7 +111,7 @@ pub struct Sender {
     )]
     rsa_secret_key: RsaSecretKey,
     rsa_key_id: String,
-
+    // This key is used for integrity proofs
     #[serde(
         alias = "ed25519_private_key",
         deserialize_with = "deserialize_ed25519_secret_key",
@@ -120,9 +123,10 @@ pub struct Sender {
 
 impl Sender {
     pub fn from_account(
-        instance_uri: &str,
+        authority: &Authority,
         account: &impl ManagedAccount,
     ) -> Self {
+        let instance_uri = authority.expect_server_uri().as_str();
         let actor_id = local_actor_id(
             instance_uri,
             &account.profile().username,

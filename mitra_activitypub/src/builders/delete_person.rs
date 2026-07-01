@@ -11,6 +11,7 @@ use mitra_models::{
 };
 
 use crate::{
+    authority::Authority,
     contexts::{build_default_context, Context},
     deliverer::Recipient,
     identifiers::{local_activity_id, local_actor_id},
@@ -69,10 +70,11 @@ pub async fn prepare_delete_person(
     instance: &Instance,
     account: &impl ManagedAccount,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
+    let authority = Authority::from(instance);
     let activity = build_delete_person(instance.uri_str(), account.profile());
     let recipients = get_delete_person_recipients(db_client, account.id()).await?;
     Ok(OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         account,
         activity,
         recipients,

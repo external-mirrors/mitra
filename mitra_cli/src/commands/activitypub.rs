@@ -469,7 +469,7 @@ impl SendActivity {
             .ok_or(Error::msg("recipient doesn't have an HTTP inbox"))?
             .inbox
             .clone();
-        let sender = Sender::from_account(instance.uri_str(), &account);
+        let sender = Sender::from_account(&authority, &account);
         let mut agent = sender.into_agent(&instance);
         if self.rfc9421 {
             agent.rfc9421_enabled = true;

@@ -94,7 +94,7 @@ pub async fn prepare_undo_like(
         reaction_has_deprecated_ap_id,
     );
     Ok(OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         sender,
         activity,
         recipients,

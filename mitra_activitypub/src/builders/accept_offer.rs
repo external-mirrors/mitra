@@ -10,6 +10,7 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::{
+    authority::Authority,
     contexts::Context,
     deliverer::Recipient,
     identifiers::{local_activity_id, local_actor_id},
@@ -72,6 +73,7 @@ pub fn prepare_accept_offer(
     remote_actor: &DbActor,
     offer_activity_id: &str,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
+    let authority = Authority::from(instance);
     let activity = build_accept_offer(
         instance.uri_str(),
         &sender.profile.username,
@@ -82,7 +84,7 @@ pub fn prepare_accept_offer(
     )?;
     let recipients = Recipient::for_inbox(remote_actor);
     Ok(OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         sender,
         activity,
         recipients,

@@ -77,6 +77,7 @@ pub async fn prepare_update_note(
     post: &PostDetailed,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(author.id, post.author.id);
+    let authority = Authority::from(instance);
     let activity = build_update_note(
         instance.uri(),
         &instance.webfinger_hostname(),
@@ -85,7 +86,7 @@ pub async fn prepare_update_note(
     );
     let recipients = get_note_recipients(db_client, post).await?;
     Ok(OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         author,
         activity,
         recipients,
