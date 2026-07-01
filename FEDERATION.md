@@ -34,7 +34,6 @@ It also supports the following standards:
   - Only `did:key` identities are supported. Planned support for `did:web`.
 - [FEP-ae97: Client-side activity signing](https://codeberg.org/silverpill/feps/src/branch/main/ae97/fep-ae97.md)
 - [FEP-1b12: Group federation](https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md)
-  - Can consume `Announce(Activity)` activities, but doesn't publish them.
 - [FEP-171b: Conversation Containers](https://codeberg.org/fediverse/fep/src/branch/main/fep/171b/fep-171b.md)
   - Can consume `Add(Activity)` activities.
   - Publishes `Add(Create(Note))` activities in followers-only and subscribers-only conversations.
@@ -48,6 +47,8 @@ It also supports the following standards:
   - The `implements` property is used to signal RFC-9421 support.
 - [FEP-044f: Consent-respecting quote posts](https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md)
   - "Consent-respecting" quotes are processed in the same way as regular quotes.
+- [FEP-5219: Groups and permissions](https://codeberg.org/fediverse/fep/src/branch/main/fep/5219/fep-5219.md)
+  - Groups publish the `affiliations` collection.
 
 ### FEPs that might be supported in the future
 

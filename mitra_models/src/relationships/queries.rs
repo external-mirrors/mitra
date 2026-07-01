@@ -172,6 +172,42 @@ pub async fn get_relationship_by_id(
     Ok(relationship)
 }
 
+pub async fn get_related_combined(
+    db_client: &impl DatabaseClient,
+    source_id: Uuid,
+    relationship_types: &[RelationshipType],
+    is_direct: bool,
+) -> Result<Vec<RelatedActorProfile<i32>>, DatabaseError> {
+    let statement = format!(
+        "
+        SELECT
+            relationship.id,
+            relationship.relationship_type,
+            actor_profile
+        FROM actor_profile
+        JOIN relationship
+        ON (actor_profile.id = relationship.{target_id})
+        WHERE
+            relationship.{source_id} = $1
+            AND relationship_type = ANY($2)
+        ORDER BY relationship.id DESC
+        ",
+        source_id=if is_direct { "source_id" } else { "target_id" },
+        target_id=if is_direct { "target_id" } else { "source_id" },
+    );
+    let rows = db_client.query(
+        &statement,
+        &[
+            &source_id,
+            &relationship_types,
+        ],
+    ).await?;
+    let related_profiles = rows.iter()
+        .map(RelatedActorProfile::try_from)
+        .collect::<Result<_, _>>()?;
+    Ok(related_profiles)
+}
+
 async fn get_related_paginated(
     db_client: &impl DatabaseClient,
     source_id: Uuid,
@@ -182,7 +218,10 @@ async fn get_related_paginated(
 ) -> Result<Vec<RelatedActorProfile<i32>>, DatabaseError> {
     let statement = format!(
         "
-        SELECT relationship.id, actor_profile
+        SELECT
+            relationship.id,
+            relationship.relationship_type,
+            actor_profile
         FROM actor_profile
         JOIN relationship
         ON (actor_profile.id = relationship.{target_id})
@@ -586,7 +625,10 @@ pub async fn get_follow_requests_paginated(
 ) -> Result<Vec<RelatedActorProfile<Uuid>>, DatabaseError> {
     let statement = format!(
         "
-        SELECT follow_request.id, actor_profile
+        SELECT
+            follow_request.id,
+            {relationship_type}::smallint AS relationship_type,
+            actor_profile
         FROM actor_profile
         JOIN follow_request
         ON (actor_profile.id = follow_request.{source_id})
@@ -597,6 +639,7 @@ pub async fn get_follow_requests_paginated(
         ORDER BY follow_request.id DESC
         LIMIT $4
         ",
+        relationship_type=i16::from(RelationshipType::FollowRequest),
         source_id=match direction {
             FollowRequestDirection::Incoming => "source_id",
             FollowRequestDirection::Outgoing => "target_id",
@@ -876,6 +919,28 @@ mod tests {
         let relationship = &target_relationships[0];
         assert_eq!(relationship.source_id, source.id);
         assert_eq!(relationship.target_id, target.id);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_related_combined() {
+        let db_client = &mut create_test_database().await;
+        let source = create_test_user(db_client, "source").await;
+        let target = create_test_user(db_client, "target").await;
+        create_relationship(
+            db_client,
+            source.id,
+            target.id,
+            RelationshipType::GroupAdmin,
+        ).await.unwrap();
+        let related_profiles = get_related_combined(
+            db_client,
+            source.id,
+            &[RelationshipType::GroupAdmin],
+            true,
+        ).await.unwrap();
+        assert_eq!(related_profiles.len(), 1);
+        assert_eq!(related_profiles[0].profile.id, target.id);
     }
 
     #[tokio::test]

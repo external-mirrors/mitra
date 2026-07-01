@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added API endpoint for deleting groups.
 - Added API endpoints for editing group info.
 - Added `group` field to `Status` Mastodon API entity.
+- Implemented FEP-5219 `affiliations` collection.
 
 ### Changed
 

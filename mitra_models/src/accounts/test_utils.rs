@@ -72,12 +72,13 @@ impl User {
 
 impl AutomatedAccountDetailed {
     pub fn group_for_test() -> Self {
+        let profile = DbActorProfile {
+            actor_type: ActorType::Group,
+            ..DbActorProfile::local_for_test("group")
+        };
         Self {
-            id: Default::default(),
-            profile: DbActorProfile {
-                actor_type: ActorType::Group,
-                ..DbActorProfile::local_for_test("group")
-            },
+            id: profile.id,
+            profile,
             account_type: AutomatedAccountType::Group,
             rsa_secret_key: generate_weak_rsa_key().unwrap(),
             ed25519_secret_key: generate_weak_ed25519_key(),

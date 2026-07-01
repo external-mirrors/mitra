@@ -26,6 +26,8 @@ use crate::{
     utils::parse_id_from_db_lenient,
 };
 
+pub struct IdPath(String);
+
 pub fn local_actor_id_canonical(
     authority_root: &AuthorityRoot,
     internal_id: Uuid,
@@ -143,6 +145,12 @@ pub fn local_conversation_history_collection(
         "{}/history",
         local_conversation_collection(authority, conversation_id),
     )
+}
+
+pub fn local_affiliations_collection_path(
+    internal_actor_id: Uuid,
+) -> IdPath {
+    IdPath(format!("/ap/actors/{internal_actor_id}/affiliations"))
 }
 
 pub fn local_activity_id_canonical(
@@ -386,6 +394,29 @@ impl IdBuilder {
         Self { http_base_uri, prefer_compatible }
     }
 
+    pub fn for_profile(
+        authority: &Authority,
+        profile: &DbActorProfile,
+    ) -> Self {
+        let local_builder = authority.id_builder();
+        match profile.actor_json {
+            Some(ref actor_data) => {
+                let maybe_gateway = actor_data
+                    .gateways
+                    .first()
+                    .map(|gateway| {
+                        HttpUri::parse(gateway)
+                            .expect("gateway URI should be valid")
+                    });
+                Self {
+                    http_base_uri: maybe_gateway,
+                    prefer_compatible: local_builder.prefer_compatible,
+                }
+            },
+            None => local_builder,
+        }
+    }
+
     pub fn build(&self, canonical_id: &CanonicalUri) -> NonCanonicalUri {
         match canonical_id {
             CanonicalUri::Http(http_uri) =>
@@ -399,6 +430,17 @@ impl IdBuilder {
                 NonCanonicalUri::Ap((maybe_gateway, ap_uri.clone()))
             },
         }
+    }
+
+    pub(super) fn build_from_path(
+        &self,
+        authority_root: &AuthorityRoot,
+        path: IdPath,
+    ) -> NonCanonicalUri {
+        let canonical_id = format!("{}{}", authority_root, path.0);
+        let canonical_id = CanonicalUri::parse_canonical(&canonical_id)
+            .expect("URI should be valid");
+        self.build(&canonical_id)
     }
 
     pub fn build_unchecked(&self, canonical_id: &str) -> NonCanonicalUri {
@@ -752,6 +794,38 @@ mod tests {
         assert_eq!(
             output.to_string(),
             "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        );
+    }
+
+    #[test]
+    fn test_id_builder_for_profile() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
+        let actor_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let profile = DbActorProfile::remote_for_test_with_data(
+            "test",
+            DbActor {
+                id: actor_id.to_string(),
+                gateways: vec!["https://remote.example".to_string()],
+                ..Default::default()
+            },
+        );
+        let id_builder = IdBuilder::for_profile(&authority, &profile);
+        let output = id_builder.build_unchecked(actor_id);
+        assert_eq!(
+            output.to_string(),
+            "https://remote.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        );
+    }
+
+    #[test]
+    fn test_id_builder_http_from_path() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
+        let path = IdPath("/objects/1".to_owned());
+        let id_builder = IdBuilder::new(None, true);
+        let output = id_builder.build_from_path(authority.root(), path);
+        assert_eq!(
+            output.to_string(),
+            "https://social.example/objects/1",
         );
     }
 }

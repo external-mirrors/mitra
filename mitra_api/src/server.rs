@@ -139,6 +139,7 @@ pub async fn run_server(
             ))
             .service(metrics_api_scope(config.metrics.is_some()))
             .service(webfinger::webfinger_view)
+            .service(activitypub::activitypub_scope())
             .service(activitypub::actor_scope())
             .service(activitypub::instance_actor_scope())
             .service(activitypub::object_view)
