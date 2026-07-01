@@ -2,10 +2,16 @@
 //!
 //! <https://github.com/multiformats/multibase>
 use bs58;
+use base64ct::{
+    Base64UrlUnpadded,
+    Encoding,
+    Error as Base64Error,
+};
 use thiserror::Error;
 
 // https://github.com/multiformats/multibase#multibase-table
 const BASE_58_BTC_PREFIX: &str = "z";
+const BASE_64_URL_NO_PAD_PREFIX: &str = "u";
 
 /// Multibase encodings
 pub enum Multibase {
@@ -13,6 +19,8 @@ pub enum Multibase {
     ///
     /// **This encoding is not constant-time**.
     Base58Btc,
+    /// `base-64-url-no-pad` alphabet.
+    Base64UrlNoPad,
 }
 
 /// Errors that may occur when decoding multibase strings
@@ -25,7 +33,10 @@ pub enum MultibaseError {
     UnknownBase,
 
     #[error(transparent)]
-    DecodeError(#[from] bs58::decode::Error),
+    Base58Error(#[from] bs58::decode::Error),
+
+    #[error(transparent)]
+    Base64Error(#[from] Base64Error),
 }
 
 impl Multibase {
@@ -37,6 +48,10 @@ impl Multibase {
                     .with_alphabet(bs58::Alphabet::BITCOIN)
                     .into_string();
                 format!("{BASE_58_BTC_PREFIX}{encoded}")
+            },
+            Self::Base64UrlNoPad => {
+                let encoded = Base64UrlUnpadded::encode_string(value);
+                format!("{BASE_64_URL_NO_PAD_PREFIX}{encoded}")
             },
         }
     }
@@ -52,6 +67,10 @@ impl Multibase {
                     .with_alphabet(bs58::Alphabet::BITCOIN)
                     .into_vec()?;
                 (Self::Base58Btc, data)
+            },
+            BASE_64_URL_NO_PAD_PREFIX => {
+                let data = Base64UrlUnpadded::decode_vec(encoded_data)?;
+                (Self::Base64UrlNoPad, data)
             },
             _ => return Err(MultibaseError::UnknownBase),
         };
@@ -97,6 +116,9 @@ mod tests {
         assert_eq!(result, "z117paNL19xttacUY");
         let result = encode_multibase_base58btc("yes mani !".as_bytes());
         assert_eq!(result, "z7paNL19xttacUY");
+
+        let result = Multibase::Base64UrlNoPad.encode("yes mani !".as_bytes());
+        assert_eq!(result, "ueWVzIG1hbmkgIQ");
     }
 
     #[test]
@@ -104,6 +126,14 @@ mod tests {
         let value = [1; 20];
         let encoded = encode_multibase_base58btc(&value);
         let decoded = decode_multibase_base58btc(&encoded).unwrap();
+        assert_eq!(decoded, value);
+    }
+
+    #[test]
+    fn test_base64_url_nopad_encode_decode() {
+        let value = [1; 20];
+        let encoded = Multibase::Base64UrlNoPad.encode(&value);
+        let decoded = Multibase::Base64UrlNoPad.decode_exact(&encoded).unwrap();
         assert_eq!(decoded, value);
     }
 }

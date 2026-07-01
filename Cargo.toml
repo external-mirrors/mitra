@@ -71,6 +71,7 @@ extend-ignore-re = [
     # Multiformats
     "zQm\\w+",
     "z2H\\w+",
+    "ueWVzIG1hbmkgIQ",
 ]
 extend-ignore-identifiers-re = [
     "^inport$",

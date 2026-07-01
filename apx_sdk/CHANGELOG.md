@@ -11,11 +11,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `NonCanonicalUri` type to `url::canonical` module.
 - Accept 'ap' URIs with `ap+ef61` scheme.
 - Added `Multibase` type to `multibase` module.
+- Implemented `base64-url-no-pad` multibase encoding.
 
 ### Changed
 
 - Changed MSRV to 1.85.0.
 - Changed Rust edition to 2024.
+- Added `Base64Error` variant to `MultibaseError` enum and renamed `DecodeError` to `Base58Error`.
 
 ### Deprecated
 
