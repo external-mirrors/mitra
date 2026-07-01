@@ -1,6 +1,7 @@
 //! Verify JSON signatures
 use std::fmt;
 
+use chrono::{DateTime, Utc};
 use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
@@ -98,6 +99,7 @@ pub struct JsonSignatureData {
     pub object: JsonValue,
     pub proof_config: JsonValue,
     pub signature: Vec<u8>,
+    pub expires_at: Option<DateTime<Utc>>,
 }
 
 /// Errors that may occur during the verification of a JSON signature
@@ -173,6 +175,7 @@ pub fn get_json_signature(
         object,
         proof_config: proof,
         signature,
+        expires_at: proof_config.expires,
     };
     Ok(signature_data)
 }
@@ -231,7 +234,7 @@ pub fn verify_blake2_ed25519_json_signature(
 
 #[cfg(test)]
 mod tests {
-    use chrono::{DateTime, Utc};
+    use chrono::{DateTime, TimeZone, Utc};
     use serde_json::json;
     use crate::{
         crypto::{
@@ -302,6 +305,28 @@ mod tests {
         };
         assert_eq!(did_url.did(), &expected_did);
         assert_eq!(signature_data.signature, [171, 205]);
+    }
+
+    #[test]
+    fn test_get_json_signature_expired() {
+        let signed_object = json!({
+            "type": "Test",
+            "id": "https://server.example/objects/1",
+            "proof": {
+                "type": "DataIntegrityProof",
+                "cryptosuite": "eddsa-jcs-2022",
+                "verificationMethod": "https://server.example/users/alice#ed25519-key",
+                "proofPurpose": "assertionMethod",
+                "proofValue": "zE5J",
+                "created": "2026-01-01T00:00:00Z",
+                "expires": "2026-06-01T00:00:00Z",
+            },
+        });
+        let signature_data = get_json_signature(&signed_object).unwrap();
+        assert_eq!(
+            signature_data.expires_at.unwrap(),
+            Utc.with_ymd_and_hms(2026, 6, 1, 0, 0, 0).unwrap(),
+        );
     }
 
     #[test]

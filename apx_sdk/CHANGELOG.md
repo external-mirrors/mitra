@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Accept 'ap' URIs with `ap+ef61` scheme.
 - Added `Multibase` type to `multibase` module.
 - Implemented `base64-url-no-pad` multibase encoding.
+- Parse `expires` attribute of integrity proof.
 
 ### Changed
 

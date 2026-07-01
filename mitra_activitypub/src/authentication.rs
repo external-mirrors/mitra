@@ -48,6 +48,7 @@ use apx_sdk::{
         CoreType,
     },
 };
+use chrono::Utc;
 use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
@@ -322,6 +323,9 @@ pub async fn verify_signed_object(
             return Err(AuthenticationError::NoJsonSignature);
         },
         Err(other_error) => return Err(other_error.into()),
+    };
+    if signature_data.expires_at.is_some_and(|exp| exp < Utc::now()) {
+        log::warn!("integrity proof has expired");
     };
 
     let signer = match signature_data.verification_method {

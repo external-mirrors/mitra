@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed MSRV to 1.85.0.
 - Changed Rust edition to 2024.
 - Allowed implicit lists in query parameters.
+- Write warning to log when processing expired integrity proof.
 
 ## [5.6.0] - 2026-06-26
 
