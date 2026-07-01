@@ -24,7 +24,7 @@ use crate::{
         canonicalize_object,
         CanonicalizationError,
     },
-    multibase::encode_multibase_base58btc,
+    multibase::Multibase,
 };
 
 use super::proofs::{
@@ -111,7 +111,7 @@ impl IntegrityProof {
     ) -> Self {
         Self {
             proof_config,
-            proof_value: encode_multibase_base58btc(signature),
+            proof_value: Multibase::Base58Btc.encode(signature),
         }
     }
 

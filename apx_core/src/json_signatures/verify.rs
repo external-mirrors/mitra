@@ -14,7 +14,7 @@ use crate::{
         canonicalize_object,
         CanonicalizationError,
     },
-    multibase::{decode_multibase_base58btc, MultibaseError},
+    multibase::{Multibase, MultibaseError},
     url::{
         ap_uri::{is_ap_uri, ApUri},
         common::Origin,
@@ -166,7 +166,7 @@ pub fn get_json_signature(
     };
     let verification_method = VerificationMethod::parse(&proof_config.verification_method)
         .map_err(VerificationError::InvalidProof)?;
-    let signature = decode_multibase_base58btc(&proof_value)?;
+    let signature = Multibase::Base58Btc.decode_exact(&proof_value)?;
     let signature_data = JsonSignatureData {
         proof_type,
         verification_method,

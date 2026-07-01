@@ -88,12 +88,14 @@ impl Multibase {
 }
 
 /// Decodes multibase base58 (bitcoin) value
+#[deprecated]
 pub fn decode_multibase_base58btc(value: &str)
     -> Result<Vec<u8>, MultibaseError>
 {
     Multibase::Base58Btc.decode_exact(value)
 }
 
+#[deprecated]
 pub fn encode_multibase_base58btc(value: &[u8]) -> String {
     Multibase::Base58Btc.encode(value)
 }
@@ -105,16 +107,16 @@ mod tests {
     #[test]
     fn multibase_test_vectors() {
         // https://github.com/multiformats/multibase/tree/master/tests
-        let result = encode_multibase_base58btc("yes mani !".as_bytes());
+        let result = Multibase::Base58Btc.encode("yes mani !".as_bytes());
         assert_eq!(result, "z7paNL19xttacUY");
-        let value = decode_multibase_base58btc("z7paNL19xttacUY").unwrap();
+        let value = Multibase::Base58Btc.decode_exact("z7paNL19xttacUY").unwrap();
         assert_eq!(value, "yes mani !".as_bytes());
 
-        let result = encode_multibase_base58btc("\x00yes mani !".as_bytes());
+        let result = Multibase::Base58Btc.encode("\x00yes mani !".as_bytes());
         assert_eq!(result, "z17paNL19xttacUY");
-        let result = encode_multibase_base58btc("\x00\x00yes mani !".as_bytes());
+        let result = Multibase::Base58Btc.encode("\x00\x00yes mani !".as_bytes());
         assert_eq!(result, "z117paNL19xttacUY");
-        let result = encode_multibase_base58btc("yes mani !".as_bytes());
+        let result = Multibase::Base58Btc.encode("yes mani !".as_bytes());
         assert_eq!(result, "z7paNL19xttacUY");
 
         let result = Multibase::Base64UrlNoPad.encode("yes mani !".as_bytes());
@@ -124,8 +126,8 @@ mod tests {
     #[test]
     fn test_base58btc_encode_decode() {
         let value = [1; 20];
-        let encoded = encode_multibase_base58btc(&value);
-        let decoded = decode_multibase_base58btc(&encoded).unwrap();
+        let encoded = Multibase::Base58Btc.encode(&value);
+        let decoded = Multibase::Base58Btc.decode_exact(&encoded).unwrap();
         assert_eq!(decoded, value);
     }
 
