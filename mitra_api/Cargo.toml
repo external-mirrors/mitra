@@ -22,7 +22,7 @@ actix-web = { version = "~4.11.0", default-features = false, features = ["compat
 # Used for working with dates
 chrono = { version = "0.4.34", default-features = false, features = ["std", "serde"] }
 # Used to parse emoji shortcodes
-emojis = "0.6.1"
+emojis = "0.8.2"
 # Used to work with hexadecimal strings
 hex = { version = "0.4.3" }
 # Provides order-preserving map

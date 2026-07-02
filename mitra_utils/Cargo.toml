@@ -10,8 +10,8 @@ publish.workspace = true
 
 [dependencies]
 # Used for HTML sanitization
-ammonia = "4.1.0"
-  html5ever = "0.35.0"
+ammonia = "4.1.3"
+  html5ever = "0.39.0"
 # Used to generate identicons
 eth-blockies = "1.1.0"
 # Used for working with dates
@@ -19,7 +19,7 @@ chrono = { version = "0.4.34", default-features = false, features = ["std", "clo
 # Used for parsing markdown
 comrak = { version = "0.40.0", default-features = false, features = ["bon"] }
 # Used for extracting text from HTML
-html2text = "0.15.5"
+html2text = "0.17.0"
 # ISO 639 language codes
 isolang = { version = "2.4.0", default-features = false }
 # Used to determine file extension
