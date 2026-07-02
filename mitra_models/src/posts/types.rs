@@ -252,7 +252,7 @@ pub struct PostDetailed {
     pub conversation: Option<Conversation>,
     pub in_reply_to_id: Option<Uuid>,
     pub repost_of_id: Option<Uuid>,
-    pub group_id: Option<Uuid>,
+    pub group: Option<DbActorProfile>,
     pub visibility: Visibility,
     pub is_sensitive: bool,
     pub is_pinned: bool,
@@ -286,6 +286,7 @@ impl PostDetailed {
         db_post: Post,
         db_author: DbActorProfile,
         maybe_conversation: Option<Conversation>,
+        maybe_group: Option<DbActorProfile>,
         maybe_poll: Option<Poll>,
         db_attachments: Vec<MediaAttachment>,
         db_mentions: Vec<DbActorProfile>,
@@ -354,6 +355,9 @@ impl PostDetailed {
         } else if maybe_conversation.is_some() {
             return Err(DatabaseTypeError);
         };
+        if db_post.group_id != maybe_group.as_ref().map(|group| group.id) {
+            return Err(DatabaseTypeError);
+        };
         if let Some(ref poll) = maybe_poll {
             if poll.id != db_post.id {
                 return Err(DatabaseTypeError);
@@ -378,7 +382,7 @@ impl PostDetailed {
             conversation: maybe_conversation,
             in_reply_to_id: db_post.in_reply_to_id,
             repost_of_id: db_post.repost_of_id,
-            group_id: db_post.group_id,
+            group: maybe_group,
             visibility: db_post.visibility,
             is_sensitive: db_post.is_sensitive,
             is_pinned: db_post.is_pinned,
@@ -477,7 +481,7 @@ impl Default for PostDetailed {
             conversation: Some(Conversation::for_test(post_id)),
             in_reply_to_id: None,
             repost_of_id: None,
-            group_id: None,
+            group: None,
             visibility: Visibility::Public,
             is_sensitive: false,
             is_pinned: false,
@@ -511,6 +515,7 @@ impl TryFrom<&Row> for PostDetailed {
         let db_profile: DbActorProfile = row.try_get("post_author")?;
         // Data from subqueries
         let maybe_conversation: Option<Conversation> = row.try_get("conversation")?;
+        let maybe_group: Option<DbActorProfile> = row.try_get("group")?;
         let maybe_poll: Option<Poll> = row.try_get("poll")?;
         let db_attachments: Vec<MediaAttachment> = row.try_get("attachments")?;
         let db_mentions: Vec<DbActorProfile> = row.try_get("mentions")?;
@@ -522,6 +527,7 @@ impl TryFrom<&Row> for PostDetailed {
             db_post,
             db_profile,
             maybe_conversation,
+            maybe_group,
             maybe_poll,
             db_attachments,
             db_mentions,

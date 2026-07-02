@@ -1148,12 +1148,45 @@ paths:
                 $ref: '#/components/schemas/Relationship'
         404:
           description: Follow request not found
+  /api/v1/groups:
+    post:
+      summary: Create a group
+      security:
+        - tokenAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  description: The name of the group
+                  type: string
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        400:
+          description: Invalid group info
   /api/v1/groups/followed:
     get:
       summary: List groups followed by the user.
       security:
         - tokenAuth: []
       parameters:
+        - name: filter
+          in: query
+          description: The kind of relationship to a group.
+          required: false
+          schema:
+            type: string
+            enum:
+              - following
+              - moderating
+            default: following
         - name: offset
           in: query
           description: How many groups to skip before returning results.
@@ -3220,6 +3253,10 @@ components:
             - only_contacts
         bot:
           description: Indicates that the account may perform automated actions, may not be monitored, or identifies as a robot.
+          type: boolean
+          example: false
+        is_group:
+          description: Indicates that the account is a group.
           type: boolean
           example: false
         discoverable:

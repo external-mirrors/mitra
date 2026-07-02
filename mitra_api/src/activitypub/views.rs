@@ -93,6 +93,7 @@ use mitra_config::Config;
 use mitra_models::{
     accounts::{
         queries::{
+            get_managed_account_by_username,
             get_portable_user_by_id,
             get_portable_user_by_inbox_id,
             get_portable_user_by_outbox_id,
@@ -173,12 +174,12 @@ async fn actor_view(
     username: web::Path<String>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let user = get_user_by_name(db_client, &username).await?;
+    let account = get_managed_account_by_username(db_client, &username).await?;
     let instance = config.instance();
     if !is_activitypub_request(&header_map_adapter(request.headers())) {
         let page_url = get_profile_page_url(
             instance.uri_str(),
-            &user.profile.username,
+            &account.profile().username,
         );
         let response = HttpResponse::Found()
             .append_header((http_header::LOCATION, page_url))
@@ -190,7 +191,7 @@ async fn actor_view(
     let actor = build_local_actor(
         &authority,
         &media_server,
-        &user,
+        &account,
     ).map_err(|_| DatabaseError::type_error())?;
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
@@ -220,7 +221,7 @@ async fn inbox(
     let activity_digest = ContentDigest::new(&request_body);
     drop(request_body);
 
-    let recipient = match get_user_by_name(
+    let recipient = match get_managed_account_by_username(
         db_client_await!(&db_pool),
         &username,
     ).await {
@@ -235,7 +236,7 @@ async fn inbox(
     };
     let recipient_id = local_actor_id(
         config.instance().uri_str(),
-        &recipient.profile.username,
+        &recipient.profile().username,
     );
     receive_activity(
         &config,

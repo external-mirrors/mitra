@@ -9,14 +9,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Added `NonCanonicalUri` type to `url::canonical` module.
+- Accept 'ap' URIs with `ap+ef61` scheme.
+- Added `Multibase` type to `multibase` module.
+- Implemented `base64-url-no-pad` multibase encoding.
+- Parse `expires` attribute of integrity proof.
 
 ### Changed
 
-- Changed MSRV to 1.82.0.
+- Changed MSRV to 1.85.0.
+- Changed Rust edition to 2024.
+- Added `Base64Error` variant to `MultibaseError` enum and renamed `DecodeError` to `Base58Error`.
 
 ### Deprecated
 
 - Deprecated `parse_url` function.
+- Deprecated `decode_multibase_base58btc` and `encode_multibase_base58btc` functions.
 
 ### Security
 

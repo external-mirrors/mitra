@@ -45,7 +45,7 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
 use mitra_models::{
-    accounts::types::{PortableUser, User},
+    accounts::types::{ManagedAccount, PortableUser},
     profiles::types::{DbActor, PublicKeyType},
 };
 
@@ -119,10 +119,13 @@ pub struct Sender {
 }
 
 impl Sender {
-    pub fn from_user(instance_uri: &str, user: &User) -> Self {
+    pub fn from_account(
+        instance_uri: &str,
+        account: &impl ManagedAccount,
+    ) -> Self {
         let actor_id = local_actor_id(
             instance_uri,
-            &user.profile.username,
+            &account.profile().username,
         );
         let rsa_key_id = local_actor_key_id(
             &actor_id,
@@ -133,9 +136,9 @@ impl Sender {
             PublicKeyType::Ed25519,
         );
         Self {
-            rsa_secret_key: user.rsa_secret_key.clone(),
+            rsa_secret_key: account.rsa_secret_key().clone(),
             rsa_key_id: rsa_key_id,
-            ed25519_secret_key: user.ed25519_secret_key,
+            ed25519_secret_key: account.ed25519_secret_key(),
             ed25519_key_id: ed25519_key_id,
         }
     }

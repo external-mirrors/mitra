@@ -30,6 +30,22 @@ use super::types::{
     RelationshipType,
 };
 
+pub(crate) async fn create_relationship(
+    db_client: &impl DatabaseClient,
+    source_id: Uuid,
+    target_id: Uuid,
+    relationship_type: RelationshipType,
+) -> Result<(), DatabaseError> {
+    db_client.execute(
+        "
+        INSERT INTO relationship (source_id, target_id, relationship_type)
+        VALUES ($1, $2, $3)
+        ",
+        &[&source_id, &target_id, &relationship_type],
+    ).await?;
+    Ok(())
+}
+
 pub async fn get_relationships(
     db_client: &impl DatabaseClient,
     source_id: Uuid,

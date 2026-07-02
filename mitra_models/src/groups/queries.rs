@@ -1,6 +1,18 @@
+use apx_core::crypto::{
+    eddsa::Ed25519SecretKey,
+    rsa::RsaSecretKey,
+};
 use uuid::Uuid;
 
 use crate::{
+    accounts::{
+        queries::create_automated_account,
+        types::{
+            AutomatedAccountData,
+            AutomatedAccountDetailed,
+            AutomatedAccountType,
+        },
+    },
     database::{
         query_macro::query,
         DatabaseClient,
@@ -14,17 +26,52 @@ use crate::{
         },
         types::PostDetailed,
     },
-    profiles::types::DbActorProfile,
-    relationships::types::RelationshipType,
+    profiles::types::{ActorType, DbActorProfile},
+    relationships::{
+        queries::create_relationship,
+        types::RelationshipType,
+    },
 };
 
-pub async fn get_followed_groups(
+use super::types::GroupFilter;
+
+pub async fn create_group(
+    db_client: &mut impl DatabaseClient,
+    owner_id: Uuid,
+    group_name: String,
+    rsa_secret_key: RsaSecretKey,
+    ed25519_secret_key: Ed25519SecretKey,
+) -> Result<AutomatedAccountDetailed, DatabaseError> {
+    let mut transaction = db_client.transaction().await?;
+    let account_data = AutomatedAccountData {
+        username: group_name,
+        account_type: AutomatedAccountType::Group,
+        rsa_secret_key,
+        ed25519_secret_key,
+    };
+    let account =
+        create_automated_account(&mut transaction, account_data).await?;
+    create_relationship(
+        &transaction,
+        owner_id,
+        account.id,
+        RelationshipType::GroupAdmin,
+    ).await?;
+    transaction.commit().await?;
+    Ok(account)
+}
+
+pub async fn get_related_groups(
     db_client: &impl DatabaseClient,
     account_id: Uuid,
+    filter: GroupFilter,
     offset: u16,
     limit: u16,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
-    // TODO: include local groups
+    let relationship_type = match filter {
+        GroupFilter::Following => RelationshipType::Follow,
+        GroupFilter::Moderating => RelationshipType::GroupAdmin,
+    };
     let rows = db_client.query(
         "
         SELECT actor_profile
@@ -39,16 +86,17 @@ pub async fn get_followed_groups(
             LIMIT 1
         ) AS latest_post ON TRUE
         WHERE
-            actor_profile.actor_json ->> 'type' = 'Group'
-            AND relationship.source_id = $1
-            AND relationship.relationship_type = $2
+            actor_profile.actor_type = $1
+            AND relationship.source_id = $2
+            AND relationship.relationship_type = $3
         ORDER BY latest_post.created_at DESC NULLS LAST
-        LIMIT $3
-        OFFSET $4
+        LIMIT $4
+        OFFSET $5
         ",
         &[
+            &ActorType::Group,
             &account_id,
-            &RelationshipType::Follow,
+            &relationship_type,
             &i64::from(limit),
             &i64::from(offset),
         ],
@@ -104,6 +152,10 @@ pub async fn get_group_timeline(
 
 #[cfg(test)]
 mod tests {
+    use apx_core::crypto::{
+        eddsa::generate_weak_ed25519_key,
+        rsa::generate_weak_rsa_key,
+    };
     use serial_test::serial;
     use crate::{
         accounts::test_utils::create_test_user,
@@ -118,9 +170,41 @@ mod tests {
             test_utils::create_test_remote_profile,
             types::ProfileCreateData,
         },
-        relationships::queries::follow,
+        relationships::{
+            queries::{follow, has_relationship},
+            types::RelationshipType,
+        },
     };
     use super::*;
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_group() {
+        let db_client = &mut create_test_database().await;
+        let user = create_test_user(db_client, "user").await;
+        let group_name = "tesgroup";
+        let rsa_secret_key = generate_weak_rsa_key().unwrap();
+        let ed25519_secret_key = generate_weak_ed25519_key();
+        let group = create_group(
+            db_client,
+            user.id,
+            group_name.to_owned(),
+            rsa_secret_key,
+            ed25519_secret_key,
+        ).await.unwrap();
+        assert_eq!(group.account_type, AutomatedAccountType::Group);
+        let profile = group.profile;
+        assert_eq!(profile.automated_account_id.is_some(), true);
+        assert_eq!(profile.is_group(), true);
+        assert_eq!(profile.username, group_name);
+        let is_admin = has_relationship(
+            db_client,
+            user.id,
+            group.id,
+            RelationshipType::GroupAdmin,
+        ).await.unwrap();
+        assert_eq!(is_admin, true);
+    }
 
     #[tokio::test]
     #[serial]
@@ -133,15 +217,15 @@ mod tests {
                 "groups.example",
                 "https://groups.example/123",
             );
-            let actor_data = group_data.actor_json.as_mut().unwrap();
-            actor_data.object_type = "Group".to_owned();
+            group_data.actor_type = ActorType::Group;
             group_data
         };
         let group = create_profile(db_client, group_data).await.unwrap();
         follow(db_client, account.id, group.id).await.unwrap();
-        let groups = get_followed_groups(
+        let groups = get_related_groups(
             db_client,
             account.id,
+            GroupFilter::Following,
             0,
             20,
         ).await.unwrap();
@@ -160,8 +244,7 @@ mod tests {
                 "groups.example",
                 "https://groups.example/123",
             );
-            let actor_data = group_data.actor_json.as_mut().unwrap();
-            actor_data.object_type = "Group".to_owned();
+            group_data.actor_type = ActorType::Group;
             group_data
         };
         let group = create_profile(db_client, group_data).await.unwrap();

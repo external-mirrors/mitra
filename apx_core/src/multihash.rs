@@ -6,8 +6,7 @@ use unsigned_varint;
 
 use crate::{
     multibase::{
-        decode_multibase_base58btc,
-        encode_multibase_base58btc,
+        Multibase,
         MultibaseError,
     },
     multicodec::{
@@ -45,12 +44,12 @@ fn decode_digest(value: &[u8]) -> Result<(usize, Vec<u8>), MulticodecError> {
 pub fn encode_sha256_multihash(digest: [u8; 32]) -> String {
     let digest_sized = encode_digest(&digest);
     let digest_multicode = Multicodec::Sha256.encode(&digest_sized);
-    encode_multibase_base58btc(&digest_multicode)
+    Multibase::Base58Btc.encode(&digest_multicode)
 }
 
 /// Decodes SHA2-256 multihash
 pub fn decode_sha256_multihash(value: &str) -> Result<[u8; 32], MultihashError> {
-    let digest_multicode = decode_multibase_base58btc(value)?;
+    let digest_multicode = Multibase::Base58Btc.decode_exact(value)?;
     let digest_sized = Multicodec::Sha256.decode_exact(&digest_multicode)?;
     let (size, digest) = decode_digest(&digest_sized)?;
     if size != 32 {

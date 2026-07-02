@@ -12,6 +12,8 @@ use thiserror::Error;
 
 use mitra_config::MoneroLightConfig;
 
+const REQUEST_TIMEOUT: u64 = 10;
+
 pub struct LightWalletClient {
     client: LwsRpcClient,
     address: Address,
@@ -33,7 +35,10 @@ impl LightWalletClient {
         address: Address,
         view_key: PrivateKey,
     ) -> Self {
-        let client = LwsRpcClient::new(config.lightwallet_api_url.clone());
+        let client = LwsRpcClient::new_with_timeout(
+            config.lightwallet_api_url.clone(),
+            Some(REQUEST_TIMEOUT),
+        );
         Self { client, address, view_key }
     }
 

@@ -24,7 +24,7 @@ use crate::{
         canonicalize_object,
         CanonicalizationError,
     },
-    multibase::encode_multibase_base58btc,
+    multibase::Multibase,
 };
 
 use super::proofs::{
@@ -53,6 +53,9 @@ pub(super) const PURPOSE_AUTHENTICATION: &str = "authentication";
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IntegrityProofConfig {
+    #[serde(rename = "@context", skip_serializing_if = "Option::is_none")]
+    _context: Option<JsonValue>,
+
     #[serde(rename = "type")]
     pub proof_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -60,8 +63,8 @@ pub struct IntegrityProofConfig {
     pub proof_purpose: String,
     pub verification_method: String,
     pub created: DateTime<Utc>,
-    #[serde(rename = "@context", skip_serializing_if = "Option::is_none")]
-    _context: Option<JsonValue>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires: Option<DateTime<Utc>>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -79,12 +82,13 @@ impl IntegrityProofConfig {
         maybe_proof_context: Option<JsonValue>,
     ) -> Self {
         Self {
+            _context: maybe_proof_context,
             proof_type: DATA_INTEGRITY_PROOF.to_string(),
             cryptosuite: Some(CRYPTOSUITE_JCS_EDDSA.to_string()),
             proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
             verification_method: verification_method.to_string(),
             created: created_at,
-            _context: maybe_proof_context,
+            expires: None,
         }
     }
 
@@ -94,12 +98,13 @@ impl IntegrityProofConfig {
         created_at: DateTime<Utc>,
     ) -> Self {
         Self {
+            _context: None,
             proof_type: DATA_INTEGRITY_PROOF.to_string(),
             cryptosuite: Some(CRYPTOSUITE_JCS_EDDSA_LEGACY.to_string()),
             proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
             verification_method: verification_method.to_string(),
             created: created_at,
-            _context: None,
+            expires: None,
         }
     }
 }
@@ -111,7 +116,7 @@ impl IntegrityProof {
     ) -> Self {
         Self {
             proof_config,
-            proof_value: encode_multibase_base58btc(signature),
+            proof_value: Multibase::Base58Btc.encode(signature),
         }
     }
 
@@ -122,12 +127,13 @@ impl IntegrityProof {
         created_at: DateTime<Utc>,
     ) -> Self {
         let proof_config = IntegrityProofConfig {
+            _context: None,
             proof_type: PROOF_TYPE_JCS_RSA.to_string(),
             cryptosuite: None,
             proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
             verification_method: signer_key_id.to_string(),
             created: created_at,
-            _context: None,
+            expires: None,
         };
         Self::new(proof_config, signature)
     }
@@ -138,12 +144,13 @@ impl IntegrityProof {
         signature: &[u8],
     ) -> Self {
         let proof_config = IntegrityProofConfig {
+            _context: None,
             proof_type: PROOF_TYPE_JCS_EIP191.to_string(),
             cryptosuite: None,
             proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
             verification_method: signer.verification_method_id(),
             created: Utc::now(),
-            _context: None,
+            expires: None,
         };
         Self::new(proof_config, signature)
     }
@@ -154,12 +161,13 @@ impl IntegrityProof {
         signature: &[u8],
     ) -> Self {
         let proof_config = IntegrityProofConfig {
+            _context: None,
             proof_type: PROOF_TYPE_JCS_BLAKE2_ED25519.to_string(),
             cryptosuite: None,
             proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
             verification_method: signer.verification_method_id(),
             created: Utc::now(),
-            _context: None,
+            expires: None,
         };
         Self::new(proof_config, signature)
     }

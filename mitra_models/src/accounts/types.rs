@@ -36,7 +36,11 @@ use crate::{
         DatabaseTypeError,
     },
     posts::types::{DbLanguage, Visibility},
-    profiles::types::{get_identity_key, DbActorProfile},
+    profiles::types::{
+        get_identity_key,
+        ActorType,
+        DbActorProfile,
+    },
 };
 
 #[expect(dead_code)]
@@ -197,7 +201,6 @@ impl Default for SharedClientConfig {
 json_from_sql!(SharedClientConfig);
 json_to_sql!(SharedClientConfig);
 
-#[expect(dead_code)]
 #[derive(FromSql)]
 #[postgres(name = "user_account")]
 pub struct DbUser {
@@ -207,10 +210,12 @@ pub struct DbUser {
     login_address_monero: Option<String>,
     rsa_private_key: String,
     ed25519_private_key: Vec<u8>,
+    #[expect(dead_code)]
     invite_code: Option<String>,
     user_role: Role,
     client_config: DbClientConfig,
     shared_client_config: SharedClientConfig,
+    #[expect(dead_code)]
     created_at: DateTime<Utc>,
 }
 
@@ -379,11 +384,12 @@ impl Default for UserCreateData {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AutomatedAccountType {
     Application,
     Relay,
     Anonymous,
+    Group,
 }
 
 impl From<AutomatedAccountType> for i16 {
@@ -392,6 +398,7 @@ impl From<AutomatedAccountType> for i16 {
             AutomatedAccountType::Application => 1,
             AutomatedAccountType::Relay => 2,
             AutomatedAccountType::Anonymous => 3,
+            AutomatedAccountType::Group => 4,
         }
     }
 }
@@ -404,6 +411,7 @@ impl TryFrom<i16> for AutomatedAccountType {
             1 => Self::Application,
             2 => Self::Relay,
             3 => Self::Anonymous,
+            4 => Self::Group,
             _ => return Err(DatabaseTypeError),
         };
         Ok(account_type)
@@ -413,11 +421,149 @@ impl TryFrom<i16> for AutomatedAccountType {
 int_enum_from_sql!(AutomatedAccountType);
 int_enum_to_sql!(AutomatedAccountType);
 
+#[derive(FromSql)]
+#[postgres(name = "automated_account")]
+pub struct AutomatedAccount {
+    id: Uuid,
+    account_type: AutomatedAccountType,
+    rsa_secret_key: Vec<u8>,
+    ed25519_secret_key: Vec<u8>,
+    #[expect(dead_code)]
+    created_at: DateTime<Utc>,
+}
+
+pub struct AutomatedAccountDetailed {
+    pub id: Uuid,
+    pub profile: DbActorProfile,
+    pub account_type: AutomatedAccountType,
+    pub rsa_secret_key: RsaSecretKey,
+    pub ed25519_secret_key: Ed25519SecretKey,
+}
+
+impl AutomatedAccountDetailed {
+    pub fn new(
+        db_account: AutomatedAccount,
+        db_profile: DbActorProfile,
+    ) -> Result<Self, DatabaseTypeError> {
+        db_profile.check_consistency()?;
+        if db_account.id != db_profile.id {
+            return Err(DatabaseTypeError);
+        };
+        if db_profile.automated_account_id != Some(db_account.id) {
+            return Err(DatabaseTypeError);
+        };
+        match db_account.account_type {
+            AutomatedAccountType::Group => {
+                if db_profile.actor_type != ActorType::Group {
+                    return Err(DatabaseTypeError);
+                };
+            },
+            _ => {
+                if db_profile.actor_type != ActorType::Automated {
+                    return Err(DatabaseTypeError);
+                };
+            },
+        };
+        let rsa_secret_key =
+            rsa_secret_key_from_pkcs1_der(&db_account.rsa_secret_key)
+                .map_err(|_| DatabaseTypeError)?;
+        let ed25519_secret_key =
+            ed25519_secret_key_from_bytes(&db_account.ed25519_secret_key)
+                .map_err(|_| DatabaseTypeError)?;
+        let account = Self {
+            id: db_account.id,
+            profile: db_profile,
+            account_type: db_account.account_type,
+            rsa_secret_key,
+            ed25519_secret_key,
+        };
+        Ok(account)
+    }
+}
+
 pub struct AutomatedAccountData {
     pub username: String,
     pub account_type: AutomatedAccountType,
     pub rsa_secret_key: RsaSecretKey,
     pub ed25519_secret_key: Ed25519SecretKey,
+}
+
+pub trait ManagedAccount {
+    fn profile(&self) -> &DbActorProfile;
+    fn rsa_secret_key(&self) -> &RsaSecretKey;
+    fn ed25519_secret_key(&self) -> Ed25519SecretKey;
+
+    fn id(&self) -> Uuid {
+        self.profile().id
+    }
+}
+
+impl ManagedAccount for User {
+    fn profile(&self) -> &DbActorProfile {
+        &self.profile
+    }
+
+    fn rsa_secret_key(&self) -> &RsaSecretKey {
+        &self.rsa_secret_key
+    }
+
+    fn ed25519_secret_key(&self) -> Ed25519SecretKey {
+        self.ed25519_secret_key
+    }
+}
+
+impl ManagedAccount for AutomatedAccountDetailed {
+    fn profile(&self) -> &DbActorProfile {
+        &self.profile
+    }
+
+    fn rsa_secret_key(&self) -> &RsaSecretKey {
+        &self.rsa_secret_key
+    }
+
+    fn ed25519_secret_key(&self) -> Ed25519SecretKey {
+        self.ed25519_secret_key
+    }
+}
+
+// `Send` is required for using the box in async functions
+pub type BoxedManagedAccount = Box<dyn ManagedAccount + Send>;
+
+impl TryFrom<&Row> for BoxedManagedAccount {
+
+    type Error = DatabaseError;
+
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        let profile: DbActorProfile = row.try_get("actor_profile")?;
+        let maybe_user_account: Option<DbUser> =
+            row.try_get("user_account")?;
+        let maybe_automated_account: Option<AutomatedAccount> =
+            row.try_get("automated_account")?;
+        let account: Box<dyn ManagedAccount + Send> = if let Some(user_account) = maybe_user_account {
+            let account = User::new(user_account, profile)?;
+            Box::new(account)
+        } else if let Some(automated_account) = maybe_automated_account {
+            let account = AutomatedAccountDetailed::new(automated_account, profile)?;
+            Box::new(account)
+        } else {
+            return Err(DatabaseError::NotFound("account"));
+        };
+        Ok(account)
+    }
+}
+
+impl ManagedAccount for BoxedManagedAccount {
+    fn profile(&self) -> &DbActorProfile {
+        (**self).profile()
+    }
+
+    fn rsa_secret_key(&self) -> &RsaSecretKey {
+        (**self).rsa_secret_key()
+    }
+
+    fn ed25519_secret_key(&self) -> Ed25519SecretKey {
+        (**self).ed25519_secret_key()
+    }
 }
 
 #[derive(FromSql)]

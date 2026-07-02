@@ -88,10 +88,8 @@ fn is_safe_addr(ip_addr: IpAddr) -> bool {
     let is_unsafe_ipv6 = |addr: Ipv6Addr| {
         addr.is_loopback()
         || addr.is_unspecified()
-        // is_unicast_link_local (Rust 1.84)
-        || (addr.segments()[0] & 0xffc0) == 0xfe80
-        // is_unique_local (Rust 1.84)
-        || (addr.segments()[0] & 0xfe00) == 0xfc00
+        || addr.is_unicast_link_local()
+        || addr.is_unique_local()
         // is_benchmarking (Rust Unstable)
         || ((addr.segments()[0] == 0x2001) && (addr.segments()[1] == 0x2) && (addr.segments()[2] == 0))
     };

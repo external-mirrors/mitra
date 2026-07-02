@@ -72,7 +72,6 @@ struct Accept {
     actor: String,
     #[serde(deserialize_with = "deserialize_into_object_id")]
     object: String,
-    result: Option<JsonValue>,
 }
 
 pub async fn handle_accept(
@@ -80,12 +79,12 @@ pub async fn handle_accept(
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
+    if activity["result"].as_object().is_some() {
+        // Accept(Offer)
+        return handle_accept_offer(ap_client, db_pool, activity).await;
+    };
     let accept: Accept = serde_json::from_value(activity)?;
     let db_client = &mut **get_database_client(db_pool).await?;
-    if accept.result.is_some() {
-        // Accept(Offer)
-        return handle_accept_offer(ap_client, db_client, accept).await;
-    };
     // Accept(Follow)
     let canonical_actor_id = canonicalize_id(&accept.actor)?;
     let actor_profile = get_remote_profile_by_actor_id(
@@ -118,11 +117,23 @@ pub async fn handle_accept(
     Ok(Some(Descriptor::object(FOLLOW)))
 }
 
-async fn handle_accept_offer(
+#[derive(Deserialize)]
+struct AcceptOffer {
+    #[serde(deserialize_with = "deserialize_into_object_id")]
+    actor: String,
+    #[serde(deserialize_with = "deserialize_into_object_id")]
+    object: String,
+
+    result: Agreement,
+}
+
+pub async fn handle_accept_offer(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
-    accept: Accept,
+    db_pool: &DatabaseConnectionPool,
+    activity: JsonValue,
 ) -> HandlerResult {
+    let accept: AcceptOffer = serde_json::from_value(activity)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
         &accept.actor,
@@ -137,8 +148,7 @@ async fn handle_accept_offer(
     if invoice.recipient_id != actor_profile.id {
         return Err(ValidationError("actor is not a recipient").into());
     };
-    let agreement_value = accept.result.expect("result should be present");
-    let agreement: Agreement = serde_json::from_value(agreement_value)?;
+    let agreement = accept.result;
     let agreement_id = agreement.id.as_ref()
         .ok_or(ValidationError("missing 'id' field"))?;
     let invoice_amount: i64 = agreement.reciprocal_commitment()

@@ -2,7 +2,7 @@ use serde::Serialize;
 
 use mitra_config::Instance;
 use mitra_models::{
-    accounts::types::User,
+    accounts::types::ManagedAccount,
     database::DatabaseError,
     profiles::types::{DbActor, DbActorProfile},
 };
@@ -61,7 +61,7 @@ pub fn build_accept_follow(
 
 pub fn prepare_accept_follow(
     instance: &Instance,
-    sender: &User,
+    sender: &impl ManagedAccount,
     source_actor: &DbActor,
     follow_activity_id: &str,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
@@ -73,7 +73,7 @@ pub fn prepare_accept_follow(
     )?;
     let activity = build_accept_follow(
         &authority,
-        &sender.profile,
+        sender.profile(),
         &source_actor_id,
         &follow_activity_id,
     );

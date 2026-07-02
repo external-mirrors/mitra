@@ -8,8 +8,13 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
 use mitra_models::{
-    accounts::types::User,
-    profiles::types::{DbActor, DbActorProfile, IdentityProofType},
+    accounts::types::ManagedAccount,
+    profiles::types::{
+        ActorType,
+        DbActor,
+        DbActorProfile,
+        IdentityProofType,
+    },
 };
 use mitra_services::media::MediaServer;
 
@@ -33,7 +38,13 @@ use crate::{
         LocalActorCollection,
     },
     keys::{Multikey, PublicKeyPem},
-    vocabulary::{APPLICATION, IMAGE, PERSON, SERVICE},
+    vocabulary::{
+        APPLICATION,
+        GROUP,
+        IMAGE,
+        PERSON,
+        SERVICE,
+    },
 };
 
 use super::attachments::{
@@ -214,10 +225,10 @@ pub(crate) fn local_actor_data(
         profile.id,
         &profile.username,
     ).to_string();
-    let actor_type = if profile.is_automated {
-        SERVICE
-    } else {
-        PERSON
+    let actor_type = match profile.actor_type {
+        ActorType::Automated => SERVICE,
+        ActorType::Group => GROUP,
+        _ => PERSON,
     };
     // TODO: replace all String fields with CanonicalUri
     DbActor {
@@ -239,25 +250,25 @@ pub(crate) fn local_actor_data(
 pub fn build_local_actor(
     authority: &Authority,
     media_server: &MediaServer,
-    user: &User,
+    account: &impl ManagedAccount,
 ) -> Result<Actor, KeySerializationError> {
     let id_builder = authority.id_builder();
     let server_uri = authority.expect_server_uri();
-    let username = &user.profile.username;
-    let actor_data = local_actor_data(authority.root(), &user.profile);
+    let profile = account.profile();
+    let actor_data = local_actor_data(authority.root(), profile);
     let actor_id = id_builder.build_string_unchecked(&actor_data.id);
     // TODO: add to actor data?
     let following = LocalActorCollection::Following.of(&actor_data.id);
 
     #[cfg(not(feature = "mini"))]
     let public_key_pem =
-        PublicKeyPem::new_local(&actor_id, &user.rsa_secret_key)?;
+        PublicKeyPem::new_local(&actor_id, account.rsa_secret_key())?;
     #[cfg(not(feature = "mini"))]
     let maybe_public_key_pem = Some(public_key_pem);
     #[cfg(not(feature = "mini"))]
     let verification_methods = vec![
-        Multikey::new_rsa_local(&actor_id, &user.rsa_secret_key)?,
-        Multikey::new_ed25519_local(&actor_id, &user.ed25519_secret_key)?,
+        Multikey::new_rsa_local(&actor_id, account.rsa_secret_key())?,
+        Multikey::new_ed25519_local(&actor_id, &account.ed25519_secret_key())?,
     ];
 
     #[cfg(feature = "mini")]
@@ -268,16 +279,16 @@ pub fn build_local_actor(
         Multikey::new(
             format!("{}#main-key", actor_data.id),
             id_builder.build_string_unchecked(&actor_data.id),
-            PublicKey::Rsa(RsaPublicKey::from(&user.rsa_secret_key)),
+            PublicKey::Rsa(RsaPublicKey::from(account.rsa_secret_key())),
         )?,
         Multikey::new(
             format!("{}#ed25519-key", actor_data.id),
             id_builder.build_string_unchecked(&actor_data.id),
-            PublicKey::Ed25519(ed25519_public_key_from_secret_key(&user.ed25519_secret_key)),
+            PublicKey::Ed25519(ed25519_public_key_from_secret_key(&account.ed25519_secret_key())),
         )?,
     ];
     #[cfg(feature = "mini")]
-    if let Some(gateway_rsa_actor_key) = user.profile.public_keys.inner()
+    if let Some(gateway_rsa_actor_key) = profile.public_keys.inner()
         .iter()
         .find(|db_key| db_key.key_type == PublicKeyType::RsaPkcs1)
     {
@@ -298,7 +309,7 @@ pub fn build_local_actor(
         verification_methods.push(multikey_gateway_rsa);
     };
     #[cfg(feature = "mini")]
-    if let Some(gateway_ed25519_actor_key) = user.profile.public_keys.inner()
+    if let Some(gateway_ed25519_actor_key) = profile.public_keys.inner()
         .iter()
         .find(|db_key| db_key.key_type == PublicKeyType::Ed25519)
     {
@@ -312,7 +323,7 @@ pub fn build_local_actor(
         verification_methods.push(multikey_gateway_ed25519);
     };
 
-    let avatar = match &user.profile.avatar {
+    let avatar = match &profile.avatar {
         Some(image) => {
             // Media is expected to be local (verified on database read)
             let file_info = image.expect_file_info();
@@ -325,7 +336,7 @@ pub fn build_local_actor(
         },
         None => None,
     };
-    let banner = match &user.profile.banner {
+    let banner = match &profile.banner {
         Some(image) => {
             let file_info = image.expect_file_info();
             let actor_image = ActorImage {
@@ -338,7 +349,7 @@ pub fn build_local_actor(
         None => None,
     };
     let mut attachments = vec![];
-    for proof in user.profile.identity_proofs.clone().into_inner() {
+    for proof in profile.identity_proofs.clone().into_inner() {
         let attachment_value = match proof.proof_type {
             IdentityProofType::LegacyEip191IdentityProof |
                 IdentityProofType::LegacyMinisignIdentityProof =>
@@ -350,34 +361,34 @@ pub fn build_local_actor(
         };
         attachments.push(attachment_value);
     };
-    for payment_option in user.profile.payment_options.clone().into_inner() {
+    for payment_option in profile.payment_options.clone().into_inner() {
         let attachment = attach_payment_option(
             authority,
-            user.profile.id,
-            &user.profile.username,
+            profile.id,
+            &profile.username,
             payment_option,
         );
         let attachment_value = serde_json::to_value(attachment)
             .expect("attachment should be serializable");
         attachments.push(attachment_value);
     };
-    for field in user.profile.extra_fields.clone().into_inner() {
+    for field in profile.extra_fields.clone().into_inner() {
         let attachment = attach_extra_field(field);
         let attachment_value = serde_json::to_value(attachment)
             .expect("attachment should be serializable");
         attachments.push(attachment_value);
     };
     let mut emojis = vec![];
-    for db_emoji in user.profile.emojis.inner() {
+    for db_emoji in profile.emojis.inner() {
         // TODO: FEP-EF61: portable or anonymous emojis?
         let emoji = build_emoji(server_uri.as_str(), media_server, db_emoji);
         emojis.push(emoji);
     };
-    let aliases = user.profile.aliases.clone().into_actor_ids();
+    let aliases = profile.aliases.clone().into_actor_ids();
     // HTML representation
     let maybe_profile_url = match authority.root() {
         AuthorityRoot::Server(uri) => {
-            let profile_url = local_actor_id(uri.as_str(), username);
+            let profile_url = local_actor_id(uri.as_str(), &profile.username);
             Some(profile_url)
         },
         // TODO: FEP-EF61: client should use server's URL template
@@ -391,8 +402,8 @@ pub fn build_local_actor(
         _context: build_actor_context(),
         id: actor_id,
         object_type: actor_data.object_type,
-        name: user.profile.display_name.clone(),
-        preferred_username: username.clone(),
+        name: profile.display_name.clone(),
+        preferred_username: profile.username.clone(),
         inbox: id_builder.build_string_unchecked(&actor_data.inbox),
         outbox: id_builder.build_string_unchecked(&actor_data.outbox),
         followers: actor_data.followers
@@ -411,16 +422,16 @@ pub fn build_local_actor(
         generator: Some(Application::new()),
         icon: avatar,
         image: banner,
-        summary: user.profile.bio.clone(),
+        summary: profile.bio.clone(),
         also_known_as: aliases,
         attachment: attachments,
         tag: emojis,
-        manually_approves_followers: user.profile.manually_approves_followers,
+        manually_approves_followers: profile.manually_approves_followers,
         // Some applications don't work properly if this flag is not set
         discoverable: true,
         url: maybe_profile_url,
-        published: Some(user.profile.created_at),
-        updated: Some(user.profile.updated_at),
+        published: Some(profile.created_at),
+        updated: Some(profile.updated_at),
         gateways: gateways,
     };
     Ok(actor)
@@ -475,7 +486,10 @@ mod tests {
     use apx_sdk::core::url::http_uri::HttpUri;
     use serde_json::json;
     use uuid::uuid;
-    use mitra_models::profiles::types::DbActorProfile;
+    use mitra_models::{
+        accounts::types::{AutomatedAccountDetailed, User},
+        profiles::types::DbActorProfile,
+    };
     use super::*;
 
     const INSTANCE_URI: &str = "https://server.example";
@@ -572,6 +586,20 @@ mod tests {
             "updated": "2023-02-24T23:36:38Z",
         });
         assert_eq!(value, expected_value);
+    }
+
+    #[test]
+    fn test_build_local_actor_group() {
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let authority = Authority::server(&instance_uri);
+        let media_server = MediaServer::for_test(INSTANCE_URI);
+        let account = AutomatedAccountDetailed::group_for_test();
+        let actor = build_local_actor(
+            &authority,
+            &media_server,
+            &account,
+        ).unwrap();
+        assert_eq!(actor.object_type, GROUP);
     }
 
     #[test]

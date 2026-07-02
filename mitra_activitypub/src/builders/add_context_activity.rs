@@ -6,7 +6,10 @@ use uuid::Uuid;
 use mitra_config::Instance;
 use mitra_models::{
     accounts::{
-        queries::get_user_by_id,
+        queries::{
+            get_group_account_by_id,
+            get_user_by_id,
+        },
         types::User,
     },
     conversations::types::Conversation,
@@ -30,7 +33,10 @@ use crate::{
     vocabulary::{ADD, DELETE, ORDERED_COLLECTION},
 };
 
-use super::note::get_note_recipients;
+use super::{
+    group_announce::prepare_group_announce,
+    note::get_note_recipients,
+};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -122,6 +128,23 @@ pub async fn sync_conversation(
     activity: JsonValue,
     activity_visibility: Visibility,
 ) -> Result<(), DatabaseError> {
+    if let Some(group_id) = conversation.group_id {
+        // FEP-1b12
+        if conversation.is_managed {
+            let group = get_group_account_by_id(db_client, group_id).await?;
+            // Not syncing non-public activities
+            if activity_visibility == Visibility::Public {
+                let job_data = prepare_group_announce(
+                    db_client,
+                    instance,
+                    &group,
+                    activity,
+                ).await?;
+                job_data.save_and_enqueue(db_client).await?;
+            };
+        };
+        return Ok(());
+    };
     let root = match get_post_by_id(db_client, conversation.root_id).await {
         Ok(root) => root,
         Err(DatabaseError::NotFound(_))

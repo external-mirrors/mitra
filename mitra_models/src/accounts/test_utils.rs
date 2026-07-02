@@ -9,13 +9,23 @@ use crate::{
     database::DatabaseClient,
     profiles::{
         test_utils::create_test_remote_profile,
-        types::DbActorProfile,
+        types::{
+            ActorType,
+            DbActorProfile,
+        },
     },
 };
 
 use super::{
     queries::{create_portable_user, create_user},
-    types::{PortableUser, PortableUserData, User, UserCreateData},
+    types::{
+        AutomatedAccountDetailed,
+        AutomatedAccountType,
+        PortableUser,
+        PortableUserData,
+        User,
+        UserCreateData,
+    },
 };
 
 pub async fn create_test_user(
@@ -56,6 +66,21 @@ impl User {
             id: profile.id,
             profile: profile,
             ..Default::default()
+        }
+    }
+}
+
+impl AutomatedAccountDetailed {
+    pub fn group_for_test() -> Self {
+        Self {
+            id: Default::default(),
+            profile: DbActorProfile {
+                actor_type: ActorType::Group,
+                ..DbActorProfile::local_for_test("group")
+            },
+            account_type: AutomatedAccountType::Group,
+            rsa_secret_key: generate_weak_rsa_key().unwrap(),
+            ed25519_secret_key: generate_weak_ed25519_key(),
         }
     }
 }

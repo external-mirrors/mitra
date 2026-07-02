@@ -176,6 +176,7 @@ pub async fn create_profile(
         "
         INSERT INTO actor_profile (
             id,
+            actor_type,
             username,
             hostname,
             webfinger_hostname,
@@ -183,7 +184,6 @@ pub async fn create_profile(
             bio,
             avatar,
             banner,
-            is_automated,
             manually_approves_followers,
             mention_policy,
             public_keys,
@@ -198,6 +198,7 @@ pub async fn create_profile(
         ",
         &[
             &profile_id,
+            &profile_data.actor_type,
             &profile_data.username,
             &profile_data.hostname,
             &profile_data.webfinger_hostname.as_str(),
@@ -205,7 +206,6 @@ pub async fn create_profile(
             &profile_data.bio,
             &profile_data.avatar,
             &profile_data.banner,
-            &profile_data.is_automated,
             &profile_data.manually_approves_followers,
             &profile_data.mention_policy,
             &PublicKeys(profile_data.public_keys),
@@ -278,15 +278,15 @@ pub async fn update_profile(
         "
         UPDATE actor_profile
         SET
-            username = $1,
-            hostname = $2,
-            webfinger_hostname = $3,
-            display_name = $4,
-            bio = $5,
-            bio_source = $6,
-            avatar = $7,
-            banner = $8,
-            is_automated = $9,
+            actor_type = $1,
+            username = $2,
+            hostname = $3,
+            webfinger_hostname = $4,
+            display_name = $5,
+            bio = $6,
+            bio_source = $7,
+            avatar = $8,
+            banner = $9,
             manually_approves_followers = $10,
             mention_policy = $11,
             public_keys = $12,
@@ -301,6 +301,7 @@ pub async fn update_profile(
         RETURNING actor_profile
         ",
         &[
+            &profile_data.actor_type,
             &profile_data.username,
             &profile_data.hostname,
             &profile_data.webfinger_hostname.as_str(),
@@ -309,7 +310,6 @@ pub async fn update_profile(
             &profile_data.bio_source,
             &profile_data.avatar,
             &profile_data.banner,
-            &profile_data.is_automated,
             &profile_data.manually_approves_followers,
             &profile_data.mention_policy,
             &PublicKeys(profile_data.public_keys),

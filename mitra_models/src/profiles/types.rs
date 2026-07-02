@@ -46,6 +46,40 @@ pub enum Origin {
     Remote,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ActorType {
+    Person,
+    Automated,
+    Group,
+}
+
+impl From<ActorType> for i16 {
+    fn from(value: ActorType) -> i16 {
+        match value {
+            ActorType::Person => 1,
+            ActorType::Automated => 2,
+            ActorType::Group => 3,
+        }
+    }
+}
+
+impl TryFrom<i16> for ActorType {
+    type Error = DatabaseTypeError;
+
+    fn try_from(value: i16) -> Result<Self, Self::Error> {
+        let actor_type = match value {
+            1 => Self::Person,
+            2 => Self::Automated,
+            3 => Self::Group,
+            _ => return Err(DatabaseTypeError),
+        };
+        Ok(actor_type)
+    }
+}
+
+int_enum_from_sql!(ActorType);
+int_enum_to_sql!(ActorType);
+
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum MentionPolicy {
     #[default]
@@ -642,6 +676,7 @@ pub struct DbActorProfile {
     pub(crate) user_id: Option<Uuid>,
     pub(crate) automated_account_id: Option<Uuid>,
     pub(crate) portable_user_id: Option<Uuid>,
+    pub actor_type: ActorType,
     pub username: String,
     pub(crate) hostname: Option<String>,
     pub(crate) webfinger_hostname: Option<String>,
@@ -651,7 +686,6 @@ pub struct DbActorProfile {
     pub bio_source: Option<String>, // plaintext or markdown
     pub avatar: Option<PartialMediaInfo>,
     pub banner: Option<PartialMediaInfo>,
-    pub is_automated: bool,
     pub manually_approves_followers: bool,
     pub mention_policy: MentionPolicy,
     pub public_keys: PublicKeys,
@@ -737,6 +771,11 @@ impl DbActorProfile {
                 return Err(DatabaseTypeError);
             };
         };
+        let is_local_account = self.has_user_account() || self.has_automated_account();
+        let is_local_acct = self.acct.as_ref() == Some(&self.username);
+        if is_local_account && !is_local_acct {
+            return Err(DatabaseTypeError);
+        };
         match self.webfinger_hostname() {
             WebfingerHostname::Local => {
                 if self.acct.as_ref() != Some(&self.username) {
@@ -813,6 +852,10 @@ impl DbActorProfile {
         self.user_id.is_some()
     }
 
+    pub fn has_automated_account(&self) -> bool {
+        self.automated_account_id.is_some()
+    }
+
     pub fn has_portable_account(&self) -> bool {
         self.portable_user_id.is_some()
     }
@@ -837,11 +880,7 @@ impl DbActorProfile {
     }
 
     pub fn is_group(&self) -> bool {
-        if let Some(ref actor_data) = self.actor_json {
-            actor_data.object_type == "Group"
-        } else {
-            false
-        }
+        self.actor_type == ActorType::Group
     }
 
     pub fn is_anonymous(&self) -> bool {
@@ -905,6 +944,7 @@ impl Default for DbActorProfile {
             user_id: None,
             automated_account_id: None,
             portable_user_id: None,
+            actor_type: ActorType::Person,
             username: "test".to_string(),
             hostname: None,
             webfinger_hostname: None,
@@ -914,7 +954,6 @@ impl Default for DbActorProfile {
             bio_source: None,
             avatar: None,
             banner: None,
-            is_automated: false,
             manually_approves_followers: false,
             mention_policy: MentionPolicy::default(),
             public_keys: PublicKeys(vec![]),
@@ -940,6 +979,7 @@ impl Default for DbActorProfile {
 #[cfg_attr(any(test, feature = "test-utils"), derive(Default))]
 pub struct ProfileCreateData {
     pub id: Option<Uuid>,
+    pub actor_type: ActorType,
     pub username: String,
     pub hostname: Option<String>,
     pub webfinger_hostname: WebfingerHostname,
@@ -947,7 +987,6 @@ pub struct ProfileCreateData {
     pub bio: Option<String>,
     pub avatar: Option<MediaInfo>,
     pub banner: Option<MediaInfo>,
-    pub is_automated: bool,
     pub manually_approves_followers: bool,
     pub mention_policy: MentionPolicy,
     pub public_keys: Vec<DbActorKey>,
@@ -993,6 +1032,7 @@ impl ProfileCreateData {
 }
 
 pub struct ProfileUpdateData {
+    pub actor_type: ActorType,
     pub username: String,
     pub hostname: Option<String>,
     pub webfinger_hostname: WebfingerHostname,
@@ -1001,7 +1041,6 @@ pub struct ProfileUpdateData {
     pub bio_source: Option<String>,
     pub avatar: Option<PartialMediaInfo>,
     pub banner: Option<PartialMediaInfo>,
-    pub is_automated: bool,
     pub manually_approves_followers: bool,
     pub mention_policy: MentionPolicy,
     pub public_keys: Vec<DbActorKey>,
@@ -1069,6 +1108,7 @@ impl From<&DbActorProfile> for ProfileUpdateData {
         let profile = profile.clone();
         let webfinger_hostname = profile.webfinger_hostname();
         Self {
+            actor_type: profile.actor_type,
             username: profile.username,
             hostname: profile.hostname,
             webfinger_hostname: webfinger_hostname,
@@ -1077,7 +1117,6 @@ impl From<&DbActorProfile> for ProfileUpdateData {
             bio_source: profile.bio_source,
             avatar: profile.avatar,
             banner: profile.banner,
-            is_automated: profile.is_automated,
             manually_approves_followers: profile.manually_approves_followers,
             mention_policy: profile.mention_policy,
             public_keys: profile.public_keys.into_inner(),

@@ -2,11 +2,11 @@ use anyhow::Error;
 use clap::Parser;
 
 use mitra_activitypub::{
-    adapters::users::delete_user,
+    adapters::users::delete_account,
 };
 use mitra_config::Config;
 use mitra_models::{
-    accounts::queries::get_user_by_id,
+    accounts::queries::get_managed_account_by_id,
     database::{
         get_database_client,
         DatabaseConnectionPool,
@@ -72,8 +72,9 @@ impl DeleteUser {
             &self.id_or_name,
         ).await?;
         if profile.is_local() {
-            let user = get_user_by_id(db_client, profile.id).await?;
-            delete_user(config, db_client, &user).await?;
+            let account =
+                get_managed_account_by_id(db_client, profile.id).await?;
+            delete_account(config, db_client, &account).await?;
         } else {
             let deletion_queue = delete_profile(db_client, profile.id).await?;
             deletion_queue.into_job(db_client).await?;

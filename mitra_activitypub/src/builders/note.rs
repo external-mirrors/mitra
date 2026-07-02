@@ -19,7 +19,6 @@ use mitra_models::{
         queries::get_post_author,
         types::{PostDetailed, Visibility},
     },
-    profiles::queries::get_profile_by_id,
     relationships::queries::{get_followers, get_subscribers},
 };
 use mitra_services::media::MediaServer;
@@ -204,7 +203,6 @@ pub fn build_note(
 
     let mut primary_audience = vec![];
     let mut secondary_audience = vec![];
-    let mut group_audience = None;
     let followers_collection_id =
         LocalActorCollection::Followers.of(&actor_id);
     let subscribers_collection_id =
@@ -258,10 +256,6 @@ pub fn build_note(
         let actor_id = compatible_profile_actor_id(authority, profile);
         if !primary_audience.contains(&actor_id) {
             primary_audience.push(actor_id.clone());
-        };
-        // TODO: do not require group mentions
-        if post.group_id.is_some_and(|group_id| group_id == profile.id) {
-            group_audience = Some(actor_id.clone());
         };
         let tag = SimpleTag {
             tag_type: MENTION.to_string(),
@@ -351,6 +345,15 @@ pub fn build_note(
         conversation.object_id.clone()
     };
     let replies_collection_id = local_object_replies(&object_id);
+    let group_audience = if let Some(ref group) = post.group {
+        let actor_id = compatible_profile_actor_id(authority, group);
+        if !primary_audience.contains(&actor_id) {
+            primary_audience.push(actor_id.clone());
+        };
+        Some(actor_id)
+    } else {
+        None
+    };
 
     Note {
         _context: with_context.then(build_default_context),
@@ -410,9 +413,8 @@ pub async fn get_note_recipients(
         let in_reply_to_author = get_post_author(db_client, in_reply_to_id).await?;
         primary_audience.push(in_reply_to_author);
     };
-    if let Some(group_id) = post.group_id {
-         let group = get_profile_by_id(db_client, group_id).await?;
-        primary_audience.push(group);
+    if let Some(ref group) = post.group {
+        primary_audience.push(group.clone());
     };
     primary_audience.extend(post.mentions.clone());
     if let Some(ref poll) = post.poll {
@@ -870,6 +872,70 @@ mod tests {
                 "https://social.example/user/test/followers",
             ],
             "cc": [],
+        });
+        assert_eq!(value, expected_value);
+    }
+
+    #[test]
+    fn test_build_note_group() {
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let group_actor_id = "https://social.example/group";
+        let group = DbActorProfile::remote_for_test(
+            "group",
+            group_actor_id,
+        );
+        let conversation = Conversation {
+            id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),
+            group_id: Some(group.id),
+            ..Conversation::for_test(Default::default())
+        };
+        let post = PostDetailed {
+            id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
+            conversation: Some(conversation),
+            group: Some(group.clone()),
+            created_at: DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
+                .unwrap().with_timezone(&Utc),
+            related_posts: Some(RelatedPosts::default()),
+            ..Default::default()
+        };
+        let authority = Authority::server(&instance_uri);
+        let media_server = MediaServer::for_test(INSTANCE_URI);
+        let note = build_note(
+            INSTANCE_HOSTNAME,
+            &authority,
+            &media_server,
+            &post,
+            true,
+        );
+        let value = serde_json::to_value(note).unwrap();
+        let expected_value = json!({
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+                "https://w3id.org/security/v1",
+                "https://w3id.org/security/data-integrity/v2",
+                {
+                    "Hashtag": "as:Hashtag",
+                    "sensitive": "as:sensitive",
+                    "toot": "http://joinmastodon.org/ns#",
+                    "Emoji": "toot:Emoji"
+                },
+            ],
+            "id": "https://server.example/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
+            "type": "Note",
+            "attributedTo": "https://server.example/users/test",
+            "audience": "https://social.example/group",
+            "context": "https://server.example/collections/conversations/837ffc24-dab2-414b-a9b8-fe47d0a463f2",
+            "content": "",
+            "sensitive": false,
+            "replies": "https://server.example/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f/replies",
+            "published": "2023-02-24T23:36:38Z",
+            "to": [
+                "https://www.w3.org/ns/activitystreams#Public",
+                "https://social.example/group",
+            ],
+            "cc": [
+                "https://server.example/users/test/followers",
+            ],
         });
         assert_eq!(value, expected_value);
     }

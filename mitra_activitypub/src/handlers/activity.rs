@@ -41,7 +41,10 @@ use crate::{
 };
 
 use super::{
-    accept::handle_accept,
+    accept::{
+        handle_accept,
+        handle_accept_offer,
+    },
     add::handle_add,
     announce::handle_announce,
     block::handle_block,
@@ -161,6 +164,9 @@ pub async fn handle_activity(
         ACCEPT => {
             handle_accept(ap_client, db_pool, activity).await?
         },
+        ACCEPT_AGREEMENT => {
+            handle_accept_offer(ap_client, db_pool, activity).await?
+        },
         ADD => {
             // `config` is required by Add(Create) handler
             handle_add(config, ap_client, db_pool, activity).await?
@@ -198,7 +204,7 @@ pub async fn handle_activity(
         MOVE => {
             handle_move(ap_client, db_pool, activity).await?
         },
-        OFFER => {
+        OFFER | OFFER_AGREEMENT => {
             // `config` required by `create_payment_address`
             handle_offer(config, ap_client, db_pool, activity).await?
         },

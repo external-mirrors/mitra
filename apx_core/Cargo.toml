@@ -11,6 +11,8 @@ rust-version.workspace = true
 [dependencies]
 # Used for working with RSA keys, HTTP signatures
 base64_ext = { package = "base64", version = "0.22.1" }
+# Used for constant-time base64 encoding
+base64ct = "1.7.3"
 # Used to verify minisign signatures
 blake2 = { version = "0.10.5", optional = true }
 # Used to decode base58btc

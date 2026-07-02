@@ -14,6 +14,7 @@ use crate::{
 use super::{
     queries::create_profile,
     types::{
+        ActorType,
         DbActor,
         DbActorKey,
         DbActorProfile,
@@ -21,6 +22,12 @@ use super::{
         WebfingerHostname,
     },
 };
+
+impl Default for ActorType {
+    fn default() -> Self {
+        ActorType::Person
+    }
+}
 
 impl DbActor {
     pub fn for_test(actor_id: &str) -> Self {

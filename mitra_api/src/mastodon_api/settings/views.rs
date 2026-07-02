@@ -15,7 +15,7 @@ use mitra_activitypub::{
         follow_requests::follow_or_create_request,
         users::{
             create_or_update_local_actor,
-            delete_user,
+            delete_account,
         },
     },
     authority::Authority,
@@ -475,7 +475,7 @@ async fn delete_account_view(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    delete_user(&config, db_client, &current_user).await?;
+    delete_account(&config, db_client, &current_user).await?;
     Ok(HttpResponse::NoContent().finish())
 }
 

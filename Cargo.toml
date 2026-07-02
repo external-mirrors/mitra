@@ -34,32 +34,13 @@ default-members = [
 resolver = "2"
 
 [workspace.package]
-version = "5.5.1-dev"
+version = "5.6.1-dev"
 license = "AGPL-3.0-only"
 
-edition = "2021"
-rust-version = "1.82.0"
+edition = "2024"
+rust-version = "1.85.0"
 
 publish = false
-
-[workspace.lints.rust]
-# Lints from rust-2024-compatibility group
-boxed_slice_into_iter = "warn"
-dependency_on_unit_never_type_fallback = "warn"
-deprecated_safe_2024 = "warn"
-edition_2024_expr_fragment_specifier = "allow"
-#if_let_rescope = "warn"
-impl_trait_overcaptures = "warn"
-keyword_idents_2024 = "warn"
-missing_unsafe_on_extern = "warn"
-never_type_fallback_flowing_into_unsafe = "warn"
-rust_2024_guarded_string_incompatible_syntax = "warn"
-rust_2024_incompatible_pat = "warn"
-rust_2024_prelude_collisions = "warn"
-static_mut_refs = "warn"
-#tail_expr_drop_order = "warn"
-unsafe_attr_outside_unsafe = "warn"
-unsafe_op_in_unsafe_fn = "warn"
 
 [workspace.lints.clippy]
 derivable_impls = "allow"
@@ -90,6 +71,7 @@ extend-ignore-re = [
     # Multiformats
     "zQm\\w+",
     "z2H\\w+",
+    "ueWVzIG1hbmkgIQ",
 ]
 extend-ignore-identifiers-re = [
     "^inport$",

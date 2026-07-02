@@ -4,8 +4,9 @@ use uuid::Uuid;
 
 use mitra_config::Instance;
 use mitra_models::{
-    accounts::types::User,
+    accounts::types::ManagedAccount,
     database::{DatabaseClient, DatabaseError},
+    profiles::types::DbActorProfile,
     relationships::queries::{get_followers, get_following},
 };
 
@@ -34,10 +35,10 @@ struct DeletePerson {
 
 fn build_delete_person(
     instance_uri: &str,
-    user: &User,
+    actor_profile: &DbActorProfile,
 ) -> DeletePerson {
-    let actor_id = local_actor_id(instance_uri, &user.profile.username);
-    let activity_id = local_activity_id(instance_uri, DELETE, user.id);
+    let actor_id = local_actor_id(instance_uri, &actor_profile.username);
+    let activity_id = local_activity_id(instance_uri, DELETE, actor_profile.id);
     DeletePerson {
         _context: build_default_context(),
         activity_type: DELETE.to_string(),
@@ -66,13 +67,13 @@ async fn get_delete_person_recipients(
 pub async fn prepare_delete_person(
     db_client: &impl DatabaseClient,
     instance: &Instance,
-    user: &User,
+    account: &impl ManagedAccount,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
-    let activity = build_delete_person(instance.uri_str(), user);
-    let recipients = get_delete_person_recipients(db_client, user.id).await?;
+    let activity = build_delete_person(instance.uri_str(), account.profile());
+    let recipients = get_delete_person_recipients(db_client, account.id()).await?;
     Ok(OutgoingActivityJobData::new(
         instance.uri_str(),
-        user,
+        account,
         activity,
         recipients,
     ))
@@ -87,14 +88,11 @@ mod tests {
 
     #[test]
     fn test_build_delete_person() {
-        let user = User {
-            profile: DbActorProfile::local_for_test("testuser"),
-            ..Default::default()
-        };
-        let activity = build_delete_person(INSTANCE_URI, &user);
+        let profile = DbActorProfile::local_for_test("testuser");
+        let activity = build_delete_person(INSTANCE_URI, &profile);
         assert_eq!(
             activity.id,
-            format!("{}/activities/delete/{}", INSTANCE_URI, user.id),
+            format!("{}/activities/delete/{}", INSTANCE_URI, profile.id),
         );
         assert_eq!(activity.actor, activity.object);
         assert_eq!(

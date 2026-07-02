@@ -15,7 +15,7 @@ use crate::{
 // https://www.w3.org/TR/did-core/
 // 'ap' URI must have path
 // authority: DID regexp plus percent sign (see also: DID_RE in apx_core::did)
-const AP_URI_RE: &str = r"^ap://(?P<did>did(:|%3A)[[:alpha:]]+(:|%3A)[A-Za-z0-9._:%-]+)(?P<path>/.+)$";
+const AP_URI_RE: &str = r"^ap(\+ef61)?://(?P<did>did(:|%3A)[[:alpha:]]+(:|%3A)[A-Za-z0-9._:%-]+)(?P<path>/.+)$";
 const AP_URI_SCHEME: &str = "ap";
 const AP_URI_PREFIX: &str = "ap://";
 
@@ -174,6 +174,17 @@ mod tests {
         assert_eq!(ap_uri.authority().to_string(), "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
         assert_eq!(ap_uri.relative_uri(), "/actor#main-key");
         assert_eq!(ap_uri.to_string(), url);
+    }
+
+    #[test]
+    fn test_parse_with_ef61_scheme() {
+        let url = "ap+ef61://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/123";
+        let ap_uri = ApUri::parse(url).unwrap();
+        assert_eq!(ap_uri.scheme(), "ap");
+        assert_eq!(
+            ap_uri.to_string(),
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/123",
+        );
     }
 
     #[test]

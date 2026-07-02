@@ -12,10 +12,7 @@ use crate::{
         Ed25519PublicKey,
     },
     did::DidParseError,
-    multibase::{
-        decode_multibase_base58btc,
-        encode_multibase_base58btc,
-    },
+    multibase::Multibase,
     multicodec::{Multicodec, MulticodecError},
 };
 
@@ -32,7 +29,7 @@ impl DidKey {
 
     pub fn key_multibase(&self) -> String {
         let multidata = self.codec.encode(&self.key_data);
-        encode_multibase_base58btc(&multidata)
+        Multibase::Base58Btc.encode(&multidata)
     }
 
     /// Returns ID of the verification method
@@ -66,7 +63,8 @@ impl FromStr for DidKey {
         let did_key_re = Regex::new(DID_KEY_RE)
             .expect("regexp should be valid");
         let caps = did_key_re.captures(value).ok_or(DidParseError)?;
-        let multidata = decode_multibase_base58btc(&caps["key"])
+        let multidata = Multibase::Base58Btc
+            .decode_exact(&caps["key"])
             .map_err(|_| DidParseError)?;
         let (codec, key_data) = Multicodec::decode(&multidata)
             .map_err(|_| DidParseError)?;

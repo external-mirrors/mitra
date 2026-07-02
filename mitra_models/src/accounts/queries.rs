@@ -18,6 +18,7 @@ use crate::{
     profiles::{
         queries::create_profile,
         types::{
+            ActorType,
             DbActorProfile,
             MentionPolicy,
             ProfileCreateData,
@@ -28,8 +29,11 @@ use crate::{
 
 use super::types::{
     AccountAdminInfo,
+    AutomatedAccount,
     AutomatedAccountData,
+    AutomatedAccountDetailed,
     AutomatedAccountType,
+    BoxedManagedAccount,
     ClientConfig,
     DbClientConfig,
     DbInviteCode,
@@ -153,6 +157,7 @@ pub async fn create_user(
     // Create profile
     let profile_data = ProfileCreateData {
         id: user_data.id,
+        actor_type: ActorType::Person,
         username: user_data.username.clone(),
         hostname: None,
         webfinger_hostname: WebfingerHostname::Local,
@@ -160,7 +165,6 @@ pub async fn create_user(
         bio: None,
         avatar: None,
         banner: None,
-        is_automated: false,
         #[cfg(feature = "mini")]
         manually_approves_followers: true,
         #[cfg(not(feature = "mini"))]
@@ -330,20 +334,6 @@ pub async fn get_user_by_name(
     let db_profile: DbActorProfile = row.try_get("actor_profile")?;
     let user = User::new(db_user, db_profile)?;
     Ok(user)
-}
-
-pub async fn is_registered_user(
-    db_client: &impl DatabaseClient,
-    username: &str,
-) -> Result<bool, DatabaseError> {
-    let maybe_row = db_client.query_opt(
-        "
-        SELECT 1 FROM user_account JOIN actor_profile USING (id)
-        WHERE actor_profile.username = $1
-        ",
-        &[&username],
-    ).await?;
-    Ok(maybe_row.is_some())
 }
 
 pub async fn get_user_by_login_address(
@@ -522,7 +512,7 @@ pub async fn get_accounts_for_admin(
 pub async fn create_automated_account(
     db_client: &mut impl DatabaseClient,
     account_data: AutomatedAccountData,
-) -> Result<Uuid, DatabaseError> {
+) -> Result<AutomatedAccountDetailed, DatabaseError> {
     let mut transaction = db_client.transaction().await?;
     // Prevent changes to actor_profile table
     transaction.execute(
@@ -534,6 +524,10 @@ pub async fn create_automated_account(
     // Create profile
     let profile_data = ProfileCreateData {
         id: None,
+        actor_type: match account_data.account_type {
+            AutomatedAccountType::Group => ActorType::Group,
+            _ => ActorType::Automated,
+        },
         username: account_data.username.clone(),
         hostname: None,
         webfinger_hostname: WebfingerHostname::Local,
@@ -541,7 +535,6 @@ pub async fn create_automated_account(
         bio: None,
         avatar: None,
         banner: None,
-        is_automated: true,
         manually_approves_followers: false,
         mention_policy: MentionPolicy::None,
         public_keys: vec![],
@@ -557,7 +550,7 @@ pub async fn create_automated_account(
     let rsa_secret_key_der =
         rsa_secret_key_to_pkcs1_der(&account_data.rsa_secret_key)
             .map_err(|_| DatabaseTypeError)?;
-    transaction.execute(
+    let row = transaction.query_one(
         "
         INSERT INTO automated_account (
             id,
@@ -566,6 +559,7 @@ pub async fn create_automated_account(
             ed25519_secret_key
         )
         VALUES ($1, $2, $3, $4)
+        RETURNING automated_account
         ",
         &[
             &db_profile.id,
@@ -574,17 +568,21 @@ pub async fn create_automated_account(
             &account_data.ed25519_secret_key,
         ],
     ).await.map_err(catch_unique_violation("automated account"))?;
+    let db_account: AutomatedAccount = row.try_get("automated_account")?;
     // Create reverse FK
-    transaction.execute(
+    let row = transaction.query_one(
         "
         UPDATE actor_profile
         SET automated_account_id = actor_profile.id
         WHERE id = $1
+        RETURNING actor_profile
         ",
         &[&db_profile.id],
     ).await?;
+    let db_profile: DbActorProfile = row.try_get("actor_profile")?;
+    let account = AutomatedAccountDetailed::new(db_account, db_profile)?;
     transaction.commit().await?;
-    Ok(db_profile.id)
+    Ok(account)
 }
 
 pub async fn get_anonymous_system_account_id(
@@ -603,6 +601,69 @@ pub async fn get_anonymous_system_account_id(
     };
     let account_id = row.try_get("id")?;
     Ok(Some(account_id))
+}
+
+pub async fn get_group_account_by_id(
+    db_client: &impl DatabaseClient,
+    account_id: Uuid,
+) -> Result<AutomatedAccountDetailed, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT automated_account, actor_profile
+        FROM automated_account JOIN actor_profile USING (id)
+        WHERE id = $1 AND account_type = $2
+        ",
+        &[&account_id, &AutomatedAccountType::Group],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("account"))?;
+    let db_account: AutomatedAccount = row.try_get("automated_account")?;
+    let db_profile: DbActorProfile = row.try_get("actor_profile")?;
+    let account = AutomatedAccountDetailed::new(db_account, db_profile)?;
+    Ok(account)
+}
+
+pub async fn get_managed_account_by_id(
+    db_client: &impl DatabaseClient,
+    account_id: Uuid,
+) -> Result<BoxedManagedAccount, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT
+            user_account,
+            automated_account,
+            actor_profile
+        FROM actor_profile
+        LEFT JOIN user_account USING (id)
+        LEFT JOIN automated_account USING (id)
+        WHERE actor_profile.id = $1
+        ",
+        &[&account_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("account"))?;
+    let account = BoxedManagedAccount::try_from(&row)?;
+    Ok(account)
+}
+
+pub async fn get_managed_account_by_username(
+    db_client: &impl DatabaseClient,
+    username: &str,
+) -> Result<BoxedManagedAccount, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT
+            user_account,
+            automated_account,
+            actor_profile
+        FROM actor_profile
+        LEFT JOIN user_account USING (id)
+        LEFT JOIN automated_account USING (id)
+        WHERE actor_profile.acct = $1
+        ",
+        &[&username],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("account"))?;
+    let account = BoxedManagedAccount::try_from(&row)?;
+    Ok(account)
 }
 
 pub async fn create_portable_user(
@@ -687,25 +748,6 @@ pub async fn get_portable_user_by_id(
     Ok(user)
 }
 
-pub async fn get_portable_user_by_name(
-    db_client: &impl DatabaseClient,
-    username: &str,
-) -> Result<PortableUser, DatabaseError> {
-    let maybe_row = db_client.query_opt(
-        "
-        SELECT portable_user_account, actor_profile
-        FROM portable_user_account JOIN actor_profile USING (id)
-        WHERE actor_profile.username = $1
-        ",
-        &[&username],
-    ).await?;
-    let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
-    let db_user: DbPortableUser = row.try_get("portable_user_account")?;
-    let db_profile: DbActorProfile = row.try_get("actor_profile")?;
-    let user = PortableUser::new(db_user, db_profile)?;
-    Ok(user)
-}
-
 pub async fn get_portable_user_by_actor_id(
     db_client: &impl DatabaseClient,
     actor_id: &str,
@@ -781,7 +823,6 @@ mod tests {
         database::test_utils::create_test_database,
         posts::types::Visibility,
         profiles::{
-            queries::get_profile_by_id,
             types::{
                 DbActor,
                 DbActorKey,
@@ -925,21 +966,22 @@ mod tests {
             rsa_secret_key: generate_weak_rsa_key().unwrap(),
             ed25519_secret_key: generate_weak_ed25519_key(),
         };
-        let account_id = create_automated_account(
+        let account = create_automated_account(
             db_client,
             account_data,
         ).await.unwrap();
 
-        let profile = get_profile_by_id(db_client, account_id).await.unwrap();
+        assert_eq!(account.account_type, AutomatedAccountType::Anonymous);
+        let profile = account.profile;
+        assert_eq!(profile.actor_type, ActorType::Automated);
         assert_eq!(profile.username, "myname");
         assert_eq!(profile.webfinger_hostname(), WebfingerHostname::Local);
         assert_eq!(profile.acct.as_ref().unwrap(), "myname");
-        assert_eq!(profile.is_automated, true);
         assert!(!profile.has_user_account());
 
         let maybe_account_id =
             get_anonymous_system_account_id(db_client).await.unwrap();
-        assert_eq!(maybe_account_id.unwrap(), account_id);
+        assert_eq!(maybe_account_id.unwrap(), account.id);
     }
 
     #[tokio::test]

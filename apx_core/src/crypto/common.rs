@@ -24,7 +24,7 @@ use crate::{
             RsaSerializationError,
         },
     },
-    multibase::decode_multibase_base58btc,
+    multibase::Multibase,
     multicodec::Multicodec,
 };
 
@@ -48,7 +48,8 @@ pub enum PublicKey {
 impl PublicKey {
     /// Parses multikey string
     pub fn from_multikey(public_key_multibase: &str) -> Result<Self, &'static str> {
-        let public_key_multicode = decode_multibase_base58btc(public_key_multibase)
+        let public_key_multicode = Multibase::Base58Btc
+            .decode_exact(public_key_multibase)
             .map_err(|_| "invalid key encoding")?;
         let public_key_decoded = Multicodec::decode(&public_key_multicode)
             .map_err(|_| "unexpected key type")?;

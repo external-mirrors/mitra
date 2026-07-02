@@ -29,6 +29,7 @@ CREATE TABLE actor_profile (
     user_id UUID UNIQUE, -- FK is added later
     automated_account_id UUID UNIQUE, -- FK is added later
     portable_user_id UUID UNIQUE, -- FK is added later
+    actor_type SMALLINT NOT NULL,
     username VARCHAR(100) NOT NULL,
     hostname VARCHAR(100) REFERENCES instance (hostname) ON DELETE RESTRICT,
     webfinger_hostname VARCHAR(100),
@@ -44,7 +45,6 @@ CREATE TABLE actor_profile (
     bio_source TEXT,
     avatar JSONB,
     banner JSONB,
-    is_automated BOOLEAN NOT NULL,
     manually_approves_followers BOOLEAN NOT NULL,
     mention_policy SMALLINT NOT NULL,
     public_keys JSONB NOT NULL DEFAULT '[]',
@@ -132,11 +132,13 @@ CREATE TABLE oauth_token (
 
 CREATE TABLE automated_account (
     id UUID PRIMARY KEY REFERENCES actor_profile (id) ON DELETE CASCADE,
-    account_type SMALLINT UNIQUE NOT NULL,
+    account_type SMALLINT NOT NULL,
     rsa_secret_key BYTEA NOT NULL,
     ed25519_secret_key BYTEA NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX automated_account_account_type_idx ON automated_account (account_type) WHERE account_type != 4;
 
 ALTER TABLE actor_profile
     ADD CONSTRAINT actor_profile_automated_account_id_fkey

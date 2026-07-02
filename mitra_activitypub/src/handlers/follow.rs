@@ -3,7 +3,7 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use mitra_models::{
-    accounts::queries::get_user_by_id,
+    accounts::queries::get_managed_account_by_id,
     database::{
         get_database_client,
         DatabaseConnectionPool,
@@ -49,11 +49,10 @@ pub async fn handle_follow(
     ).await?;
     let source_actor = source_profile.actor_json
         .expect("actor data should be present");
-    let target_profile = ActorIdResolver::default().resolve(
-        ap_client,
-        db_pool,
-        &follow.object,
-    ).await?;
+    let target_profile = ActorIdResolver::default()
+        .include_automated_accounts()
+        .resolve(ap_client, db_pool, &follow.object)
+        .await?;
     // Create new follow request or update activity ID on existing one,
     // because latest activity ID might be needed to process Undo(Follow)
     let canonical_activity_id = canonicalize_id(&follow.id)?;
@@ -65,14 +64,13 @@ pub async fn handle_follow(
         target_profile.id,
         &canonical_activity_id.to_string(),
     ).await?;
-    let target_user = if target_profile.is_local() {
-        // Will not work if account is automated
-        get_user_by_id(db_client, target_profile.id).await?
+    let target_account = if target_profile.is_local() {
+        get_managed_account_by_id(db_client, target_profile.id).await?
     } else {
         // Activity has been performed by a portable account
         return Ok(Some(Descriptor::object("Actor")));
     };
-    if follow_request_created && target_user.profile.manually_approves_followers {
+    if follow_request_created && target_account.profile().manually_approves_followers {
         create_follow_request_notification(
             db_client,
             follow_request.source_id,
@@ -99,7 +97,7 @@ pub async fn handle_follow(
         // Send Accept activity even if follow request has already been processed
         prepare_accept_follow(
             &ap_client.instance,
-            &target_user,
+            &target_account,
             &source_actor,
             &canonical_activity_id.to_string(),
         )?.save_and_enqueue(db_client).await?;

@@ -145,17 +145,27 @@ pub fn local_conversation_history_collection(
     )
 }
 
+pub fn local_activity_id_canonical(
+    authority_root: &AuthorityRoot,
+    activity_type: &str,
+    internal_id: Uuid,
+) -> CanonicalUri {
+    let path = format!(
+        "/activities/{}/{}",
+        activity_type.to_lowercase(),
+        internal_id,
+    );
+    let id = format!("{}{}", authority_root, path);
+    CanonicalUri::parse_canonical(&id).expect("URI should be valid")
+}
+
 pub fn local_activity_id(
     instance_uri: &str,
     activity_type: &str,
     internal_id: Uuid,
 ) -> String {
-    format!(
-        "{}/activities/{}/{}",
-        instance_uri,
-        activity_type.to_lowercase(),
-        internal_id,
-    )
+    let authority = Authority::server_unchecked(instance_uri);
+    local_activity_id_unified(&authority, activity_type, internal_id)
 }
 
 pub fn local_activity_id_unified(
@@ -163,12 +173,9 @@ pub fn local_activity_id_unified(
     activity_type: &str,
     internal_id: Uuid,
 ) -> String {
-    format!(
-        "{}/activities/{}/{}",
-        authority,
-        activity_type.to_lowercase(),
-        internal_id,
-    )
+    let canonical_id =
+        local_activity_id_canonical(authority.root(), activity_type, internal_id);
+    authority.id_builder().build(&canonical_id).to_string()
 }
 
 #[derive(Debug, PartialEq)]
@@ -379,7 +386,7 @@ impl IdBuilder {
         Self { http_base_uri, prefer_compatible }
     }
 
-    fn build(&self, canonical_id: &CanonicalUri) -> NonCanonicalUri {
+    pub fn build(&self, canonical_id: &CanonicalUri) -> NonCanonicalUri {
         match canonical_id {
             CanonicalUri::Http(http_uri) =>
                 NonCanonicalUri::Http(http_uri.clone()),
@@ -394,7 +401,7 @@ impl IdBuilder {
         }
     }
 
-    fn build_unchecked(&self, canonical_id: &str) -> NonCanonicalUri {
+    pub fn build_unchecked(&self, canonical_id: &str) -> NonCanonicalUri {
         let canonical_id = CanonicalUri::parse_canonical(canonical_id)
             .expect("URI should be valid");
         self.build(&canonical_id)

@@ -23,7 +23,7 @@ use rsa::{
 use sha2::Sha256;
 
 use crate::{
-    multibase::{decode_multibase_base58btc, encode_multibase_base58btc},
+    multibase::Multibase,
     multicodec::Multicodec,
 };
 
@@ -107,14 +107,15 @@ pub fn rsa_secret_key_to_multikey(
 ) -> Result<String, RsaSerializationError> {
     let secret_key_der = rsa_secret_key_to_pkcs1_der(secret_key)?;
     let secret_key_multicode = Multicodec::RsaPriv.encode(&secret_key_der);
-    let secret_key_multibase = encode_multibase_base58btc(&secret_key_multicode);
+    let secret_key_multibase = Multibase::Base58Btc.encode(&secret_key_multicode);
     Ok(secret_key_multibase)
 }
 
 pub fn rsa_secret_key_from_multikey(
     secret_key_multibase: &str,
 ) -> Result<RsaSecretKey, RsaSerializationError> {
-    let secret_key_multicode = decode_multibase_base58btc(secret_key_multibase)
+    let secret_key_multicode = Multibase::Base58Btc
+        .decode_exact(secret_key_multibase)
         .map_err(|_| RsaSerializationError::MultikeyError)?;
     let secret_key_der = Multicodec::RsaPriv.decode_exact(&secret_key_multicode)
         .map_err(|_| RsaSerializationError::MultikeyError)?;
@@ -151,14 +152,15 @@ pub fn rsa_public_key_to_multikey(
 ) -> Result<String, RsaSerializationError> {
     let public_key_der = rsa_public_key_to_pkcs1_der(public_key)?;
     let public_key_multicode = Multicodec::RsaPub.encode(&public_key_der);
-    let public_key_multibase = encode_multibase_base58btc(&public_key_multicode);
+    let public_key_multibase = Multibase::Base58Btc.encode(&public_key_multicode);
     Ok(public_key_multibase)
 }
 
 pub fn rsa_public_key_from_multikey(
     multikey: &str,
 ) -> Result<RsaPublicKey, RsaSerializationError> {
-    let public_key_multicode = decode_multibase_base58btc(multikey)
+    let public_key_multicode = Multibase::Base58Btc
+        .decode_exact(multikey)
         .map_err(|_| RsaSerializationError::MultikeyError)?;
     let public_key_der =
         Multicodec::RsaPub.decode_exact(&public_key_multicode)

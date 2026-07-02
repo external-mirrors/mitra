@@ -34,6 +34,7 @@ use mitra_models::{
     media::types::{MediaInfo, PartialMediaInfo},
     posts::types::{DbLanguage, Visibility},
     profiles::types::{
+        ActorType,
         DbActorProfile,
         ExtraField,
         MentionPolicy,
@@ -165,7 +166,7 @@ fn mention_policy_to_str(mention_policy: MentionPolicy) -> &'static str {
     }
 }
 
-/// https://docs.joinmastodon.org/entities/account/
+// https://docs.joinmastodon.org/entities/account/
 #[derive(Serialize)]
 pub struct Account {
     pub id: Uuid,
@@ -182,6 +183,7 @@ pub struct Account {
     pub locked: bool,
     pub mention_policy: String,
     pub bot: bool,
+    is_group: bool, // not part of Mastodon API
     discoverable: bool,
     pub identity_proofs: Vec<AccountField>,
     pub payment_options: Vec<AccountPaymentOption>,
@@ -305,7 +307,8 @@ impl Account {
             header: header_url,
             locked: profile.manually_approves_followers,
             mention_policy: mention_policy.to_string(),
-            bot: profile.is_automated,
+            bot: profile.actor_type == ActorType::Automated,
+            is_group: profile.actor_type == ActorType::Group,
             discoverable: true,
             identity_proofs,
             payment_options,
@@ -507,7 +510,11 @@ impl AccountUpdateData {
             media_storage,
         )?;
         if let Some(bot) = self.bot {
-            profile_data.is_automated = bot;
+            profile_data.actor_type = if bot {
+                ActorType::Automated
+            } else {
+                ActorType::Person
+            };
         };
         if let Some(locked) = self.locked {
             profile_data.manually_approves_followers = locked;

@@ -8,9 +8,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Accept 'ap' URIs with `ap+ef61` scheme.
+
+### Changed
+
+- Changed MSRV to 1.85.0.
+- Changed Rust edition to 2024.
+- Allowed implicit lists in query parameters.
+- Write warning to log when processing expired integrity proof.
+
+## [5.6.0] - 2026-06-26
+
+### Added
+
 - Added `title` parameter to `/api/v1/statuses` form data.
 - Add `title` field to `Status` API entity if ActivityPub object has a `name`.
 - Added `default_fts_config` dynamic configuration parameter for changing text search settings.
+- Added `is_group` field to Mastodon API `Status` entity.
+- Added API method for creating groups.
+- Added `filter` parameter to `/api/v1/groups/followed` API endpoint.
+- Support `OfferAgreement` and `AcceptAgreement` activities.
 
 ### Changed
 
@@ -18,6 +35,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Treat scheduled outgoing activities where Ed25519 key is not included as invalid.
 - Validate 'ap' URI before making database query when serving portable objects.
 - Add actor to `followers` collection in database when creating follow relationship.
+- Provide better error message when attempting to fetch 'ap' URI.
+- Reduce number of database queries made when processing webfinger request.
+- Don't automatically insert mention when creating a group post.
+- Renamed `emoji steal` subcommand to `emoji copy`.
 
 ## [5.5.0] - 2026-06-10
 
