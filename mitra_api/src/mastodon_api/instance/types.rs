@@ -267,6 +267,7 @@ pub struct InstanceInfo {
     blockchains: Vec<BlockchainInfo>,
     ipfs_gateway_url: Option<String>,
 
+    // Custom field, used by Husky
     max_toot_chars: usize,
 
     pleroma: PleromaInfo,
