@@ -267,6 +267,8 @@ pub struct InstanceInfo {
     blockchains: Vec<BlockchainInfo>,
     ipfs_gateway_url: Option<String>,
 
+    max_toot_chars: usize,
+
     pleroma: PleromaInfo,
 }
 
@@ -340,6 +342,7 @@ impl InstanceInfo {
                 .map(BlockchainInfo::from)
                 .collect(),
             ipfs_gateway_url: config.ipfs_gateway_url.clone(),
+            max_toot_chars: config.limits.posts.character_limit,
             pleroma: PleromaInfo {
                 metadata: PleromaMetadata::new(),
             },
