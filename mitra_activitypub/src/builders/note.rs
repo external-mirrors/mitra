@@ -116,44 +116,44 @@ pub struct MediaAttachment {
 #[serde(rename_all = "camelCase")]
 pub struct Note {
     #[serde(rename = "@context", skip_serializing_if = "Option::is_none")]
-    pub _context: Option<Context>,
+    pub(super) _context: Option<Context>,
 
     pub id: String,
 
     #[serde(rename = "type")]
-    pub object_type: String,
+    object_type: String,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub attachment: Vec<MediaAttachment>,
+    attachment: Vec<MediaAttachment>,
 
     pub attributed_to: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub in_reply_to: Option<String>,
+    in_reply_to: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub context: Option<String>,
+    context: Option<String>,
 
-    pub replies: String,
+    replies: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
     content: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub content_map: Option<HashMap<String, String>>,
+    content_map: Option<HashMap<String, String>>,
 
-    pub sensitive: bool,
-
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub tag: Vec<Tag>,
+    sensitive: bool,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub one_of: Vec<QuestionOption>,
+    tag: Vec<Tag>,
+
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub any_of: Vec<QuestionOption>,
+    one_of: Vec<QuestionOption>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    any_of: Vec<QuestionOption>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub end_time: Option<DateTime<Utc>>,
+    end_time: Option<DateTime<Utc>>,
 
     pub to: Vec<String>,
     pub cc: Vec<String>,
@@ -165,10 +165,10 @@ pub struct Note {
     #[serde(skip_serializing_if = "Option::is_none")]
     quote_url: Option<String>,
 
-    pub published: DateTime<Utc>,
+    published: DateTime<Utc>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub updated: Option<DateTime<Utc>>,
+    pub(super) updated: Option<DateTime<Utc>>,
 }
 
 pub fn build_note(

@@ -22,17 +22,17 @@ use super::note::{build_note, get_note_recipients};
 #[derive(Serialize)]
 pub struct CreateNote {
     #[serde(rename = "@context")]
-    pub _context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
-    pub activity_type: String,
+    activity_type: String,
 
-    pub id: String,
-    pub actor: String,
-    pub object: JsonValue,
+    id: String,
+    actor: String,
+    object: JsonValue,
 
-    pub to: Vec<String>,
-    pub cc: Vec<String>,
+    to: Vec<String>,
+    cc: Vec<String>,
 }
 
 pub fn build_create_note(

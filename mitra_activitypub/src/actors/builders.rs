@@ -70,7 +70,7 @@ use {
     mitra_models::profiles::types::PublicKeyType,
 };
 
-pub fn build_actor_context() -> Context {
+fn build_actor_context() -> Context {
     Context {
         vec: vec![
             AP_CONTEXT,
@@ -114,13 +114,13 @@ pub struct ActorImage {
 }
 
 #[derive(Serialize)]
-pub struct ApplicationFeature {
+struct ApplicationFeature {
     name: &'static str,
     href: &'static str,
 }
 
 #[derive(Serialize)]
-pub struct Application {
+struct Application {
     #[serde(rename = "type")]
     object_type: &'static str,
     implements: Vec<ApplicationFeature>,
@@ -147,72 +147,72 @@ impl Application {
 #[serde(rename_all = "camelCase")]
 pub struct Actor {
     #[serde(rename = "@context")]
-    pub _context: Context,
+    _context: Context,
 
     pub id: String,
 
     #[serde(rename = "type")]
-    pub object_type: String,
+    object_type: String,
 
-    pub preferred_username: String,
+    preferred_username: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    name: Option<String>,
 
-    pub inbox: String,
-    pub outbox: String,
+    inbox: String,
+    outbox: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub followers: Option<String>,
+    followers: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub following: Option<String>,
+    following: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub subscribers: Option<String>,
+    subscribers: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub featured: Option<String>,
+    featured: Option<String>,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub assertion_method: Vec<Multikey>,
+    assertion_method: Vec<Multikey>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub public_key: Option<PublicKeyPem>,
+    public_key: Option<PublicKeyPem>,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub implements: Vec<ApplicationFeature>,
+    implements: Vec<ApplicationFeature>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub generator: Option<Application>,
+    generator: Option<Application>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub icon: Option<ActorImage>,
+    icon: Option<ActorImage>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub image: Option<ActorImage>,
+    image: Option<ActorImage>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub summary: Option<String>,
+    summary: Option<String>,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub also_known_as: Vec<String>,
+    also_known_as: Vec<String>,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub attachment: Vec<JsonValue>,
+    attachment: Vec<JsonValue>,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub tag: Vec<Emoji>,
+    tag: Vec<Emoji>,
 
-    pub manually_approves_followers: bool,
+    manually_approves_followers: bool,
     // https://docs.joinmastodon.org/spec/activitypub/#discoverable
-    pub discoverable: bool,
+    discoverable: bool,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub url: Option<String>,
+    url: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub published: Option<DateTime<Utc>>,
+    published: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub updated: Option<DateTime<Utc>>,
+    updated: Option<DateTime<Utc>>,
 
     // Required for FEP-ef61
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub gateways: Vec<String>,
+    gateways: Vec<String>,
 }
 
 // All identifiers are canonical

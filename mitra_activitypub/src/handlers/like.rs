@@ -114,12 +114,11 @@ pub async fn handle_like(
     ).await?;
     let authority = Authority::from(instance);
     let canonical_object_id = canonicalize_id(&like.object)?;
-    let maybe_post = get_post_by_object_id(
+    let post = match get_post_by_object_id(
         db_client_await!(db_pool),
         &authority,
         &canonical_object_id,
-    ).await;
-    let post = match maybe_post {
+    ).await {
         Ok(post) => post,
         // Ignore like if post is not found locally
         Err(DatabaseError::NotFound(_)) => return Ok(None),
