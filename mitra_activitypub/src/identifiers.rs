@@ -324,7 +324,7 @@ pub(crate) fn compatible_id(
 fn compatible_actor_id(
     db_actor: &DbActor,
 ) -> Result<String, DatabaseTypeError> {
-   compatible_id(db_actor, &db_actor.id)
+    compatible_id(db_actor, &db_actor.id)
 }
 
 pub fn expect_compatible_actor_id(actor_data: &DbActor) -> String {

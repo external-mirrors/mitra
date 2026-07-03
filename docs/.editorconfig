@@ -1,0 +1,5 @@
+# Markdown file with an Caddyfile in an code block.
+[reverse_proxy.md]
+# "caddy fmt" uses tabs for Caddyfile.
+indent_style = tab
+indent_size = 4

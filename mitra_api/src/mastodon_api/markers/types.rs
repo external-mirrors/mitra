@@ -81,7 +81,7 @@ impl From<MarkerCreateMultipartForm> for MarkerCreateData {
                 MarkerData { last_read_id: value.into_inner() }
             }),
             notifications: form.notifications_last_read_id.map(|value| {
-                 MarkerData { last_read_id: value.into_inner() }
+                MarkerData { last_read_id: value.into_inner() }
             }),
             home_last_read_id: None,
             notifications_last_read_id: None,

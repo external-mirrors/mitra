@@ -42,7 +42,7 @@ impl WebfingerAddress {
 
     /// Parses WebFinger address
     pub fn parse(value: &str) -> Result<Self, WebfingerAddressError> {
-         let address_re = Regex::new(WEBFINGER_ADDRESS_RE)
+        let address_re = Regex::new(WEBFINGER_ADDRESS_RE)
             .expect("regexp should be valid");
         let caps = address_re.captures(value)
             .ok_or(WebfingerAddressError("invalid webfinger address"))?;

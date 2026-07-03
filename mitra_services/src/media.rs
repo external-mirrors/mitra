@@ -55,7 +55,7 @@ trait MediaStorageBackend {
     ) -> Result<FileInfo, MediaStorageError>;
 
     fn read_file(
-         &self,
+        &self,
         file_name: &str,
     ) -> Result<Vec<u8>, MediaStorageError>;
 

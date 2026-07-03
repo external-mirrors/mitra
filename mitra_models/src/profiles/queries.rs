@@ -237,7 +237,7 @@ pub async fn update_profile(
 ) -> Result<(DbActorProfile, DeletionQueue), DatabaseError> {
     profile_data.check_consistency()?;
     let transaction = db_client.transaction().await?;
-     // Get hostname and currently used images
+    // Get hostname and currently used images
     let maybe_row = transaction.query_opt(
         "
         SELECT actor_profile
@@ -750,7 +750,7 @@ pub async fn search_profiles_by_did_only(
     db_client: &impl DatabaseClient,
     did: &Did,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
-     let rows = db_client.query(
+    let rows = db_client.query(
         "
         SELECT actor_profile
         FROM actor_profile
