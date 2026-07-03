@@ -141,6 +141,13 @@ impl NonCanonicalUri {
             },
         }
     }
+
+    pub fn origin(&self) -> Origin {
+        match self {
+            Self::Http(http_uri) => http_uri.origin(),
+            Self::Ap((_, ap_uri)) => ap_uri.origin(),
+        }
+    }
 }
 
 impl fmt::Display for NonCanonicalUri {
@@ -174,21 +181,21 @@ pub fn parse_url(
     Ok((canonical_uri, maybe_gateway))
 }
 
-impl<'de> Deserialize<'de> for CanonicalUri {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
-    {
-        let value: String = Deserialize::deserialize(deserializer)?;
-        Self::parse(&value).map_err(DeserializerError::custom)
-    }
-}
-
 impl Serialize for NonCanonicalUri {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
         let uri_string = self.to_string();
         serializer.serialize_str(&uri_string)
+    }
+}
+
+impl<'de> Deserialize<'de> for NonCanonicalUri {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        let value: String = Deserialize::deserialize(deserializer)?;
+        Self::parse(&value).map_err(DeserializerError::custom)
     }
 }
 
@@ -372,6 +379,22 @@ mod tests {
         let url = "ap://did%3Akey%3Az6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor";
         let error = CanonicalUri::parse_canonical(url).err().unwrap();
         assert_eq!(error.0, "URI is not canonical");
+    }
+
+    #[test]
+    fn test_non_canonical_uri_serialize_deserialize() {
+        #[derive(Deserialize, Serialize)]
+        struct Object {
+            id: NonCanonicalUri,
+        }
+
+        let initial_value = serde_json::json!({
+            "id": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        });
+        let object: Object =
+            serde_json::from_value(initial_value.clone()).unwrap();
+        let value = serde_json::to_value(object).unwrap();
+        assert_eq!(value, initial_value);
     }
 
     #[test]
