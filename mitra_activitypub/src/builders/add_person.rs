@@ -10,6 +10,7 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::{
+    authority::Authority,
     contexts::{build_default_context, Context},
     deliverer::Recipient,
     identifiers::{
@@ -79,6 +80,7 @@ fn prepare_add_person(
     end_time: DateTime<Utc>,
     maybe_invoice_id: Option<Uuid>,
 ) -> OutgoingActivityJobData {
+    let authority = Authority::from(instance);
     let activity = build_add_person(
         instance.uri_str(),
         &sender.profile.username,
@@ -89,7 +91,7 @@ fn prepare_add_person(
     );
     let recipients = Recipient::for_inbox(person);
     OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         sender,
         activity,
         recipients,

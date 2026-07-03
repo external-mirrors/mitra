@@ -79,7 +79,7 @@ pub fn prepare_accept_follow(
     );
     let recipients = Recipient::for_inbox(source_actor);
     Ok(OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         sender,
         activity,
         recipients,

@@ -41,6 +41,7 @@ use mitra_models::{
 };
 
 use crate::{
+    authority::Authority,
     deliverer::{
         deliver_activity_worker,
         sign_activity,
@@ -231,16 +232,17 @@ impl OutgoingActivityJobData {
     }
 
     pub(super) fn new(
-        instance_uri: &str,
+        authority: &Authority,
         sender: &impl ManagedAccount,
         activity: impl Serialize,
         mut recipients: Vec<Recipient>,
     ) -> Self {
+        let instance_uri = authority.expect_server_uri().as_str();
         Self::mark_local_recipients(instance_uri, &mut recipients);
         let recipients = Self::sort_recipients(recipients);
         let activity = serde_json::to_value(activity)
             .expect("activity should be serializable");
-        let sender = Sender::from_account(instance_uri, sender);
+        let sender = Sender::from_account(authority, sender);
         let activity_signed = sign_activity(
             &sender,
             activity,
@@ -312,6 +314,7 @@ impl OutgoingActivityJobData {
             &canonical_activity_id,
             &self.activity,
         ).await?;
+        // TODO: move to process_queued_outgoing_activities and remove .is_local
         // Immediately put into inbox if recipient is local
         for recipient in self.recipients.iter_mut() {
             // TODO: FEP-EF61: bulk add
@@ -674,7 +677,7 @@ mod tests {
 
     #[test]
     fn test_outgoing_queue_sort_recipients() {
-        let instance_uri = "https://local.example";
+        let authority = Authority::server_unchecked("https://local.example");
         let sender = User::default();
         let activity = json!({});
         let recipient_1 =
@@ -701,7 +704,7 @@ mod tests {
             },
         ];
         let job_data = OutgoingActivityJobData::new(
-            instance_uri,
+            &authority,
             &sender,
             activity,
             recipients,

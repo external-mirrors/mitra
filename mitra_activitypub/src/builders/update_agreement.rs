@@ -11,6 +11,7 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::{
+    authority::Authority,
     contexts::Context,
     deliverer::Recipient,
     identifiers::{
@@ -81,6 +82,7 @@ pub fn prepare_update_agreement(
     invoice: &Invoice,
     remote_payer: &DbActor,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
+    let authority = Authority::from(instance);
     let activity = build_update_agreement(
         instance.uri(),
         &sender.profile.username,
@@ -90,7 +92,7 @@ pub fn prepare_update_agreement(
     )?;
     let recipients = Recipient::for_inbox(remote_payer);
     Ok(OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         sender,
         activity,
         recipients,

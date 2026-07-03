@@ -9,6 +9,7 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::{
+    authority::Authority,
     contexts::{build_default_context, Context},
     deliverer::Recipient,
     identifiers::{
@@ -72,6 +73,7 @@ pub fn prepare_move_person(
     pull_mode: bool,
     followers: Vec<DbActor>,
 ) -> OutgoingActivityJobData {
+    let authority = Authority::from(instance);
     let activity = build_move_person(
         instance.uri_str(),
         sender,
@@ -82,7 +84,7 @@ pub fn prepare_move_person(
         .flat_map(Recipient::for_inbox)
         .collect();
     OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         sender,
         activity,
         recipients,

@@ -104,6 +104,7 @@ async fn prepare_add_context_activity(
     assert_eq!(conversation_owner.id, conversation_root.author.id);
     let conversation = conversation_root.expect_conversation();
     assert_eq!(conversation_id, conversation.id);
+    let authority = Authority::from(instance);
     let activity = build_add_context_activity(
         instance.uri_str(),
         &conversation_owner.profile.username,
@@ -113,7 +114,7 @@ async fn prepare_add_context_activity(
     );
     let recipients = get_note_recipients(db_client, conversation_root).await?;
     Ok(OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         conversation_owner,
         activity,
         recipients,

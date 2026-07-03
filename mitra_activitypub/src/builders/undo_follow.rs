@@ -103,7 +103,7 @@ pub fn prepare_undo_follow(
     );
     let recipients = Recipient::for_inbox(target_actor);
     Ok(OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         sender,
         activity,
         recipients,

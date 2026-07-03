@@ -8,6 +8,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Implemented `Deserialize` for `NonCanonicalUri` type.
+- Added `origin()` method to `NonCanonicalUri` type.
+
+### Removed
+
+- Removed incorrect implementation of `Deserialize` for `CanonicalUri`.
+
+## [0.26.0] - 2026-07-02
+
+### Added
+
 - Added `NonCanonicalUri` type to `url::canonical` module.
 - Accept 'ap' URIs with `ap+ef61` scheme.
 - Added `Multibase` type to `multibase` module.

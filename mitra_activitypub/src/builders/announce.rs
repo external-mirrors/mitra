@@ -161,7 +161,7 @@ pub async fn prepare_announce(
         repost,
     );
     Ok(OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         sender,
         activity,
         recipients,

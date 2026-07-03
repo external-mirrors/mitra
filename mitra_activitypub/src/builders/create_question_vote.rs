@@ -11,6 +11,7 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::{
+    authority::Authority,
     contexts::{build_default_context, Context},
     deliverer::Recipient,
     identifiers::{
@@ -93,6 +94,7 @@ pub fn prepare_create_question_vote(
     question_owner: &DbActor,
     votes: Vec<PollVote>,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
+    let authority = Authority::from(instance);
     let activity = build_create_question_vote(
         instance.uri_str(),
         &sender.profile,
@@ -102,7 +104,7 @@ pub fn prepare_create_question_vote(
     );
     let recipients = Recipient::for_inbox(question_owner);
     Ok(OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         sender,
         activity,
         recipients,

@@ -149,7 +149,7 @@ pub async fn prepare_like(
         reaction.emoji.as_ref(),
     );
     Ok(OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         sender,
         activity,
         recipients,

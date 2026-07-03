@@ -257,7 +257,7 @@ pub async fn handle_like_c2s(
         .collect();
     let account = get_user_by_id(db_client, author.id).await?;
     let job_data = OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         &account,
         &activity,
         recipients,

@@ -111,7 +111,7 @@ pub async fn prepare_update_person(
     ).map_err(|_| DatabaseError::type_error())?;
     let recipients = get_update_person_recipients(db_client, user).await?;
     Ok(OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         user,
         activity,
         recipients,

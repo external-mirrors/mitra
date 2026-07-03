@@ -781,7 +781,7 @@ pub async fn fetch_collection(
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct Collection {
-        id: CanonicalUri,
+        id: NonCanonicalUri,
         first: Option<JsonValue>, // page can be embedded
         #[serde(default)]
         items: Vec<JsonValue>,
@@ -791,7 +791,7 @@ pub async fn fetch_collection(
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct CollectionPage {
-        id: Option<CanonicalUri>,
+        id: Option<NonCanonicalUri>,
         next: Option<JsonValue>,
         #[serde(default)]
         items: Vec<JsonValue>,

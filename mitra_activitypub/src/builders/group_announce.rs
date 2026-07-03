@@ -102,7 +102,7 @@ pub async fn prepare_group_announce(
         .flat_map(|actor_data| Recipient::for_inbox(&actor_data))
         .collect();
     Ok(OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         sender,
         group_announce,
         recipients,

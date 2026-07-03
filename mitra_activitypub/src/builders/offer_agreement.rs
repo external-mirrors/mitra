@@ -11,6 +11,7 @@ use mitra_models::{
 };
 
 use crate::{
+    authority::Authority,
     contexts::Context,
     deliverer::Recipient,
     identifiers::{local_activity_id, local_actor_id},
@@ -95,6 +96,7 @@ pub fn prepare_offer_agreement(
     invoice_id: Uuid,
     invoice_amount: u64,
 ) -> OutgoingActivityJobData {
+    let authority = Authority::from(instance);
     let activity = build_offer_agreement(
         instance.uri_str(),
         &sender.profile.username,
@@ -105,7 +107,7 @@ pub fn prepare_offer_agreement(
     );
     let recipients = Recipient::for_inbox(proposer_actor);
     OutgoingActivityJobData::new(
-        instance.uri_str(),
+        &authority,
         sender,
         activity,
         recipients,
