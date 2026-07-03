@@ -18,6 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allowed implicit lists in query parameters.
 - Write warning to log when processing expired integrity proof.
 
+### Fixed
+
+- Fixed full text search not using index.
+
 ## [5.6.0] - 2026-06-26
 
 ### Added
