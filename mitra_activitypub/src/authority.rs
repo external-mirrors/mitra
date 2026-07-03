@@ -88,15 +88,20 @@ impl Authority {
     }
 
     // TODO: make public after removing expect_server_uri()
-    #[allow(dead_code)]
-    fn key(secret_key: &Ed25519SecretKey) -> Self {
-        let public_key = ed25519_public_key_from_secret_key(secret_key);
+    fn public_key(public_key: Ed25519PublicKey) -> Self {
         let root = AuthorityRoot::Key(public_key);
         Self {
             root,
             http_base_uri: None,
             prefer_compatible: true,
         }
+    }
+
+    // TODO: make public after removing expect_server_uri()
+    #[allow(dead_code)]
+    fn key(secret_key: &Ed25519SecretKey) -> Self {
+        let public_key = ed25519_public_key_from_secret_key(secret_key);
+        Self::public_key(public_key)
     }
 
     pub fn key_with_gateway(secret_key: &Ed25519SecretKey, server_uri: &HttpUri) -> Self {
