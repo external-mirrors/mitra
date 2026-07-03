@@ -1,4 +1,3 @@
-use apx_core::url::http_uri::HttpUri;
 use serde::Serialize;
 
 use mitra_config::Instance;
@@ -13,7 +12,7 @@ use mitra_utils::id::generate_ulid;
 use crate::{
     authority::Authority,
     contexts::{build_default_context, Context},
-    identifiers::local_activity_id,
+    identifiers::local_activity_id_unified,
     queues::OutgoingActivityJobData,
     vocabulary::UPDATE,
 };
@@ -37,15 +36,14 @@ struct UpdateNote {
 }
 
 fn build_update_note(
-    instance_uri: &HttpUri,
+    authority: &Authority,
     instance_webfinger_hostname: &str,
     media_server: &MediaServer,
     post: &PostDetailed,
 ) -> UpdateNote {
-    let authority = Authority::server(instance_uri);
     let object = build_note(
         instance_webfinger_hostname,
-        &authority,
+        authority,
         media_server,
         post,
         false, // no context
@@ -53,8 +51,8 @@ fn build_update_note(
     let primary_audience = object.to.clone();
     let secondary_audience = object.cc.clone();
     // Update(Note) is idempotent so its ID can be random
-    let activity_id = local_activity_id(
-        instance_uri.as_str(),
+    let activity_id = local_activity_id_unified(
+        authority,
         UPDATE,
         generate_ulid(),
     );
@@ -79,7 +77,7 @@ pub async fn prepare_update_note(
     assert_eq!(author.id, post.author.id);
     let authority = Authority::from(instance);
     let activity = build_update_note(
-        instance.uri(),
+        &authority,
         &instance.webfinger_hostname(),
         media_server,
         post,
@@ -108,7 +106,7 @@ mod tests {
 
     #[test]
     fn test_build_update_note() {
-        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let author_username = "author";
         let author = DbActorProfile::local_for_test(author_username);
@@ -119,7 +117,7 @@ mod tests {
             ..Default::default()
         };
         let activity = build_update_note(
-            &instance_uri,
+            &authority,
             INSTANCE_HOSTNAME,
             &media_server,
             &post,
