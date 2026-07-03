@@ -260,6 +260,25 @@ pub(super) fn sign_activity(
         log::warn!("activity is already signed");
         activity
     } else {
+        #[cfg(feature = "mini")]
+        let activity = if activity["object"].is_object() {
+            let object = &activity["object"];
+            if is_object_signed(object) {
+                log::warn!("object is already signed");
+                activity
+            } else {
+                let object_signed = sign_object(
+                    &sender.ed25519_secret_key,
+                    &sender.ed25519_key_id,
+                    object,
+                )?;
+                let mut activity_clone = activity.clone();
+                activity_clone["object"] = object_signed;
+                activity_clone
+            }
+        } else {
+            activity
+        };
         sign_object(
             &sender.ed25519_secret_key,
             &sender.ed25519_key_id,
