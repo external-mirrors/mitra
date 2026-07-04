@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Accept 'ap' URIs with `ap+ef61` scheme.
 - Added `max_toot_chars` to `/api/v1/instance` response ([#240](https://codeberg.org/silverpill/mitra/pulls/240)).
+- Allowed to specify description on group creation.
 
 ### Changed
 

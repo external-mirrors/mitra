@@ -6,8 +6,9 @@ use mitra_validators::errors::ValidationError;
 use crate::mastodon_api::pagination::PageSize;
 
 #[derive(Deserialize)]
-pub struct GroupCreateData {
+pub struct GroupCreateForm {
     pub name: String,
+    pub description: Option<String>,
 }
 
 const GROUP_FILTER_FOLLOWING: &str = "following";

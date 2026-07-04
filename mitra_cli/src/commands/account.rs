@@ -105,6 +105,9 @@ impl CreateSystemAccount {
         let instance = config.instance();
         let account_data = AutomatedAccountData {
             username: ANONYMOUS.to_owned(),
+            bio: None,
+            bio_source: None,
+            emojis: vec![],
             account_type: AutomatedAccountType::Anonymous,
             rsa_secret_key: instance.rsa_secret_key,
             ed25519_secret_key: instance.ed25519_secret_key,

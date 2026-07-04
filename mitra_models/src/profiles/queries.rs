@@ -182,6 +182,7 @@ pub async fn create_profile(
             webfinger_hostname,
             display_name,
             bio,
+            bio_source,
             avatar,
             banner,
             manually_approves_followers,
@@ -193,7 +194,7 @@ pub async fn create_profile(
             aliases,
             actor_json
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         RETURNING actor_profile
         ",
         &[
@@ -204,6 +205,7 @@ pub async fn create_profile(
             &profile_data.webfinger_hostname.as_str(),
             &profile_data.display_name,
             &profile_data.bio,
+            &profile_data.bio_source,
             &profile_data.avatar,
             &profile_data.banner,
             &profile_data.manually_approves_followers,

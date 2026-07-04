@@ -1162,6 +1162,10 @@ paths:
                 name:
                   description: The name of the group
                   type: string
+                description:
+                  description: The description of the group
+                  type: string
+                  nullable: true
       responses:
         200:
           description: Successful operation

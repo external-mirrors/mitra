@@ -1,7 +1,3 @@
-use apx_core::crypto::{
-    eddsa::Ed25519SecretKey,
-    rsa::RsaSecretKey,
-};
 use uuid::Uuid;
 
 use crate::{
@@ -33,21 +29,22 @@ use crate::{
     },
 };
 
-use super::types::GroupFilter;
+use super::types::{GroupCreateData, GroupFilter};
 
 pub async fn create_group(
     db_client: &mut impl DatabaseClient,
     owner_id: Uuid,
-    group_name: String,
-    rsa_secret_key: RsaSecretKey,
-    ed25519_secret_key: Ed25519SecretKey,
+    group_data: GroupCreateData,
 ) -> Result<AutomatedAccountDetailed, DatabaseError> {
     let mut transaction = db_client.transaction().await?;
     let account_data = AutomatedAccountData {
-        username: group_name,
+        username: group_data.username,
+        bio: group_data.bio,
+        bio_source: group_data.bio_source,
+        emojis: group_data.emojis,
         account_type: AutomatedAccountType::Group,
-        rsa_secret_key,
-        ed25519_secret_key,
+        rsa_secret_key: group_data.rsa_secret_key,
+        ed25519_secret_key: group_data.ed25519_secret_key,
     };
     let account =
         create_automated_account(&mut transaction, account_data).await?;
@@ -183,20 +180,27 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let user = create_test_user(db_client, "user").await;
         let group_name = "tesgroup";
-        let rsa_secret_key = generate_weak_rsa_key().unwrap();
-        let ed25519_secret_key = generate_weak_ed25519_key();
+        let group_description = "my group";
+        let group_data = GroupCreateData {
+            username: group_name.to_owned(),
+            bio: Some(group_description.to_owned()),
+            bio_source: Some(group_description.to_owned()),
+            emojis: vec![],
+            rsa_secret_key: generate_weak_rsa_key().unwrap(),
+            ed25519_secret_key: generate_weak_ed25519_key(),
+        };
         let group = create_group(
             db_client,
             user.id,
-            group_name.to_owned(),
-            rsa_secret_key,
-            ed25519_secret_key,
+            group_data,
         ).await.unwrap();
         assert_eq!(group.account_type, AutomatedAccountType::Group);
         let profile = group.profile;
         assert_eq!(profile.automated_account_id.is_some(), true);
         assert_eq!(profile.is_group(), true);
         assert_eq!(profile.username, group_name);
+        assert_eq!(profile.bio.unwrap(), group_description);
+        assert_eq!(profile.bio_source.unwrap(), group_description);
         let is_admin = has_relationship(
             db_client,
             user.id,

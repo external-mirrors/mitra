@@ -25,21 +25,35 @@ use mitra_models::{
         get_database_client,
         DatabaseConnectionPool,
     },
-    groups::queries::{
-        create_group,
-        get_related_groups,
+    groups::{
+        queries::{
+            create_group,
+            get_related_groups,
+        },
+        types::GroupCreateData,
     },
     posts::helpers::can_create_post,
     relationships::helpers::create_follow_request,
 };
-use mitra_validators::accounts::validate_local_username;
+use mitra_validators::{
+    groups::{
+        clean_group_create_data,
+        validate_group_create_data,
+    },
+};
 
 use crate::{
     http::{
         get_request_base_url,
     },
     mastodon_api::{
-        accounts::types::Account,
+        accounts::{
+            helpers::{
+                parse_microsyntaxes,
+                parse_profile_bio,
+            },
+            types::Account,
+        },
         auth::get_current_user,
         errors::MastodonError,
         media_server::ClientMediaServer,
@@ -47,7 +61,7 @@ use crate::{
 };
 
 use super::types::{
-    GroupCreateData,
+    GroupCreateForm,
     GroupListQueryParams,
 };
 
@@ -57,26 +71,40 @@ async fn create_group_view(
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
-    group_data: web::Json<GroupCreateData>,
+    group_form: web::Json<GroupCreateForm>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     if !can_create_post(&current_user) {
         return Err(MastodonError::PermissionError);
     };
+    let maybe_bio_source = group_form.description.clone();
+    let maybe_bio_html = parse_profile_bio(maybe_bio_source.as_ref())?;
+    let profile_text = parse_microsyntaxes(
+        db_client,
+        None,
+        maybe_bio_html.as_ref(),
+    ).await?;
     let rsa_secret_key = match web::block(generate_rsa_key).await {
         Ok(Ok(secret_key)) => secret_key,
         Ok(Err(error)) => return Err(MastodonError::from_internal(error)),
         Err(error) => return Err(MastodonError::from_internal(error)),
     };
     let ed25519_secret_key = generate_ed25519_key();
-    validate_local_username(&group_data.name)?;
+    let mut group_data = GroupCreateData {
+        username: group_form.name.clone(),
+        bio: profile_text.bio,
+        bio_source: maybe_bio_source,
+        emojis: profile_text.emojis,
+        rsa_secret_key,
+        ed25519_secret_key,
+    };
+    clean_group_create_data(&mut group_data);
+    validate_group_create_data(&group_data)?;
     let group = create_group(
         db_client,
         current_user.id,
-        group_data.name.clone(),
-        rsa_secret_key,
-        ed25519_secret_key,
+        group_data,
     ).await?;
     create_or_update_local_actor(&config, db_client, &group).await?;
     let follow_request = create_follow_request(

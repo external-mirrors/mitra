@@ -14,6 +14,8 @@ use mitra_models::{
     },
     relationships::types::{RelationshipOrFollowRequest, RelationshipType},
 };
+use mitra_utils::markdown::markdown_basic_to_html;
+use mitra_validators::errors::ValidationError;
 
 use crate::mastodon_api::{
     media_server::ClientMediaServer,
@@ -21,6 +23,19 @@ use crate::mastodon_api::{
 };
 
 use super::types::{Account, Alias, Aliases, RelationshipMap};
+
+pub fn parse_profile_bio(
+    maybe_bio_source: Option<&String>,
+) -> Result<Option<String>, ValidationError> {
+    let maybe_bio = if let Some(bio_source) = maybe_bio_source {
+        let bio = markdown_basic_to_html(bio_source)
+            .map_err(|_| ValidationError("invalid markdown"))?;
+        Some(bio)
+    } else {
+        None
+    };
+    Ok(maybe_bio)
+}
 
 pub struct ProfileText {
     pub display_name: Option<String>,

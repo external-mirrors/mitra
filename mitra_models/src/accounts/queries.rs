@@ -162,6 +162,7 @@ pub async fn create_user(
         webfinger_hostname: WebfingerHostname::Local,
         display_name: None,
         bio: None,
+        bio_source: None,
         avatar: None,
         banner: None,
         manually_approves_followers: false,
@@ -527,7 +528,8 @@ pub async fn create_automated_account(
         hostname: None,
         webfinger_hostname: WebfingerHostname::Local,
         display_name: None,
-        bio: None,
+        bio: account_data.bio,
+        bio_source: account_data.bio_source,
         avatar: None,
         banner: None,
         manually_approves_followers: false,
@@ -537,7 +539,7 @@ pub async fn create_automated_account(
         payment_options: vec![],
         extra_fields: vec![],
         aliases: vec![],
-        emojis: vec![],
+        emojis: account_data.emojis,
         actor_json: None,
     };
     let db_profile = create_profile(&mut transaction, profile_data).await?;
@@ -957,6 +959,9 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let account_data = AutomatedAccountData {
             username: "myname".to_string(),
+            bio: None,
+            bio_source: None,
+            emojis: vec![],
             account_type: AutomatedAccountType::Anonymous,
             rsa_secret_key: generate_weak_rsa_key().unwrap(),
             ed25519_secret_key: generate_weak_ed25519_key(),

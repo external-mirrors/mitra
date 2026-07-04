@@ -73,6 +73,8 @@ use crate::mastodon_api::{
     uploads::{save_b64_file, UploadError},
 };
 
+use super::helpers::parse_profile_bio;
+
 pub const AUTHENTICATION_METHOD_PASSWORD: &str = "password";
 pub const AUTHENTICATION_METHOD_EIP4361: &str = "eip4361";
 pub const AUTHENTICATION_METHOD_CAIP122_MONERO: &str = "caip122_monero";
@@ -490,9 +492,7 @@ impl AccountUpdateData {
             profile_data.display_name = Some(display_name);
         };
         if let Some(bio_source) = self.note {
-            let bio = markdown_basic_to_html(&bio_source)
-                .map_err(|_| ValidationError("invalid markdown"))?;
-            profile_data.bio = Some(bio);
+            profile_data.bio = parse_profile_bio(Some(&bio_source))?;
             profile_data.bio_source = Some(bio_source);
         };
         profile_data.avatar = process_b64_image_field_value(
