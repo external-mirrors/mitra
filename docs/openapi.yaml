@@ -1218,6 +1218,31 @@ paths:
         400:
           description: Invalid query parameters.
   /api/v1/groups/{group_id}:
+    patch:
+      summary: Update group profile.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/group_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description:
+                  description: The description of the group
+                  type: string
+                  nullable: true
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        400:
+          description: Invalid group info
     delete:
       summary: Delete group.
       security:
@@ -1227,6 +1252,25 @@ paths:
       responses:
         204:
           description: Group deleted
+  /api/v1/groups/{group_id}/source:
+    get:
+      summary: Obtain the source properties for a group profile so that it can be edited.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/group_id'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  description:
+                    description: The description of the group
+                    type: string
+                    nullable: true
   /api/v1/instance:
     get:
       summary: Information about the instance.

@@ -3,6 +3,7 @@ use actix_web::{
     dev::ConnectionInfo,
     get,
     post,
+    patch,
     web,
     HttpResponse,
     Scope,
@@ -23,6 +24,7 @@ use mitra_activitypub::{
         },
     },
     authority::Authority,
+    builders::update_person::prepare_update_person,
 };
 use mitra_config::Config;
 use mitra_models::{
@@ -39,17 +41,23 @@ use mitra_models::{
         types::GroupCreateData,
     },
     posts::helpers::can_create_post,
+    profiles::{
+        queries::update_profile,
+        types::ProfileUpdateData,
+    },
     relationships::{
         helpers::create_follow_request,
         queries::has_relationship,
         types::RelationshipType,
     },
 };
+use mitra_services::media::MediaServer;
 use mitra_validators::{
     groups::{
         clean_group_create_data,
         validate_group_create_data,
     },
+    profiles::clean_profile_update_data,
 };
 
 use crate::{
@@ -73,6 +81,8 @@ use crate::{
 use super::types::{
     GroupCreateForm,
     GroupListQueryParams,
+    GroupSource,
+    GroupUpdateForm,
 };
 
 #[post("")]
@@ -169,6 +179,91 @@ async fn get_followed_groups_view(
     Ok(HttpResponse::Ok().json(accounts))
 }
 
+#[get("/{group_id}/source")]
+async fn get_group_source(
+    auth: BearerAuth,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    group_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let group = get_group_account_by_id(db_client, *group_id).await?;
+    if !has_relationship(
+        db_client,
+        current_user.id,
+        group.id,
+        RelationshipType::GroupAdmin,
+    ).await? {
+        return Err(MastodonError::PermissionError);
+    };
+    let source = GroupSource {
+        description: group.profile.bio_source,
+    };
+    Ok(HttpResponse::Ok().json(source))
+}
+
+#[patch("/{group_id}")]
+async fn update_group_view(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    group_id: web::Path<Uuid>,
+    group_form: web::Json<GroupUpdateForm>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let mut group = get_group_account_by_id(db_client, *group_id).await?;
+    if !has_relationship(
+        db_client,
+        current_user.id,
+        group.id,
+        RelationshipType::GroupAdmin,
+    ).await? {
+        return Err(MastodonError::PermissionError);
+    };
+    let mut group_data = ProfileUpdateData::from(&group.profile);
+    // Partial update
+    if let Some(ref bio_source) = group_form.description {
+        let maybe_bio_html = parse_profile_bio(Some(bio_source))?;
+        let profile_text = parse_microsyntaxes(
+            db_client,
+            None,
+            maybe_bio_html.as_ref(),
+        ).await?;
+        group_data.bio = profile_text.bio;
+        group_data.bio_source = Some(bio_source.clone());
+        group_data.emojis = profile_text.emojis;
+    };
+    clean_profile_update_data(&mut group_data)?;
+    let (updated_profile, _) = update_profile(
+        db_client,
+        group.id,
+        group_data,
+    ).await?;
+    group.profile = updated_profile;
+    create_or_update_local_actor(&config, db_client, &group).await?;
+
+    let media_server = MediaServer::new(&config);
+    let instance = config.instance();
+    prepare_update_person(
+        db_client,
+        &instance,
+        &media_server,
+        &group,
+    ).await?.save_and_enqueue(db_client).await?;
+
+    let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&instance);
+    let media_server = ClientMediaServer::new(&config, &base_url);
+    let account = Account::from_profile(
+        &authority,
+        &media_server,
+        group.profile,
+    );
+    Ok(HttpResponse::Ok().json(account))
+}
+
 #[delete("/{group_id}")]
 async fn delete_group_view(
     auth: BearerAuth,
@@ -196,5 +291,7 @@ pub fn group_api_scope() -> Scope {
     web::scope("/v1/groups")
         .service(create_group_view)
         .service(get_followed_groups_view)
+        .service(get_group_source)
+        .service(update_group_view)
         .service(delete_group_view)
 }

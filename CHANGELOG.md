@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `max_toot_chars` to `/api/v1/instance` response ([#240](https://codeberg.org/silverpill/mitra/pulls/240)).
 - Allowed to specify description on group creation.
 - Added API endpoint for deleting groups.
+- Added API endpoints for editing group info.
 
 ### Changed
 
