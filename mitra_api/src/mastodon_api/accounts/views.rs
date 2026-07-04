@@ -349,7 +349,14 @@ async fn update_credentials(
         &config.limits.media,
         &media_storage,
     )?;
-    parse_microsyntaxes(db_client, &mut profile_data).await?;
+    let profile_text = parse_microsyntaxes(
+        db_client,
+        profile_data.display_name.as_ref(),
+        profile_data.bio.as_ref(),
+    ).await?;
+    profile_data.display_name = profile_text.display_name;
+    profile_data.bio = profile_text.bio;
+    profile_data.emojis = profile_text.emojis;
     clean_profile_update_data(&mut profile_data)?;
 
     // Update profile
