@@ -1217,6 +1217,16 @@ paths:
                   $ref: '#/components/schemas/Account'
         400:
           description: Invalid query parameters.
+  /api/v1/groups/{group_id}:
+    delete:
+      summary: Delete group.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/group_id'
+      responses:
+        204:
+          description: Group deleted
   /api/v1/instance:
     get:
       summary: Information about the instance.

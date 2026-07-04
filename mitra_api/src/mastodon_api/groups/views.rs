@@ -1,4 +1,5 @@
 use actix_web::{
+    delete,
     dev::ConnectionInfo,
     get,
     post,
@@ -11,16 +12,21 @@ use apx_sdk::core::crypto::{
     eddsa::generate_ed25519_key,
     rsa::generate_rsa_key,
 };
+use uuid::Uuid;
 
 use mitra_activitypub::{
     adapters::{
         follow_requests::accept_and_add_follower,
-        users::create_or_update_local_actor,
+        users::{
+            create_or_update_local_actor,
+            delete_account,
+        },
     },
     authority::Authority,
 };
 use mitra_config::Config;
 use mitra_models::{
+    accounts::queries::get_group_account_by_id,
     database::{
         get_database_client,
         DatabaseConnectionPool,
@@ -33,7 +39,11 @@ use mitra_models::{
         types::GroupCreateData,
     },
     posts::helpers::can_create_post,
-    relationships::helpers::create_follow_request,
+    relationships::{
+        helpers::create_follow_request,
+        queries::has_relationship,
+        types::RelationshipType,
+    },
 };
 use mitra_validators::{
     groups::{
@@ -159,8 +169,32 @@ async fn get_followed_groups_view(
     Ok(HttpResponse::Ok().json(accounts))
 }
 
+#[delete("/{group_id}")]
+async fn delete_group_view(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    group_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let group = get_group_account_by_id(db_client, *group_id).await?;
+    if !has_relationship(
+        db_client,
+        current_user.id,
+        group.id,
+        RelationshipType::GroupAdmin,
+    ).await? {
+        return Err(MastodonError::PermissionError);
+    };
+    delete_account(&config, db_client, &group).await?;
+    let empty = serde_json::json!({});
+    Ok(HttpResponse::NoContent().json(empty))
+}
+
 pub fn group_api_scope() -> Scope {
     web::scope("/v1/groups")
         .service(create_group_view)
         .service(get_followed_groups_view)
+        .service(delete_group_view)
 }
