@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed Rust edition to 2024.
 - Allowed implicit lists in query parameters.
 - Write warning to log when processing expired integrity proof.
+- Sort media types in `Instance.configuration.media_attachments.supported_mime_types` array.
 
 ### Fixed
 

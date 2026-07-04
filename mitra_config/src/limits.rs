@@ -127,10 +127,14 @@ impl Default for MediaLimits {
 
 impl MediaLimits {
     pub fn supported_media_types(&self) -> Vec<&str> {
-        SUPPORTED_MEDIA_TYPES.into_iter()
+        let mut types: Vec<_> = SUPPORTED_MEDIA_TYPES
+            .into_iter()
             .chain(self.extra_supported_types.iter()
                 .map(|media_type| media_type.as_str()))
-            .collect()
+            .collect();
+        types.sort();
+        types.dedup();
+        types
     }
 }
 
