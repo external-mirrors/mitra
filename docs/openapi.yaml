@@ -4415,6 +4415,12 @@ components:
         reblog:
           description: The post being reposted.
           type: object
+        group:
+          allOf:
+            - description: The group to which this post is addressed.
+              nullable: true
+              example: null
+            - $ref: '#/components/schemas/Account'
         ipfs_cid:
           type: string
           nullable: true

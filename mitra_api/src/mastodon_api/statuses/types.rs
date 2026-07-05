@@ -118,7 +118,6 @@ pub struct Status {
     #[serde(serialize_with = "serialize_datetime_opt")]
     edited_at: Option<DateTime<Utc>>,
     pub account: Account,
-    title: Option<String>, // custom field
     pub content: String,
     language: Option<String>,
     pub in_reply_to_id: Option<Uuid>,
@@ -142,15 +141,19 @@ pub struct Status {
     pub favourited: bool,
     pub reblogged: bool,
     bookmarked: bool,
-    conversation_tracking: Option<&'static str>,
 
     // Pleroma API
     pleroma: PleromaData,
 
-    // Extra fields
+    // Custom fields
+    title: Option<String>,
     hidden: bool,
     pub ipfs_cid: Option<String>,
     links: Vec<Status>,
+    group: Option<Account>,
+
+    // Custom fields: authorized user
+    conversation_tracking: Option<&'static str>,
 }
 
 pub fn visibility_to_str(visibility: Visibility) -> &'static str {
@@ -239,6 +242,13 @@ impl Status {
         let links: Vec<Status> = related_posts.linked.into_iter().map(|post| {
             Status::from_post(authority, media_server, post)
         }).collect();
+        let maybe_group = post.group.map(|group| {
+            Account::from_profile(
+                authority,
+                media_server,
+                group,
+            )
+        });
         let visibility = visibility_to_str(post.visibility);
         let mut emoji_reactions = vec![];
         let mut favourites_count = 0;
@@ -314,6 +324,7 @@ impl Status {
             hidden: post.actions.is_some_and(|actions| actions.hidden),
             ipfs_cid: post.ipfs_cid,
             links: links,
+            group: maybe_group,
         }
     }
 }

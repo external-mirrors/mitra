@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allowed to specify description on group creation.
 - Added API endpoint for deleting groups.
 - Added API endpoints for editing group info.
+- Added `group` field to `Status` Mastodon API entity.
 
 ### Changed
 
