@@ -3679,6 +3679,9 @@ components:
       description: Limits related to accounts.
       type: object
       properties:
+        max_note_length:
+          description: The maximum length allowed for a profile bio.
+          type: integer
         max_profile_fields:
           description: The maximum number of custom profile fields allowed to be set.
           type: integer

@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added API endpoints for editing group info.
 - Added `group` field to `Status` Mastodon API entity.
 - Implemented FEP-5219 `affiliations` collection.
+- Added `configuration.accounts.max_note_length` field to `Instance` entity.
 
 ### Changed
 

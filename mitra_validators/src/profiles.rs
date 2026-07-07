@@ -35,7 +35,7 @@ const USERNAME_LENGTH_MAX: usize = 100;
 const HOSTNAME_RE: &str = r"^([a-z0-9\.-]+|[0-9\.]+|\[[0-9a-f:]+\])$";
 const HOSTNAME_LENGTH_MAX: usize = 100;
 const DISPLAY_NAME_MAX_LENGTH: usize = 200;
-const BIO_MAX_LENGTH: usize = 10000;
+pub const BIO_MAX_LENGTH: usize = 10000;
 const BIO_ALLOWED_TAGS: [&str; 3] = [
     "a",
     "br",

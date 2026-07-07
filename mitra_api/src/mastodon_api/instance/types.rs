@@ -21,6 +21,7 @@ use mitra_utils::markdown::markdown_to_html;
 use mitra_validators::{
     polls::{POLL_OPTION_COUNT_MAX, POLL_OPTION_NAME_LENGTH_MAX},
     profiles::{
+        BIO_MAX_LENGTH,
         FIELD_LOCAL_LIMIT,
         FIELD_NAME_LENGTH_MAX,
         FIELD_REMOTE_LIMIT,
@@ -52,6 +53,7 @@ struct Stats {
 
 #[derive(Serialize)]
 struct AccountLimits {
+    max_note_length: usize,
     max_profile_fields: usize,
     profile_field_name_limit: usize,
     profile_field_value_limit: usize,
@@ -60,6 +62,7 @@ struct AccountLimits {
 impl AccountLimits {
     fn new() -> Self {
         Self {
+            max_note_length: BIO_MAX_LENGTH,
             max_profile_fields: FIELD_LOCAL_LIMIT,
             profile_field_name_limit: FIELD_NAME_LENGTH_MAX,
             profile_field_value_limit: FIELD_VALUE_LENGTH_MAX,
