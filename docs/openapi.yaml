@@ -3679,6 +3679,9 @@ components:
       description: Limits related to accounts.
       type: object
       properties:
+        max_display_name_length:
+          description: The maximum length allowed for a user's display name.
+          type: integer
         max_note_length:
           description: The maximum length allowed for a profile bio.
           type: integer
