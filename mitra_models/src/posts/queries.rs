@@ -29,7 +29,7 @@ use crate::notifications::helpers::{
     create_reply_notification,
     create_repost_notification,
 };
-use crate::polls::queries::{create_poll, reset_votes, update_poll};
+use crate::polls::queries::{create_poll, update_poll};
 use crate::profiles::{
     queries::{
         get_profile_by_id,
@@ -426,7 +426,7 @@ pub async fn update_post(
     post_id: Uuid,
     post_data: PostUpdateData,
 ) -> Result<(PostDetailed, DeletionQueue), DatabaseError> {
-    let transaction = db_client.transaction().await?;
+    let mut transaction = db_client.transaction().await?;
     // Reposts and immutable posts can't be updated
     let maybe_row = transaction.query_opt(
         "
@@ -542,14 +542,11 @@ pub async fn update_post(
     let db_reactions =
         get_post_reactions(&transaction, db_post.id).await?;
     let maybe_poll = if let Some(poll_data) = post_data.poll {
-        let (poll, options_changed) = update_poll(
-            &transaction,
+        let poll = update_poll(
+            &mut transaction,
             db_post.id,
             poll_data,
         ).await?;
-        if options_changed {
-            reset_votes(&transaction, poll.id).await?;
-        };
         Some(poll)
     } else {
         None

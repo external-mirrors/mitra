@@ -43,11 +43,44 @@ pub async fn create_poll(
 }
 
 pub async fn update_poll(
-    db_client: &impl DatabaseClient,
+    db_client: &mut impl DatabaseClient,
     poll_id: Uuid,
-    poll_data: PollData,
-) -> Result<(Poll, bool), DatabaseError> {
-    let maybe_row = db_client.query_opt(
+    mut poll_data: PollData,
+) -> Result<Poll, DatabaseError> {
+    let transaction = db_client.transaction().await?;
+    let maybe_row = transaction.query_opt(
+        "
+        SELECT poll
+        FROM poll WHERE id = $1
+        FOR UPDATE
+        ",
+        &[&poll_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("poll"))?;
+    let poll_old: Poll = row.try_get("poll")?;
+    let get_options = |results: &[PollResult]| -> HashSet<String> {
+        results.iter()
+            .map(|result| result.option_name.clone())
+            .collect()
+    };
+    let options_changed =
+        get_options(&poll_data.results) != get_options(poll_old.results.inner())
+        || poll_data.multiple_choices != poll_old.multiple_choices;
+    if options_changed {
+        // Reset remote poll
+        poll_data
+            .results
+            .iter_mut()
+            .for_each(|result| result.vote_count = 0);
+        transaction.execute(
+            "
+            DELETE FROM poll_vote
+            WHERE poll_id = $1
+            ",
+            &[&poll_id],
+        ).await?;
+    };
+    let row = transaction.query_one(
         "
         UPDATE poll
         SET
@@ -55,9 +88,7 @@ pub async fn update_poll(
             ends_at = $3,
             results = $4
         WHERE id = $1
-        RETURNING
-            poll,
-            (SELECT poll FROM poll WHERE id = $1) AS poll_old
+        RETURNING poll
         ",
         &[
             &poll_id,
@@ -66,18 +97,9 @@ pub async fn update_poll(
             &PollResults::new(poll_data.results),
         ],
     ).await?;
-    let row = maybe_row.ok_or(DatabaseError::NotFound("poll"))?;
     let poll: Poll = row.try_get("poll")?;
-    let poll_old: Poll = row.try_get("poll_old")?;
-    let get_options = |results: &PollResults| -> HashSet<String> {
-        results.inner().iter()
-            .map(|result| result.option_name.clone())
-            .collect()
-    };
-    let options_changed =
-        get_options(&poll.results) != get_options(&poll_old.results) ||
-        poll.multiple_choices != poll_old.multiple_choices;
-    Ok((poll, options_changed))
+    transaction.commit().await?;
+    Ok(poll)
 }
 
 async fn create_votes(
@@ -122,21 +144,7 @@ async fn create_votes(
     Ok(votes)
 }
 
-pub async fn reset_votes(
-    db_client: &impl DatabaseClient,
-    poll_id: Uuid,
-) -> Result<(), DatabaseError> {
-    db_client.execute(
-        "
-        DELETE FROM poll_vote
-        WHERE poll_id = $1
-        ",
-        &[&poll_id],
-    ).await?;
-    Ok(())
-}
-
-#[allow(dead_code)]
+#[cfg(test)]
 async fn get_poll_results(
     db_client: &impl DatabaseClient,
     poll_id: Uuid,
@@ -403,14 +411,13 @@ mod tests {
             ends_at: poll.ends_at,
             results: results_updated.clone(),
         };
-        let (poll, options_changed) = update_poll(
+        let poll = update_poll(
             db_client,
             post.id,
             poll_data,
         ).await.unwrap();
         assert_eq!(poll.id, post.id);
         assert_eq!(poll.results.inner(), results_updated);
-        assert_eq!(options_changed, false);
 
         // Add new option
         let mut results_updated = poll.results.into_inner();
@@ -423,13 +430,14 @@ mod tests {
             ends_at: poll.ends_at,
             results: results_updated.clone(),
         };
-        let (poll, options_changed) = update_poll(
+        let poll = update_poll(
             db_client,
             post.id,
             poll_data,
         ).await.unwrap();
-        assert_eq!(poll.results.inner(), results_updated);
-        assert_eq!(options_changed, true);
+        let results = poll.results.into_inner();
+        assert_eq!(results.len(), results_updated.len());
+        assert!(results.iter().all(|res| res.vote_count == 0));
     }
 
     #[tokio::test]
