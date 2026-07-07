@@ -378,7 +378,7 @@ fn default_authentication_method() -> String { AUTHENTICATION_METHOD_PASSWORD.to
 
 /// https://docs.joinmastodon.org/methods/accounts/
 #[derive(Deserialize)]
-pub struct AccountCreateData {
+pub struct AccountCreateForm {
     #[serde(default = "default_authentication_method")]
     pub authentication_method: String,
 
@@ -430,7 +430,7 @@ impl AccountSourceData {
 
 // Supports partial updates
 #[derive(Deserialize)]
-pub struct AccountUpdateData {
+pub struct AccountUpdateForm {
     display_name: Option<String>,
     note: Option<String>,
     avatar: Option<String>,
@@ -479,7 +479,7 @@ fn process_b64_image_field_value(
     Ok(maybe_file_name)
 }
 
-impl AccountUpdateData {
+impl AccountUpdateForm {
     pub fn into_profile_data(
         self,
         profile: &DbActorProfile,
@@ -583,7 +583,7 @@ pub struct AccountUpdateMultipartForm {
     source_language: Option<Text<String>>,
 }
 
-impl From<AccountUpdateMultipartForm> for AccountUpdateData {
+impl From<AccountUpdateMultipartForm> for AccountUpdateForm {
     fn from(form: AccountUpdateMultipartForm) -> Self {
         let fields_attributes: Vec<_> = [
             (form.fields_attributes_0_name, form.fields_attributes_0_value),
@@ -654,7 +654,7 @@ pub struct IdentityClaim {
 }
 
 #[derive(Deserialize)]
-pub struct IdentityProofData {
+pub struct IdentityProofForm {
     pub proof_type: String,
     pub did: String,
     pub signature: String,
@@ -662,7 +662,7 @@ pub struct IdentityProofData {
 }
 
 #[derive(Deserialize)]
-pub struct IdentityProofDeletionRequest {
+pub struct IdentityProofDeleteForm {
     pub did: Did,
 }
 
@@ -757,14 +757,14 @@ pub struct IdenticonQueryParams {
 }
 
 #[derive(Deserialize)]
-pub struct FollowData {
+pub struct FollowForm {
     #[serde(default = "default_showing_reblogs")]
     pub reblogs: bool,
     #[serde(default = "default_showing_replies")]
     pub replies: bool,
 }
 
-impl Default for FollowData {
+impl Default for FollowForm {
     fn default() -> Self {
         Self {
             reblogs: default_showing_reblogs(),
@@ -879,7 +879,7 @@ fn default_actor_collection() -> String {
 }
 
 #[derive(Deserialize)]
-pub struct LoadActivitiesParams {
+pub struct LoadActivitiesRequest {
     #[serde(default = "default_actor_collection")]
     pub collection: String,
 }

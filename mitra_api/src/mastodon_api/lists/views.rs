@@ -54,9 +54,9 @@ use crate::{
 
 use super::types::{
     List,
-    ListAccountsData,
+    ListAccountsForm,
     ListAccountsQueryParams,
-    ListData,
+    ListForm,
 };
 
 /// https://docs.joinmastodon.org/methods/lists/#get
@@ -77,12 +77,12 @@ async fn get_lists(
 async fn create_list(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
-    list_data: JsonOrForm<ListData>,
+    list_form: JsonOrForm<ListForm>,
 ) -> Result<HttpResponse, MastodonError> {
-    let list_data = list_data.into_inner();
+    let list_form = list_form.into_inner();
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let feed_name = clean_custom_feed_name(&list_data.title);
+    let feed_name = clean_custom_feed_name(&list_form.title);
     validate_custom_feed_name(feed_name)?;
     let feed = create_custom_feed(
         db_client,
@@ -117,11 +117,11 @@ async fn update_list(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
     list_id: web::Path<i32>,
-    list_data: web::Json<ListData>,
+    list_form: web::Json<ListForm>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let feed_name = clean_custom_feed_name(&list_data.title);
+    let feed_name = clean_custom_feed_name(&list_form.title);
     validate_custom_feed_name(feed_name)?;
     let feed = update_custom_feed(
         db_client,
@@ -198,9 +198,9 @@ async fn add_accounts_to_list(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
     list_id: web::Path<i32>,
-    accounts_data: JsonOrQsForm<ListAccountsData>,
+    accounts_form: JsonOrQsForm<ListAccountsForm>,
 ) -> Result<HttpResponse, MastodonError> {
-    let accounts_data = match accounts_data {
+    let accounts_form = match accounts_form {
         Either::Left(json) => json.into_inner(),
         Either::Right(form) => form.into_inner(),
     };
@@ -214,7 +214,7 @@ async fn add_accounts_to_list(
     match add_custom_feed_sources(
         db_client,
         feed.id,
-        &accounts_data.account_ids,
+        &accounts_form.account_ids,
     ).await {
         Ok(_) => (),
         Err(DatabaseError::AlreadyExists(_)) => {
@@ -232,7 +232,7 @@ async fn remove_accounts_from_list(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
     list_id: web::Path<i32>,
-    query_params: MultiQuery<ListAccountsData>,
+    query_params: MultiQuery<ListAccountsForm>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;

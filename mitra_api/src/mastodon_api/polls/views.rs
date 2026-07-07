@@ -34,7 +34,7 @@ use crate::{
     },
 };
 
-use super::types::{Poll, VoteData};
+use super::types::{Poll, VoteForm};
 
 // https://docs.joinmastodon.org/methods/polls/#vote
 #[post("/{poll_id}/votes")]
@@ -44,7 +44,7 @@ async fn vote_view(
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     poll_id: web::Path<Uuid>,
-    vote_data: web::Json<VoteData>,
+    vote_form: web::Json<VoteForm>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -57,17 +57,17 @@ async fn vote_view(
     if poll.ended() {
         return Err(MastodonError::OperationError("poll has already ended"));
     };
-    if vote_data.choices.is_empty() {
+    if vote_form.choices.is_empty() {
         return Err(MastodonError::OperationError("choice set is empty"));
     };
-    if !poll.multiple_choices && vote_data.choices.len() > 1 {
+    if !poll.multiple_choices && vote_form.choices.len() > 1 {
         return Err(MastodonError::OperationError("only one option can be chosen"));
     };
     let (poll_updated, votes) = match vote(
         db_client,
         poll.id,
         current_user.id,
-        vote_data.choices.clone(),
+        vote_form.choices.clone(),
     ).await {
         Ok((poll_updated, votes)) => (poll_updated, votes),
         Err(DatabaseError::AlreadyExists(_)) => {

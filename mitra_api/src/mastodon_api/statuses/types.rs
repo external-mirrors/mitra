@@ -366,7 +366,7 @@ fn default_post_content_type() -> String { POST_CONTENT_TYPE_MARKDOWN.to_string(
 
 // https://docs.joinmastodon.org/methods/statuses/
 #[derive(Debug, Deserialize)]
-pub struct StatusData {
+pub struct StatusCreateForm {
     pub status: Option<String>,
     pub title: Option<String>, // custom field
     pub language: Option<String>,
@@ -404,7 +404,7 @@ pub struct StatusData {
     pub group_id: Option<Uuid>,
 }
 
-impl StatusData {
+impl StatusCreateForm {
     pub fn language(&self) -> Result<Option<Language>, ValidationError> {
         self.language.as_ref()
             .map(|value| parse_language_code(value))
@@ -431,7 +431,7 @@ impl StatusData {
 }
 
 #[derive(Deserialize)]
-pub struct StatusPreviewData {
+pub struct StatusPreviewForm {
     pub status: String,
 
     #[serde(default = "default_post_content_type")]
@@ -485,7 +485,7 @@ impl StatusSource {
 
 // https://docs.joinmastodon.org/methods/statuses/#edit
 #[derive(Deserialize)]
-pub struct StatusUpdateData {
+pub struct StatusUpdateForm {
     pub status: String,
     pub title: Option<String>,
     pub language: Option<String>,
@@ -503,7 +503,7 @@ pub struct StatusUpdateData {
     pub quote_id: Option<Uuid>,
 }
 
-impl StatusUpdateData {
+impl StatusUpdateForm {
     pub fn language(&self) -> Result<Option<Language>, ValidationError> {
         self.language.as_ref()
             .map(|value| parse_language_code(value))
@@ -528,7 +528,7 @@ pub struct FavouritedByQueryParams {
 }
 
 #[derive(Deserialize)]
-pub struct ReblogParams {
+pub struct ReblogForm {
     pub visibility: Option<String>,
 }
 
@@ -543,11 +543,11 @@ pub struct RebloggedByQueryParams {
 }
 
 #[derive(Deserialize)]
-pub struct ConversationTrackingData {
+pub struct ConversationTrackingForm {
     status: String,
 }
 
-impl ConversationTrackingData {
+impl ConversationTrackingForm {
     pub fn status(&self) -> Result<Option<TrackingStatus>, ValidationError> {
         let maybe_tracking_status = match self.status.as_str() {
             TRACKING_STATUS_NORMAL => None,

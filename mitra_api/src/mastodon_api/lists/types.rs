@@ -32,7 +32,7 @@ impl List {
 }
 
 #[derive(Deserialize)]
-pub struct ListData {
+pub struct ListForm {
     pub title: String,
 }
 
@@ -48,6 +48,6 @@ pub struct ListAccountsQueryParams {
 
 // Debug is required by QsForm
 #[derive(Debug, Deserialize)]
-pub struct ListAccountsData {
+pub struct ListAccountsForm {
     pub account_ids: Vec<Uuid>,
 }

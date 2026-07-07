@@ -86,7 +86,7 @@ impl Poll {
 }
 
 #[derive(Deserialize)]
-pub struct VoteData {
+pub struct VoteForm {
     #[serde(alias = "choices[]")]
     pub choices: HashSet<usize>,
 }

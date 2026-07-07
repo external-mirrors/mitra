@@ -19,7 +19,7 @@ use mitra_utils::files::APPLICATION_OCTET_STREAM;
 use crate::mastodon_api::media_server::ClientMediaServer;
 
 #[derive(Deserialize)]
-pub struct AttachmentData {
+pub struct AttachmentForm {
     // base64-encoded file (not compatible with Mastodon)
     pub file: String,
     pub media_type: String,
@@ -27,13 +27,13 @@ pub struct AttachmentData {
 }
 
 #[derive(MultipartForm)]
-pub struct AttachmentDataMultipartForm {
+pub struct AttachmentMultipartForm {
     file: Bytes,
     description: Option<Text<String>>,
 }
 
-impl From<AttachmentDataMultipartForm> for AttachmentData {
-    fn from(form: AttachmentDataMultipartForm) -> Self {
+impl From<AttachmentMultipartForm> for AttachmentForm {
+    fn from(form: AttachmentMultipartForm) -> Self {
         let media_type = form.file.content_type
             .map(|mime| mime.essence_str().to_string())
             // Ignore if content type is application/octet-stream
@@ -50,7 +50,7 @@ impl From<AttachmentDataMultipartForm> for AttachmentData {
 }
 
 #[derive(Deserialize)]
-pub struct AttachmentUpdateData {
+pub struct AttachmentUpdateForm {
     pub description: Option<String>,
 }
 
