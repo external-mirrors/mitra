@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `configuration.accounts.max_note_length` field to `Instance` entity.
 - Added `configuration.accounts.max_display_name_length` field to `Instance` entity.
 - Maintain record of the total number of voters in a poll.
+- Add pagination `Link` header to `/api/v1/accounts/{account_id}/subscribers` response.
 
 ### Changed
 

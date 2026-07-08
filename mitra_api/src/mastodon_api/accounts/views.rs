@@ -1109,6 +1109,7 @@ async fn get_account_subscribers(
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
+    request_uri: Uri,
     account_id: web::Path<Uuid>,
     query_params: web::Query<SubscriptionListQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -1120,17 +1121,19 @@ async fn get_account_subscribers(
         let subscriptions: Vec<Subscription> = vec![];
         return Ok(HttpResponse::Ok().json(subscriptions));
     };
-    let base_url = get_request_base_url(connection_info);
-    let authority = Authority::from(&config.instance());
-    let media_server = ClientMediaServer::new(&config, &base_url);
-    let subscriptions: Vec<Subscription> = get_incoming_subscriptions(
+    let db_subscriptions = get_incoming_subscriptions(
         db_client,
         profile.id,
         query_params.include_expired,
         query_params.max_id,
         query_params.limit.inner(),
-    )
-        .await?
+    ).await?;
+    let maybe_last_id = get_last_item(&db_subscriptions, &query_params.limit)
+        .map(|item| item.id);
+    let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
+    let media_server = ClientMediaServer::new(&config, &base_url);
+    let subscriptions: Vec<Subscription> = db_subscriptions
         .into_iter()
         .map(|subscription| Subscription::from_db(
             &authority,
@@ -1138,7 +1141,13 @@ async fn get_account_subscribers(
             subscription,
         ))
         .collect();
-    Ok(HttpResponse::Ok().json(subscriptions))
+    let response = get_paginated_response(
+        &base_url,
+        &request_uri,
+        subscriptions,
+        maybe_last_id,
+    );
+    Ok(response)
 }
 
 /// https://docs.joinmastodon.org/methods/accounts/#lists

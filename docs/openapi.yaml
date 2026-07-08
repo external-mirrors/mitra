@@ -666,6 +666,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Subscription'
+          headers:
+            Link:
+              description: Link to the next page
+              schema:
+                type: string
+                example: '<https://social.example/api/v1/accounts/1/subscribers?limit=40&max_id=1934>; rel="next"'
         404:
           description: User not found
   /api/v1/accounts/{account_id}/follow:
