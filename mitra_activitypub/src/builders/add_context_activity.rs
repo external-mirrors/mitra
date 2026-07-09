@@ -131,18 +131,21 @@ pub async fn sync_conversation(
 ) -> Result<(), DatabaseError> {
     if let Some(group_id) = conversation.group_id {
         // FEP-1b12
-        if conversation.is_managed {
-            let group = get_group_account_by_id(db_client, group_id).await?;
-            // Not syncing non-public activities
-            if activity_visibility == Visibility::Public {
-                let job_data = prepare_group_announce(
-                    db_client,
-                    instance,
-                    &group,
-                    activity,
-                ).await?;
-                job_data.save_and_enqueue(db_client).await?;
-            };
+        match get_group_account_by_id(db_client, group_id).await {
+            Ok(group) => {
+                // Not syncing non-public activities
+                if activity_visibility == Visibility::Public {
+                    let job_data = prepare_group_announce(
+                        db_client,
+                        instance,
+                        &group,
+                        activity,
+                    ).await?;
+                    job_data.save_and_enqueue(db_client).await?;
+                };
+            },
+            Err(DatabaseError::NotFound(_)) => (), // remote group?
+            Err(other_error) => return Err(other_error),
         };
         return Ok(());
     };
