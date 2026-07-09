@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fixed full text search not using index.
 - Remove custom emojis that are no longer used in display name or bio.
 - Clear poll results when poll type or poll options are changed.
+- Fixed stack overflow in background worker when optimizations are disabled.
 
 ## [5.6.0] - 2026-06-26
 

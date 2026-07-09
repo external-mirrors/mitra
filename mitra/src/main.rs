@@ -1,5 +1,6 @@
 use anyhow::Error;
 use clap::Parser;
+use tokio::runtime::Builder;
 
 use mitra_adapters::init::{
     check_app_directories,
@@ -26,8 +27,7 @@ fn get_software_metadata() -> SoftwareMetadata {
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Error> {
+async fn run_async() -> Result<(), Error> {
     let opts: Cli = Cli::parse();
 
     if let Command::Completion { shell } = opts.command {
@@ -118,4 +118,15 @@ async fn main() -> Result<(), Error> {
         Command::Completion { .. } => unreachable!(),
     };
     result
+}
+
+fn main() -> Result<(), Error> {
+    Builder::new_multi_thread()
+        .enable_all()
+        // The default stack size is 2 MB,
+        // which is not enough for background workers
+        .thread_stack_size(4_000_000)
+        .build()
+        .expect("runtime options should be correct")
+        .block_on(run_async())
 }
