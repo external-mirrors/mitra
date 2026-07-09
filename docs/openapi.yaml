@@ -3301,9 +3301,19 @@ components:
         avatar:
           description: An image icon that is shown next to posts and in the profile.
           type: string
+          format: uri
+        avatar_static:
+          description: An image icon that is shown next to posts and in the profile (identical to `avatar`).
+          type: string
+          format: uri
         header:
           description: An image banner that is shown above the profile and in profile cards.
           type: string
+          format: uri
+        header_static:
+          description: An image banner that is shown above the profile and in profile cards (identical to `header`).
+          type: string
+          format: uri
         locked:
           description: Whether the user manually approves follow requests.
           type: boolean
