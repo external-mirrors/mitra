@@ -3,6 +3,7 @@ pub mod accept_offer;
 pub mod add_context_activity;
 pub mod add_note;
 pub mod add_person;
+pub mod affiliation;
 mod agreement;
 pub mod announce;
 pub mod bite;

@@ -8,7 +8,7 @@ use serde::Serialize;
 
 use mitra_config::Instance;
 use mitra_models::{
-    accounts::types::User,
+    accounts::types::ManagedAccount,
     database::{DatabaseClient, DatabaseError},
     profiles::helpers::find_declared_aliases,
     relationships::queries::get_followers,
@@ -48,12 +48,12 @@ pub struct UpdatePerson {
 pub fn build_update_person(
     authority: &Authority,
     media_server: &MediaServer,
-    user: &User,
+    account: &impl ManagedAccount,
 ) -> Result<UpdatePerson, KeySerializationError> {
     let actor = build_local_actor(
         authority,
         media_server,
-        user,
+        account,
     )?;
     let followers = LocalActorCollection::Followers.of(&actor.id);
     // Update(Person) is idempotent so its ID can be random
@@ -76,9 +76,9 @@ pub fn build_update_person(
 
 async fn get_update_person_recipients(
     db_client: &impl DatabaseClient,
-    user: &User,
+    account: &impl ManagedAccount,
 ) -> Result<Vec<Recipient>, DatabaseError> {
-    let followers = get_followers(db_client, user.id).await?;
+    let followers = get_followers(db_client, account.id()).await?;
     let mut recipients = vec![];
     for profile in followers {
         if let Some(remote_actor) = profile.actor_json {
@@ -86,7 +86,7 @@ async fn get_update_person_recipients(
         };
     };
     // Remote aliases
-    let aliases = find_declared_aliases(db_client, &user.profile).await?;
+    let aliases = find_declared_aliases(db_client, account.profile()).await?;
     for (_, maybe_profile) in aliases {
         let maybe_remote_actor = maybe_profile
             .and_then(|profile| profile.actor_json);
@@ -101,18 +101,18 @@ pub async fn prepare_update_person(
     db_client: &impl DatabaseClient,
     instance: &Instance,
     media_server: &MediaServer,
-    user: &User,
+    account: &impl ManagedAccount,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let authority = Authority::from(instance);
     let activity = build_update_person(
         &authority,
         media_server,
-        user,
+        account,
     ).map_err(|_| DatabaseError::type_error())?;
-    let recipients = get_update_person_recipients(db_client, user).await?;
+    let recipients = get_update_person_recipients(db_client, account).await?;
     Ok(OutgoingActivityJobData::new(
         &authority,
-        user,
+        account,
         activity,
         recipients,
     ))
@@ -121,7 +121,10 @@ pub async fn prepare_update_person(
 #[cfg(test)]
 mod tests {
     use apx_sdk::core::url::http_uri::HttpUri;
-    use mitra_models::profiles::types::DbActorProfile;
+    use mitra_models::{
+        accounts::types::User,
+        profiles::types::DbActorProfile,
+    };
     use super::*;
 
     const INSTANCE_URI: &str = "https://example.com";

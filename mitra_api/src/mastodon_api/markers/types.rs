@@ -39,7 +39,7 @@ pub struct MarkerData {
 }
 
 #[derive(Deserialize)]
-pub struct MarkerCreateData {
+pub struct MarkerCreateForm {
     // JSON
     // https://docs.joinmastodon.org/client/intro/#hash
     home: Option<MarkerData>,
@@ -52,7 +52,7 @@ pub struct MarkerCreateData {
     pub notifications_last_read_id: Option<String>,
 }
 
-impl MarkerCreateData {
+impl MarkerCreateForm {
     pub fn home_last_read_id(&self) -> Option<&String> {
         self.home.as_ref()
             .map(|marker| &marker.last_read_id)
@@ -74,14 +74,14 @@ pub struct MarkerCreateMultipartForm {
     notifications_last_read_id: Option<Text<String>>,
 }
 
-impl From<MarkerCreateMultipartForm> for MarkerCreateData {
+impl From<MarkerCreateMultipartForm> for MarkerCreateForm {
     fn from(form: MarkerCreateMultipartForm) -> Self {
         Self {
             home: form.home_last_read_id.map(|value| {
                 MarkerData { last_read_id: value.into_inner() }
             }),
             notifications: form.notifications_last_read_id.map(|value| {
-                 MarkerData { last_read_id: value.into_inner() }
+                MarkerData { last_read_id: value.into_inner() }
             }),
             home_last_read_id: None,
             notifications_last_read_id: None,

@@ -26,6 +26,7 @@ pub async fn create_test_local_poll(
         multiple_choices: multiple_choices,
         ends_at: Some(Utc::now()),
         results: results,
+        voters_count: Some(0),
     };
     let post_data = PostCreateData {
         content: "poll".to_string(),

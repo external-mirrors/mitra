@@ -7,13 +7,15 @@ use mitra_models::{
         find_declared_aliases,
         find_verified_aliases,
     },
-    profiles::types::{DbActorProfile, ProfileUpdateData},
+    profiles::types::DbActorProfile,
     relationships::queries::{
         get_relationships as get_relationships_one,
         get_relationships_many,
     },
     relationships::types::{RelationshipOrFollowRequest, RelationshipType},
 };
+use mitra_utils::markdown::markdown_basic_to_html;
+use mitra_validators::errors::ValidationError;
 
 use crate::mastodon_api::{
     media_server::ClientMediaServer,
@@ -22,29 +24,54 @@ use crate::mastodon_api::{
 
 use super::types::{Account, Alias, Aliases, RelationshipMap};
 
+pub fn parse_profile_bio(
+    maybe_bio_source: Option<&String>,
+) -> Result<Option<String>, ValidationError> {
+    let maybe_bio = if let Some(bio_source) = maybe_bio_source {
+        let bio = markdown_basic_to_html(bio_source)
+            .map_err(|_| ValidationError("invalid markdown"))?;
+        Some(bio)
+    } else {
+        None
+    };
+    Ok(maybe_bio)
+}
+
+pub struct ProfileText {
+    pub display_name: Option<String>,
+    pub bio: Option<String>,
+    pub emojis: Vec<Uuid>,
+}
+
 pub async fn parse_microsyntaxes(
     db_client: &impl DatabaseClient,
-    profile_data: &mut ProfileUpdateData,
-) -> Result<(), DatabaseError> {
-    if let Some(ref display_name) = profile_data.display_name {
+    maybe_display_name: Option<&String>,
+    maybe_bio: Option<&String>,
+) -> Result<ProfileText, DatabaseError> {
+    let mut emojis = vec![];
+    let display_name = if let Some(display_name) = maybe_display_name {
         let custom_emoji_map = find_emojis(db_client, display_name).await?;
         let display_name =
             replace_emoji_shortcodes(display_name, &custom_emoji_map);
-        profile_data.display_name = Some(display_name);
-        profile_data.emojis
+        emojis
             .extend(custom_emoji_map.into_values().map(|emoji| emoji.id));
+        Some(display_name)
+    } else {
+        None
     };
-    if let Some(ref bio) = profile_data.bio {
+    let bio = if let Some(bio) = maybe_bio {
         let custom_emoji_map = find_emojis(db_client, bio).await?;
         let bio = replace_emoji_shortcodes(bio, &custom_emoji_map);
-        profile_data.bio = Some(bio);
-        profile_data.emojis
+        emojis
             .extend(custom_emoji_map.into_values().map(|emoji| emoji.id));
+        Some(bio)
+    } else {
+        None
     };
     // Remove duplicates
-    profile_data.emojis.sort();
-    profile_data.emojis.dedup();
-    Ok(())
+    emojis.sort();
+    emojis.dedup();
+    Ok(ProfileText { display_name, bio, emojis })
 }
 
 fn create_relationship_map(

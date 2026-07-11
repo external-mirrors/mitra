@@ -26,9 +26,10 @@ pub async fn create_poll(
             id,
             multiple_choices,
             ends_at,
-            results
+            results,
+            voters_count
         )
-        VALUES ($1, $2, $3, $4)
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING poll
         ",
         &[
@@ -36,6 +37,7 @@ pub async fn create_poll(
             &poll_data.multiple_choices,
             &poll_data.ends_at,
             &PollResults::new(poll_data.results),
+            &poll_data.voters_count,
         ],
     ).await?;
     let poll = row.try_get("poll")?;
@@ -43,41 +45,66 @@ pub async fn create_poll(
 }
 
 pub async fn update_poll(
-    db_client: &impl DatabaseClient,
+    db_client: &mut impl DatabaseClient,
     poll_id: Uuid,
-    poll_data: PollData,
-) -> Result<(Poll, bool), DatabaseError> {
-    let maybe_row = db_client.query_opt(
+    mut poll_data: PollData,
+) -> Result<Poll, DatabaseError> {
+    let transaction = db_client.transaction().await?;
+    let maybe_row = transaction.query_opt(
+        "
+        SELECT poll
+        FROM poll WHERE id = $1
+        FOR UPDATE
+        ",
+        &[&poll_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("poll"))?;
+    let poll_old: Poll = row.try_get("poll")?;
+    let get_options = |results: &[PollResult]| -> HashSet<String> {
+        results.iter()
+            .map(|result| result.option_name.clone())
+            .collect()
+    };
+    let options_changed =
+        get_options(&poll_data.results) != get_options(poll_old.results.inner())
+        || poll_data.multiple_choices != poll_old.multiple_choices;
+    if options_changed {
+        // Reset remote poll
+        poll_data
+            .results
+            .iter_mut()
+            .for_each(|result| result.vote_count = 0);
+        poll_data.voters_count = None;
+        transaction.execute(
+            "
+            DELETE FROM poll_vote
+            WHERE poll_id = $1
+            ",
+            &[&poll_id],
+        ).await?;
+    };
+    let row = transaction.query_one(
         "
         UPDATE poll
         SET
             multiple_choices = $2,
             ends_at = $3,
-            results = $4
+            results = $4,
+            voters_count = $5
         WHERE id = $1
-        RETURNING
-            poll,
-            (SELECT poll FROM poll WHERE id = $1) AS poll_old
+        RETURNING poll
         ",
         &[
             &poll_id,
             &poll_data.multiple_choices,
             &poll_data.ends_at,
             &PollResults::new(poll_data.results),
+            &poll_data.voters_count,
         ],
     ).await?;
-    let row = maybe_row.ok_or(DatabaseError::NotFound("poll"))?;
     let poll: Poll = row.try_get("poll")?;
-    let poll_old: Poll = row.try_get("poll_old")?;
-    let get_options = |results: &PollResults| -> HashSet<String> {
-        results.inner().iter()
-            .map(|result| result.option_name.clone())
-            .collect()
-    };
-    let options_changed =
-        get_options(&poll.results) != get_options(&poll_old.results) ||
-        poll.multiple_choices != poll_old.multiple_choices;
-    Ok((poll, options_changed))
+    transaction.commit().await?;
+    Ok(poll)
 }
 
 async fn create_votes(
@@ -122,21 +149,7 @@ async fn create_votes(
     Ok(votes)
 }
 
-pub async fn reset_votes(
-    db_client: &impl DatabaseClient,
-    poll_id: Uuid,
-) -> Result<(), DatabaseError> {
-    db_client.execute(
-        "
-        DELETE FROM poll_vote
-        WHERE poll_id = $1
-        ",
-        &[&poll_id],
-    ).await?;
-    Ok(())
-}
-
-#[allow(dead_code)]
+#[cfg(test)]
 async fn get_poll_results(
     db_client: &impl DatabaseClient,
     poll_id: Uuid,
@@ -237,7 +250,13 @@ pub async fn vote_one(
     let row = transaction.query_one(
         "
         UPDATE poll
-        SET results = $2
+        SET
+            results = $2,
+            voters_count = (
+                SELECT count(DISTINCT voter_id)
+                FROM poll_vote
+                WHERE poll_id = poll.id
+            )
         WHERE poll.id = $1
         RETURNING poll
         ",
@@ -280,11 +299,16 @@ pub async fn vote(
     let row = transaction.query_one(
         "
         UPDATE poll
-        SET results = $2
+        SET
+            results = $2,
+            voters_count = voters_count + 1
         WHERE poll.id = $1
         RETURNING poll
         ",
-        &[&poll_id, &PollResults::new(results)],
+        &[
+            &poll_id,
+            &PollResults::new(results),
+        ],
     ).await?;
     let poll = row.try_get("poll")?;
     transaction.commit().await?;
@@ -368,6 +392,7 @@ mod tests {
             multiple_choices: false,
             ends_at: Some(poll_ends_at),
             results: poll_results.clone(),
+            voters_count: Some(0),
         };
         let poll = create_poll(
             db_client,
@@ -379,6 +404,7 @@ mod tests {
         assert_eq!(poll.multiple_choices, false);
         assert_eq!(poll.ends_at.unwrap(), poll_ends_at);
         assert_eq!(poll.results.inner(), poll_results);
+        assert_eq!(poll.voters_count, Some(0));
     }
 
     #[tokio::test]
@@ -402,15 +428,16 @@ mod tests {
             multiple_choices: poll.multiple_choices,
             ends_at: poll.ends_at,
             results: results_updated.clone(),
+            voters_count: None,
         };
-        let (poll, options_changed) = update_poll(
+        let poll = update_poll(
             db_client,
             post.id,
             poll_data,
         ).await.unwrap();
         assert_eq!(poll.id, post.id);
         assert_eq!(poll.results.inner(), results_updated);
-        assert_eq!(options_changed, false);
+        assert_eq!(poll.voters_count, None);
 
         // Add new option
         let mut results_updated = poll.results.into_inner();
@@ -422,14 +449,16 @@ mod tests {
             multiple_choices: poll.multiple_choices,
             ends_at: poll.ends_at,
             results: results_updated.clone(),
+            voters_count: None,
         };
-        let (poll, options_changed) = update_poll(
+        let poll = update_poll(
             db_client,
             post.id,
             poll_data,
         ).await.unwrap();
-        assert_eq!(poll.results.inner(), results_updated);
-        assert_eq!(options_changed, true);
+        let results = poll.results.into_inner();
+        assert_eq!(results.len(), results_updated.len());
+        assert!(results.iter().all(|res| res.vote_count == 0));
     }
 
     #[tokio::test]
@@ -512,6 +541,7 @@ mod tests {
         let results = poll_updated.results.into_inner();
         assert_eq!(results[0].vote_count, 1);
         assert_eq!(results[1].vote_count, 0);
+        assert_eq!(poll_updated.voters_count, Some(1));
 
         let error = vote_one(
             db_client,
@@ -553,6 +583,7 @@ mod tests {
         let results = poll_updated.results.into_inner();
         assert_eq!(results[0].vote_count, 1);
         assert_eq!(results[1].vote_count, 0);
+        assert_eq!(poll_updated.voters_count, Some(1));
 
         let poll_updated = vote_one(
             db_client,
@@ -564,6 +595,7 @@ mod tests {
         let results = poll_updated.results.into_inner();
         assert_eq!(results[0].vote_count, 1);
         assert_eq!(results[1].vote_count, 1);
+        assert_eq!(poll_updated.voters_count, Some(1));
 
         let error = vote_one(
             db_client,
@@ -602,6 +634,7 @@ mod tests {
         assert_eq!(votes[0].voter_id, voter.id);
         assert_eq!(votes[0].choice, option_2);
         assert_eq!(votes.len(), 1);
+        assert_eq!(poll.voters_count, Some(1));
 
         let error = vote(
             db_client,

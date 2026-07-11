@@ -155,6 +155,7 @@ impl TryFrom<&Row> for RelationshipOrFollowRequest {
 
 pub struct RelatedActorProfile<T> {
     pub related_id: T,
+    pub relationship_type: RelationshipType,
     pub profile: DbActorProfile,
 }
 
@@ -165,8 +166,13 @@ impl<T> TryFrom<&Row> for RelatedActorProfile<T>
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
         let related_id: T = row.try_get("id")?;
+        let relationship_type = row.try_get("relationship_type")?;
         let profile = row.try_get("actor_profile")?;
-        let related_profile = Self { related_id, profile };
+        let related_profile = Self {
+            related_id,
+            relationship_type,
+            profile,
+        };
         related_profile.profile.check_consistency()?;
         Ok(related_profile)
     }

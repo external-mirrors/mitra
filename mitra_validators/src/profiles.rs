@@ -34,8 +34,8 @@ const USERNAME_RE: &str = r"^[A-Za-z0-9\-\._]+$";
 const USERNAME_LENGTH_MAX: usize = 100;
 const HOSTNAME_RE: &str = r"^([a-z0-9\.-]+|[0-9\.]+|\[[0-9a-f:]+\])$";
 const HOSTNAME_LENGTH_MAX: usize = 100;
-const DISPLAY_NAME_MAX_LENGTH: usize = 200;
-const BIO_MAX_LENGTH: usize = 10000;
+pub const DISPLAY_NAME_MAX_LENGTH: usize = 200;
+pub const BIO_MAX_LENGTH: usize = 10000;
 const BIO_ALLOWED_TAGS: [&str; 3] = [
     "a",
     "br",
@@ -111,7 +111,7 @@ fn clean_bio_html(bio: &str) -> String {
     clean_html_strict(bio, &BIO_ALLOWED_TAGS, vec![])
 }
 
-fn clean_bio(bio: &str, is_remote: bool) -> String {
+pub(crate) fn clean_bio(bio: &str, is_remote: bool) -> String {
     if is_remote {
         // Remote profile
         let truncated_bio: String = bio.chars().take(BIO_MAX_LENGTH).collect();
@@ -122,7 +122,7 @@ fn clean_bio(bio: &str, is_remote: bool) -> String {
     }
 }
 
-fn validate_bio(bio: &str) -> Result<(), ValidationError> {
+pub(crate) fn validate_bio(bio: &str) -> Result<(), ValidationError> {
     if bio.chars().count() > BIO_MAX_LENGTH {
             return Err(ValidationError("bio is too long"));
         };

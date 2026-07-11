@@ -2,7 +2,7 @@ Source: mitra
 Section: admin
 Priority: optional
 Maintainer: silverpill
-Build-Depends: debhelper (>= 11)
+Build-Depends: debhelper (>= 11), dh-shell-completions
 
 Package: mitra
 Description: ActivityPub server written in Rust

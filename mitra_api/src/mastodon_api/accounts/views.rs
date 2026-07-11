@@ -154,20 +154,20 @@ use super::helpers::{
 };
 use super::types::{
     Account,
-    AccountCreateData,
-    AccountUpdateData,
+    AccountCreateForm,
+    AccountUpdateForm,
     AccountUpdateMultipartForm,
     AUTHENTICATION_METHOD_CAIP122_MONERO,
     AUTHENTICATION_METHOD_EIP4361,
     AUTHENTICATION_METHOD_PASSWORD,
-    FollowData,
+    FollowForm,
     FollowListQueryParams,
     IdenticonQueryParams,
     IdentityClaim,
     IdentityClaimQueryParams,
-    IdentityProofData,
-    IdentityProofDeletionRequest,
-    LoadActivitiesParams,
+    IdentityProofForm,
+    IdentityProofDeleteForm,
+    LoadActivitiesRequest,
     LookupAcctQueryParams,
     RelationshipQueryParams,
     SearchAcctQueryParams,
@@ -181,7 +181,7 @@ pub async fn create_account(
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
-    account_data: web::Json<AccountCreateData>,
+    account_form: web::Json<AccountCreateForm>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let instance = config.instance();
@@ -189,7 +189,7 @@ pub async fn create_account(
     let maybe_invite_code = match config.registration.registration_type {
         RegistrationType::Open => None,
         RegistrationType::Invite => {
-            let invite_code = account_data.invite_code.as_ref()
+            let invite_code = account_form.invite_code.as_ref()
                 .ok_or(ValidationError("invite code is required"))?;
             if !is_valid_invite_code(db_client, invite_code).await? {
                 return Err(ValidationError("invalid invite code").into());
@@ -198,9 +198,9 @@ pub async fn create_account(
         },
     };
 
-    validate_local_username(&account_data.username)?;
+    validate_local_username(&account_form.username)?;
 
-    let authentication_method = match account_data.authentication_method.as_str() {
+    let authentication_method = match account_form.authentication_method.as_str() {
         AUTHENTICATION_METHOD_PASSWORD => AuthenticationMethod::Password,
         AUTHENTICATION_METHOD_EIP4361 => AuthenticationMethod::Eip4361,
         AUTHENTICATION_METHOD_CAIP122_MONERO => AuthenticationMethod::Caip122Monero,
@@ -212,7 +212,7 @@ pub async fn create_account(
         return Err(MastodonError::NotSupported);
     };
     let maybe_password_digest = if authentication_method == AuthenticationMethod::Password {
-        let password = account_data.password.as_ref()
+        let password = account_form.password.as_ref()
             .ok_or(ValidationError("password is required"))?;
         let password_digest = hash_password(password)
             .map_err(MastodonError::from_internal)?;
@@ -221,9 +221,9 @@ pub async fn create_account(
         None
     };
     let maybe_ethereum_address = if authentication_method == AuthenticationMethod::Eip4361 {
-        let message = account_data.message.as_ref()
+        let message = account_form.message.as_ref()
             .ok_or(ValidationError("message is required"))?;
-        let signature = account_data.signature.as_ref()
+        let signature = account_form.signature.as_ref()
             .ok_or(ValidationError("signature is required"))?;
         let session_data = verify_eip4361_signature(
             message,
@@ -238,9 +238,9 @@ pub async fn create_account(
         None
     };
     let maybe_monero_address = if authentication_method == AuthenticationMethod::Caip122Monero {
-        let message = account_data.message.as_ref()
+        let message = account_form.message.as_ref()
             .ok_or(ValidationError("message is required"))?;
-        let signature = account_data.signature.as_ref()
+        let signature = account_form.signature.as_ref()
             .ok_or(ValidationError("signature is required"))?;
         let monero_config = config.monero_config()
             .ok_or(MastodonError::NotSupported)?;
@@ -269,7 +269,7 @@ pub async fn create_account(
     let role = from_default_role(&config.registration.default_role);
     let user_data = UserCreateData {
         id: None,
-        username: account_data.username.clone(),
+        username: account_form.username.clone(),
         password_digest: maybe_password_digest,
         login_address_ethereum: maybe_ethereum_address,
         login_address_monero: maybe_monero_address,
@@ -326,18 +326,18 @@ async fn update_credentials(
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
-    account_data: Either<
+    account_form: Either<
         MultipartForm<AccountUpdateMultipartForm>,
-        web::Json<AccountUpdateData>,
+        web::Json<AccountUpdateForm>,
     >,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let mut current_user = get_current_user(db_client, auth.token()).await?;
-    let account_data = match account_data {
+    let account_form = match account_form {
         Either::Left(form) => form.into_inner().into(),
-        Either::Right(data) => data.into_inner(),
+        Either::Right(json) => json.into_inner(),
     };
-    let maybe_client_config = if let Some(ref source) = account_data.source {
+    let maybe_client_config = if let Some(ref source) = account_form.source {
         let client_config = source
             .update_shared_client_config(&current_user.shared_client_config)?;
         Some(client_config)
@@ -345,12 +345,19 @@ async fn update_credentials(
         None
     };
     let media_storage = MediaStorage::new(&config);
-    let mut profile_data = account_data.into_profile_data(
+    let mut profile_data = account_form.into_profile_data(
         &current_user.profile,
         &config.limits.media,
         &media_storage,
     )?;
-    parse_microsyntaxes(db_client, &mut profile_data).await?;
+    let profile_text = parse_microsyntaxes(
+        db_client,
+        profile_data.display_name.as_ref(),
+        profile_data.bio.as_ref(),
+    ).await?;
+    profile_data.display_name = profile_text.display_name;
+    profile_data.bio = profile_text.bio;
+    profile_data.emojis = profile_text.emojis;
     clean_profile_update_data(&mut profile_data)?;
 
     // Update profile
@@ -440,11 +447,11 @@ async fn create_identity_proof(
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
-    proof_data: web::Json<IdentityProofData>,
+    proof_form: web::Json<IdentityProofForm>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let mut current_user = get_current_user(db_client, auth.token()).await?;
-    let proof_type = match proof_data.proof_type.as_str() {
+    let proof_type = match proof_form.proof_type.as_str() {
         // MitraJcsEip191Signature2022
         "ethereum" => IdentityProofType::FepC390JcsEip191Proof,
         // MitraJcsEd25519Signature2022
@@ -453,7 +460,7 @@ async fn create_identity_proof(
         "minisign-unhashed" => IdentityProofType::FepC390EddsaJcsProof,
         _ => return Err(ValidationError("unknown proof type").into()),
     };
-    let did = proof_data.did.parse::<Did>()
+    let did = proof_form.did.parse::<Did>()
         .map_err(|_| ValidationError("invalid DID"))?;
     // Reject proof if there's another local user with the same DID.
     // This is needed for matching ethereum subscriptions
@@ -474,7 +481,7 @@ async fn create_identity_proof(
         &actor_id,
         &did,
         &proof_type,
-        proof_data.created_at,
+        proof_form.created_at,
     ).map_err(MastodonError::from_internal)?;
     let claim_value = serde_json::to_value(&claim)
         .expect("claim should be serializable");
@@ -488,7 +495,7 @@ async fn create_identity_proof(
         IdentityProofType::FepC390JcsBlake2Ed25519Proof => {
             let did_key = did.as_did_key()
                 .ok_or(ValidationError("unexpected DID type"))?;
-            let signature = parse_minisign_signature_file(&proof_data.signature)
+            let signature = parse_minisign_signature_file(&proof_form.signature)
                 .map_err(|_| ValidationError("invalid signature encoding"))?;
             if !signature.is_prehashed {
                 return Err(ValidationError("invalid signature type").into());
@@ -514,7 +521,7 @@ async fn create_identity_proof(
                     return Err(ValidationError("DID doesn't match current identity").into());
                 };
             };
-            let signature_bin = hex::decode(&proof_data.signature)
+            let signature_bin = hex::decode(&proof_form.signature)
                 .map_err(|_| ValidationError("invalid signature encoding"))?;
             verify_eip191_json_signature(
                 did_pkh,
@@ -528,14 +535,14 @@ async fn create_identity_proof(
                 .ok_or(ValidationError("unexpected DID type"))?;
             let ed25519_key = did_key.try_ed25519_key()
                 .map_err(|_| ValidationError("invalid public key"))?;
-            let signature = parse_minisign_signature_file(&proof_data.signature)
+            let signature = parse_minisign_signature_file(&proof_form.signature)
                 .map_err(|_| ValidationError("invalid signature encoding"))?;
             if signature.is_prehashed {
                 return Err(ValidationError("invalid signature type").into());
             };
             let proof_config = IntegrityProofConfig::jcs_eddsa(
                 &did_key.verification_method_id(),
-                proof_data.created_at,
+                proof_form.created_at,
                 None, // statement doesn't have @context
             );
             let proof_config_value = serde_json::to_value(proof_config)
@@ -554,7 +561,7 @@ async fn create_identity_proof(
         &actor_id,
         &did,
         &proof_type,
-        proof_data.created_at,
+        proof_form.created_at,
         &signature_bin,
     );
     let mut profile_data = ProfileUpdateData::from(&current_user.profile);
@@ -595,12 +602,12 @@ async fn delete_identity_proof(
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
-    proof_data: web::Json<IdentityProofDeletionRequest>,
+    proof_form: web::Json<IdentityProofDeleteForm>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let mut current_user = get_current_user(db_client, auth.token()).await?;
     let mut profile_data = ProfileUpdateData::from(&current_user.profile);
-    profile_data.remove_identity_proof(&proof_data.did);
+    profile_data.remove_identity_proof(&proof_form.did);
     validate_identity_proofs(&profile_data.identity_proofs)?;
     // Only identity proofs are updated, media cleanup is not needed
     let (updated_profile, _) = update_profile(
@@ -797,11 +804,11 @@ async fn follow_account(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
     account_id: web::Path<Uuid>,
-    follow_data: Option<JsonOrForm<FollowData>>,
+    follow_form: Option<JsonOrForm<FollowForm>>,
 ) -> Result<HttpResponse, MastodonError> {
     // Some clients may send an empty body
-    let follow_data = follow_data
-        .map(|data| data.into_inner())
+    let follow_form = follow_form
+        .map(|form| form.into_inner())
         .unwrap_or_default();
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -816,12 +823,12 @@ async fn follow_account(
         &current_user,
         &target,
     ).await?;
-    if follow_data.reblogs {
+    if follow_form.reblogs {
         show_reposts(db_client, current_user.id, target.id).await?;
     } else {
         hide_reposts(db_client, current_user.id, target.id).await?;
     };
-    if follow_data.replies {
+    if follow_form.replies {
         show_replies(db_client, current_user.id, target.id).await?;
     } else {
         hide_replies(db_client, current_user.id, target.id).await?;
@@ -1103,6 +1110,7 @@ async fn get_account_subscribers(
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
+    request_uri: Uri,
     account_id: web::Path<Uuid>,
     query_params: web::Query<SubscriptionListQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -1114,17 +1122,19 @@ async fn get_account_subscribers(
         let subscriptions: Vec<Subscription> = vec![];
         return Ok(HttpResponse::Ok().json(subscriptions));
     };
-    let base_url = get_request_base_url(connection_info);
-    let authority = Authority::from(&config.instance());
-    let media_server = ClientMediaServer::new(&config, &base_url);
-    let subscriptions: Vec<Subscription> = get_incoming_subscriptions(
+    let db_subscriptions = get_incoming_subscriptions(
         db_client,
         profile.id,
         query_params.include_expired,
         query_params.max_id,
         query_params.limit.inner(),
-    )
-        .await?
+    ).await?;
+    let maybe_last_id = get_last_item(&db_subscriptions, &query_params.limit)
+        .map(|item| item.id);
+    let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
+    let media_server = ClientMediaServer::new(&config, &base_url);
+    let subscriptions: Vec<Subscription> = db_subscriptions
         .into_iter()
         .map(|subscription| Subscription::from_db(
             &authority,
@@ -1132,7 +1142,13 @@ async fn get_account_subscribers(
             subscription,
         ))
         .collect();
-    Ok(HttpResponse::Ok().json(subscriptions))
+    let response = get_paginated_response(
+        &base_url,
+        &request_uri,
+        subscriptions,
+        maybe_last_id,
+    );
+    Ok(response)
 }
 
 /// https://docs.joinmastodon.org/methods/accounts/#lists
@@ -1178,7 +1194,7 @@ async fn load_activities(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
     account_id: web::Path<Uuid>,
-    request_params: web::Json<LoadActivitiesParams>,
+    request_data: web::Json<LoadActivitiesRequest>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let _current_user = get_current_user(db_client, auth.token()).await?;
@@ -1187,7 +1203,7 @@ async fn load_activities(
         // Local profile
         return Err(MastodonError::NotFound("profile"));
     };
-    let job_data = match request_params.collection.as_str() {
+    let job_data = match request_data.collection.as_str() {
         "outbox" => FetcherJobData::Outbox { actor_id: remote_actor.id.clone() },
         "featured" => FetcherJobData::Featured { actor_id: remote_actor.id.clone() },
         _ => return Err(ValidationError("invalid collection type").into()),

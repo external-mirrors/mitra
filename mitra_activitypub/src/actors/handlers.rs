@@ -741,6 +741,7 @@ pub async fn create_remote_profile(
         webfinger_hostname: webfinger_hostname,
         display_name: actor.name.clone(),
         bio: actor.summary.clone(),
+        bio_source: None,
         avatar: maybe_avatar.ok(),
         banner: maybe_banner.ok(),
         manually_approves_followers: actor.manually_approves_followers,

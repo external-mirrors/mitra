@@ -93,8 +93,8 @@ use crate::mastodon_api::{
 
 use super::types::{
     Invoice,
-    InvoiceData,
-    SubscriberData,
+    InvoiceForm,
+    SubscriptionCreateForm,
     SubscriptionDetails,
     SubscriptionOption,
     SubscriptionQueryParams,
@@ -105,13 +105,13 @@ async fn create_subscription_view(
     auth: BearerAuth,
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
-    subscriber_data: web::Json<SubscriberData>,
+    subscription_form: web::Json<SubscriptionCreateForm>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let subscriber = get_profile_by_id(
         db_client,
-        subscriber_data.subscriber_id,
+        subscription_form.subscriber_id,
     ).await?;
     let is_follower = has_relationship(
         db_client,
@@ -132,7 +132,7 @@ async fn create_subscription_view(
         db_client,
         &subscriber, // sender
         &current_user, // recipient
-        subscriber_data.duration.into(),
+        subscription_form.duration.into(),
     ).await?;
     if let Some(ref remote_subscriber) = subscriber.actor_json {
         prepare_add_subscriber(
@@ -321,28 +321,28 @@ async fn find_subscription(
 async fn create_invoice_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
-    invoice_data: web::Json<InvoiceData>,
+    invoice_form: web::Json<InvoiceForm>,
 ) -> Result<HttpResponse, MastodonError> {
-    if invoice_data.sender_id == invoice_data.recipient_id {
+    if invoice_form.sender_id == invoice_form.recipient_id {
         return Err(ValidationError("sender must be different from recipient").into());
     };
-    validate_amount(invoice_data.amount)?;
+    validate_amount(invoice_form.amount)?;
     let db_client = &**get_database_client(&db_pool).await?;
-    let sender = get_profile_by_id(db_client, invoice_data.sender_id).await?;
-    let recipient = get_profile_by_id(db_client, invoice_data.recipient_id).await?;
+    let sender = get_profile_by_id(db_client, invoice_form.sender_id).await?;
+    let recipient = get_profile_by_id(db_client, invoice_form.recipient_id).await?;
 
     let db_invoice = if recipient.is_local() {
         // Local recipient
         let payment_method = get_payment_method_by_chain_id(
             db_client,
             recipient.id,
-            &invoice_data.chain_id,
+            &invoice_form.chain_id,
         )
             .await?
             .ok_or(ValidationError("recipient can't accept payment"))?;
         let _subscription_option: MoneroSubscription = recipient
             .payment_options
-            .find_subscription_option(&invoice_data.chain_id)
+            .find_subscription_option(&invoice_form.chain_id)
             .ok_or(ValidationError("recipient can't accept payment"))?;
         let payment_address = create_payment_address(
             &config,
@@ -358,7 +358,7 @@ async fn create_invoice_view(
             payment_method.payment_type,
             payment_method.chain_id.inner(),
             &payment_address,
-            invoice_data.amount,
+            invoice_form.amount,
         ).await?
     } else {
         // Remote recipient; the sender must be local
@@ -367,14 +367,14 @@ async fn create_invoice_view(
             .expect("actor data should be present");
         let subscription_option: RemoteMoneroSubscription = recipient
             .payment_options
-            .find_subscription_option(&invoice_data.chain_id)
+            .find_subscription_option(&invoice_form.chain_id)
             .ok_or(ValidationError("recipient can't accept payment"))?;
         let db_invoice = create_remote_invoice(
             db_client,
             sender.id,
             recipient.id,
-            &invoice_data.chain_id,
-            invoice_data.amount,
+            &invoice_form.chain_id,
+            invoice_form.amount,
         ).await?;
         prepare_offer_agreement(
             &config.instance(),
@@ -382,7 +382,7 @@ async fn create_invoice_view(
             recipient_actor,
             &subscription_option,
             db_invoice.id,
-            invoice_data.amount,
+            invoice_form.amount,
         ).save_and_enqueue(db_client).await?;
         db_invoice
     };

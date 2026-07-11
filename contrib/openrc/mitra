@@ -11,9 +11,9 @@ required_files="/etc/mitra/config.yaml"
 directory="/var/lib/mitra"
 
 start_pre() {
-	checkpath --directory --owner mitra:mitra /var/lib/mitra
+    checkpath --directory --owner mitra:mitra /var/lib/mitra
 }
 
 depend() {
-	need postgresql
+    need postgresql
 }

@@ -119,7 +119,7 @@ pub async fn get_expired_subscriptions(
         ",
         &[&RelationshipType::Subscription],
     ).await?;
-   let subscriptions = rows.iter()
+    let subscriptions = rows.iter()
         .map(|row| row.try_get("subscription"))
         .collect::<Result<_, _>>()?;
     Ok(subscriptions)

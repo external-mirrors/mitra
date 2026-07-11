@@ -51,7 +51,7 @@ impl ApUri {
     /// Query parameters are preserved.
     pub fn parse(value: &str) -> Result<Self, &'static str> {
         let uri_re = Regex::new(AP_URI_RE)
-             .expect("regexp should be valid");
+            .expect("regexp should be valid");
         let captures = uri_re.captures(value).ok_or("invalid 'ap' URI")?;
         let did_str = url_decode(&captures["did"]);
         let authority = Did::from_str(&did_str)

@@ -118,7 +118,6 @@ pub struct Status {
     #[serde(serialize_with = "serialize_datetime_opt")]
     edited_at: Option<DateTime<Utc>>,
     pub account: Account,
-    title: Option<String>, // custom field
     pub content: String,
     language: Option<String>,
     pub in_reply_to_id: Option<Uuid>,
@@ -142,15 +141,19 @@ pub struct Status {
     pub favourited: bool,
     pub reblogged: bool,
     bookmarked: bool,
-    conversation_tracking: Option<&'static str>,
 
     // Pleroma API
     pleroma: PleromaData,
 
-    // Extra fields
+    // Custom fields
+    title: Option<String>,
     hidden: bool,
     pub ipfs_cid: Option<String>,
     links: Vec<Status>,
+    group: Option<Account>,
+
+    // Custom fields: authorized user
+    conversation_tracking: Option<&'static str>,
 }
 
 pub fn visibility_to_str(visibility: Visibility) -> &'static str {
@@ -239,6 +242,13 @@ impl Status {
         let links: Vec<Status> = related_posts.linked.into_iter().map(|post| {
             Status::from_post(authority, media_server, post)
         }).collect();
+        let maybe_group = post.group.map(|group| {
+            Account::from_profile(
+                authority,
+                media_server,
+                group,
+            )
+        });
         let visibility = visibility_to_str(post.visibility);
         let mut emoji_reactions = vec![];
         let mut favourites_count = 0;
@@ -314,6 +324,7 @@ impl Status {
             hidden: post.actions.is_some_and(|actions| actions.hidden),
             ipfs_cid: post.ipfs_cid,
             links: links,
+            group: maybe_group,
         }
     }
 }
@@ -355,7 +366,7 @@ fn default_post_content_type() -> String { POST_CONTENT_TYPE_MARKDOWN.to_string(
 
 // https://docs.joinmastodon.org/methods/statuses/
 #[derive(Debug, Deserialize)]
-pub struct StatusData {
+pub struct StatusCreateForm {
     pub status: Option<String>,
     pub title: Option<String>, // custom field
     pub language: Option<String>,
@@ -393,7 +404,7 @@ pub struct StatusData {
     pub group_id: Option<Uuid>,
 }
 
-impl StatusData {
+impl StatusCreateForm {
     pub fn language(&self) -> Result<Option<Language>, ValidationError> {
         self.language.as_ref()
             .map(|value| parse_language_code(value))
@@ -420,7 +431,7 @@ impl StatusData {
 }
 
 #[derive(Deserialize)]
-pub struct StatusPreviewData {
+pub struct StatusPreviewForm {
     pub status: String,
 
     #[serde(default = "default_post_content_type")]
@@ -474,7 +485,7 @@ impl StatusSource {
 
 // https://docs.joinmastodon.org/methods/statuses/#edit
 #[derive(Deserialize)]
-pub struct StatusUpdateData {
+pub struct StatusUpdateForm {
     pub status: String,
     pub title: Option<String>,
     pub language: Option<String>,
@@ -492,7 +503,7 @@ pub struct StatusUpdateData {
     pub quote_id: Option<Uuid>,
 }
 
-impl StatusUpdateData {
+impl StatusUpdateForm {
     pub fn language(&self) -> Result<Option<Language>, ValidationError> {
         self.language.as_ref()
             .map(|value| parse_language_code(value))
@@ -517,7 +528,7 @@ pub struct FavouritedByQueryParams {
 }
 
 #[derive(Deserialize)]
-pub struct ReblogParams {
+pub struct ReblogForm {
     pub visibility: Option<String>,
 }
 
@@ -532,11 +543,11 @@ pub struct RebloggedByQueryParams {
 }
 
 #[derive(Deserialize)]
-pub struct ConversationTrackingData {
+pub struct ConversationTrackingForm {
     status: String,
 }
 
-impl ConversationTrackingData {
+impl ConversationTrackingForm {
     pub fn status(&self) -> Result<Option<TrackingStatus>, ValidationError> {
         let maybe_tracking_status = match self.status.as_str() {
             TRACKING_STATUS_NORMAL => None,

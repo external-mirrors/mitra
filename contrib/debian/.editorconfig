@@ -1,0 +1,3 @@
+[rules]
+# Indentation with spaces are syntactically not correct for Makefiles
+indent_style = tab

@@ -125,18 +125,18 @@ use super::helpers::{
 use super::types::{
     visibility_from_str,
     Context,
-    ConversationTrackingData,
+    ConversationTrackingForm,
     FavouritedByQueryParams,
     LoadConversationRequest,
-    ReblogParams,
+    ReblogForm,
     RebloggedByQueryParams,
     Status,
-    StatusData,
+    StatusCreateForm,
     StatusPreview,
-    StatusPreviewData,
+    StatusPreviewForm,
     StatusSource,
     StatusTombstone,
-    StatusUpdateData,
+    StatusUpdateForm,
 };
 
 // https://docs.joinmastodon.org/methods/statuses/#create
@@ -148,7 +148,7 @@ async fn create_status(
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request: HttpRequest,
-    status_data: JsonOrQsForm<StatusData>,
+    status_form: JsonOrQsForm<StatusCreateForm>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -156,11 +156,11 @@ async fn create_status(
         return Err(MastodonError::PermissionError);
     };
     let instance = config.instance();
-    let status_data = match status_data {
+    let status_form = match status_form {
         Either::Left(json) => json.into_inner(),
         Either::Right(form) => form.into_inner(),
     };
-    let maybe_in_reply_to = if let Some(in_reply_to_id) = status_data.in_reply_to_id {
+    let maybe_in_reply_to = if let Some(in_reply_to_id) = status_form.in_reply_to_id {
         let in_reply_to = match get_post_by_id_for_view(
             db_client,
             Some(&current_user.profile),
@@ -176,7 +176,7 @@ async fn create_status(
     } else {
         None
     };
-    let maybe_group = if let Some(group_id) = status_data.group_id {
+    let maybe_group = if let Some(group_id) = status_form.group_id {
         match get_profile_by_id(db_client, group_id).await {
             Ok(profile) if profile.is_group() => Some(profile),
             Ok(_) | Err(DatabaseError::NotFound(_)) => {
@@ -187,7 +187,7 @@ async fn create_status(
     } else {
         None
     };
-    let visibility = match status_data.visibility.as_deref() {
+    let visibility = match status_form.visibility.as_deref() {
         Some(visibility_str) => visibility_from_str(visibility_str)?,
         None => {
             // Default visibility
@@ -204,9 +204,9 @@ async fn create_status(
         parse_content(
             db_client,
             &instance,
-            status_data.status.as_deref().unwrap_or_default(),
-            &status_data.content_type,
-            status_data.quote_id,
+            status_form.status.as_deref().unwrap_or_default(),
+            &status_form.content_type,
+            status_form.quote_id,
         ).await?;
     let mentions = prepare_mentions(
         db_client,
@@ -248,7 +248,7 @@ async fn create_status(
     };
 
     // Prepare poll data
-    let maybe_poll_data = if let Some(poll_params) = status_data.poll_params()? {
+    let maybe_poll_data = if let Some(poll_params) = status_form.poll_params()? {
         let (poll_options, poll_emojis) = parse_poll_options(
             db_client,
             &poll_params.options,
@@ -265,6 +265,7 @@ async fn create_status(
             results: poll_options.into_iter()
                 .map(|name| PollResult::new(&name))
                 .collect(),
+            voters_count: Some(0),
         };
         Some(poll_data)
     } else {
@@ -275,14 +276,14 @@ async fn create_status(
     let post_data = PostCreateData {
         id: None,
         context: context,
-        title: status_data.title.clone(),
+        title: status_form.title.clone(),
         content: content,
         content_source: content_source,
-        language: status_data.language()?,
+        language: status_form.language()?,
         visibility: visibility,
-        is_sensitive: status_data.sensitive,
+        is_sensitive: status_form.sensitive,
         poll: maybe_poll_data,
-        attachments: status_data.media_ids,
+        attachments: status_form.media_ids,
         mentions: mentions,
         tags: hashtags,
         links: links,
@@ -387,18 +388,18 @@ async fn preview_status(
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
-    status_data: web::Json<StatusPreviewData>,
+    status_form: web::Json<StatusPreviewForm>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     get_current_user(db_client, auth.token()).await?;
     let instance = config.instance();
-    let status_data = status_data.into_inner();
+    let status_form = status_form.into_inner();
     let PostContent { content, emojis, .. } =
         parse_content(
             db_client,
             &instance,
-            &status_data.status,
-            &status_data.content_type,
+            &status_form.status,
+            &status_form.content_type,
             None,
         ).await?;
     // Return preview
@@ -467,7 +468,7 @@ async fn edit_status(
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
-    status_data: web::Json<StatusUpdateData>,
+    status_form: web::Json<StatusUpdateForm>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -482,15 +483,15 @@ async fn edit_status(
         None
     };
     let instance = config.instance();
-    let status_data = status_data.into_inner();
+    let status_form = status_form.into_inner();
     // Parse content
     let PostContent { content, content_source, mentions, hashtags, links, linked, emojis } =
         parse_content(
             db_client,
             &instance,
-            &status_data.status,
-            &status_data.content_type,
-            status_data.quote_id,
+            &status_form.status,
+            &status_form.content_type,
+            status_form.quote_id,
         ).await?;
     let mentions = prepare_mentions(
         db_client,
@@ -502,13 +503,13 @@ async fn edit_status(
 
     // Update post
     let post_data = PostUpdateData {
-        title: status_data.title.clone(),
+        title: status_form.title.clone(),
         content: content,
         content_source: content_source,
-        language: status_data.language()?,
-        is_sensitive: status_data.sensitive,
+        language: status_form.language()?,
+        is_sensitive: status_form.sensitive,
         poll: post.poll.map(PollData::from),
-        attachments: status_data.media_ids,
+        attachments: status_form.media_ids,
         mentions: mentions,
         tags: hashtags,
         links: links,
@@ -889,7 +890,7 @@ async fn reblog(
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
-    reblog_params: Option<web::Json<ReblogParams>>,
+    reblog_form: Option<web::Json<ReblogForm>>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -900,8 +901,8 @@ async fn reblog(
     if !post.is_public() {
         return Err(MastodonError::NotFound("post"));
     };
-    let visibility = match reblog_params.as_ref()
-        .and_then(|params| params.visibility.as_ref())
+    let visibility = match reblog_form.as_ref()
+        .and_then(|form| form.visibility.as_ref())
     {
         Some(visibility_str) => visibility_from_str(visibility_str)?,
         None => Visibility::Public,
@@ -1185,7 +1186,7 @@ async fn conversation_tracking_view(
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
-    request_data: web::Json<ConversationTrackingData>,
+    tracking_form: web::Json<ConversationTrackingForm>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -1194,7 +1195,7 @@ async fn conversation_tracking_view(
         Some(&current_user.profile),
         *status_id,
     ).await?;
-    let maybe_tracking_status = request_data.status()?;
+    let maybe_tracking_status = tracking_form.status()?;
     set_conversation_tracking_status(
         db_client,
         post.expect_conversation().id,

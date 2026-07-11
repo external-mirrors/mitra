@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use postgres_protocol::escape::escape_literal;
 use uuid::Uuid;
 
 use mitra_utils::id::generate_ulid;
@@ -28,7 +29,7 @@ use crate::notifications::helpers::{
     create_reply_notification,
     create_repost_notification,
 };
-use crate::polls::queries::{create_poll, reset_votes, update_poll};
+use crate::polls::queries::{create_poll, update_poll};
 use crate::profiles::{
     queries::{
         get_profile_by_id,
@@ -425,7 +426,7 @@ pub async fn update_post(
     post_id: Uuid,
     post_data: PostUpdateData,
 ) -> Result<(PostDetailed, DeletionQueue), DatabaseError> {
-    let transaction = db_client.transaction().await?;
+    let mut transaction = db_client.transaction().await?;
     // Reposts and immutable posts can't be updated
     let maybe_row = transaction.query_opt(
         "
@@ -541,14 +542,11 @@ pub async fn update_post(
     let db_reactions =
         get_post_reactions(&transaction, db_post.id).await?;
     let maybe_poll = if let Some(poll_data) = post_data.poll {
-        let (poll, options_changed) = update_poll(
-            &transaction,
+        let poll = update_poll(
+            &mut transaction,
             db_post.id,
             poll_data,
         ).await?;
-        if options_changed {
-            reset_votes(&transaction, poll.id).await?;
-        };
         Some(poll)
     } else {
         None
@@ -1949,8 +1947,10 @@ pub async fn search_posts(
     limit: u16,
     offset: u16,
 ) -> Result<Vec<PostDetailed>, DatabaseError> {
+    // Using `escape_literal` because
     // `&str` can't be directly cast to `regconfig`
     // https://github.com/rust-postgres/rust-postgres/issues/1041
+    // and the index is not used if the value is casted to `text`
     let statement = format!(
         "
         SELECT
@@ -1962,45 +1962,45 @@ pub async fn search_posts(
         WHERE
             -- can parse HTML documents
             to_tsvector(
-                $1::text::regconfig,
+                {search_config},
                 COALESCE(post.title, '') || ' ' || post.content
             )
-                @@ plainto_tsquery($1::text::regconfig, $2)
+                @@ plainto_tsquery({search_config}, $1)
             AND repost_of_id IS NULL
             AND (
                 -- posts published by the current user
-                post.author_id = $3
+                post.author_id = $2
                 -- posts bookmarked by the current user
                 OR EXISTS (
                     SELECT 1 FROM bookmark
                     WHERE
                         bookmark.post_id = post.id
-                        AND bookmark.owner_id = $3
+                        AND bookmark.owner_id = $2
                 )
                 -- posts with reactions from the current user
                 OR EXISTS (
                     SELECT 1 FROM post_reaction
                     WHERE
                         post_reaction.post_id = post.id
-                        AND post_reaction.author_id = $3
+                        AND post_reaction.author_id = $2
                 )
                 -- posts where the current user is mentioned
                 OR EXISTS (
                     SELECT 1 FROM post_mention
                     WHERE
                         post_mention.post_id = post.id
-                        AND post_mention.profile_id = $3
+                        AND post_mention.profile_id = $2
                 )
             )
         ORDER BY post.id DESC
-        LIMIT $4 OFFSET $5
+        LIMIT $3 OFFSET $4
         ",
         post_subqueries=post_subqueries(),
+        search_config=escape_literal(search_config),
     );
     let rows = db_client.query(
         &statement,
         &[
-            &search_config,
             &text,
             &current_user_id,
             &i64::from(limit),
@@ -3029,5 +3029,25 @@ mod tests {
         ).await.unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].id, post_1.id);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_search_posts_sql_injection() {
+        let db_client = &mut create_test_database().await;
+        let user = create_test_user(db_client, "viewer").await;
+        let dangerous = "'simple',content)--";
+        let error = search_posts(
+            db_client,
+            dangerous,
+            "post",
+            user.id,
+            5,
+            0, // no offset
+        ).await.err().unwrap();
+        assert_eq!(
+            error.to_string(),
+            "db error: ERROR: text search configuration \"'simple',content)--\" does not exist",
+        );
     }
 }

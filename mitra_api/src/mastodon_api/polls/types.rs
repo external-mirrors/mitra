@@ -30,7 +30,7 @@ pub struct Poll {
     expired: bool,
     multiple: bool,
     votes_count: u32,
-    voters_count: Option<u32>,
+    voters_count: Option<i32>,
     options: Vec<PollOption>,
     emojis: Vec<CustomEmoji>,
 
@@ -74,7 +74,7 @@ impl Poll {
             votes_count: votes_count,
             // Mastodon documentation is incorrect.
             // The value is `null` when voters count is not known.
-            voters_count: None,
+            voters_count: db_poll.voters_count,
             options: options,
             emojis: emojis.into_iter()
                 .map(|emoji| CustomEmoji::from_db(media_server, emoji))
@@ -86,7 +86,7 @@ impl Poll {
 }
 
 #[derive(Deserialize)]
-pub struct VoteData {
+pub struct VoteForm {
     #[serde(alias = "choices[]")]
     pub choices: HashSet<usize>,
 }

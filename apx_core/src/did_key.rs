@@ -16,8 +16,12 @@ use crate::{
     multicodec::{Multicodec, MulticodecError},
 };
 
+// https://w3c-ccg.github.io/did-key-spec/#did-key-identifier-syntax
 const DID_KEY_RE: &str = r"did:key:(?P<key>z[a-km-zA-HJ-NP-Z1-9]+)";
 
+/// `did:key` identifier
+///
+/// Only `base-58-btc` encoding is supported.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DidKey {
     codec: Multicodec,

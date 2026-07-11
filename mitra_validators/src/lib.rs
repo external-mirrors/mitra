@@ -4,6 +4,7 @@ pub mod custom_feeds;
 pub mod emojis;
 pub mod errors;
 pub mod filter_rules;
+pub mod groups;
 pub mod invoices;
 pub mod media;
 pub mod oauth;

@@ -23,28 +23,28 @@ use crate::mastodon_api::{
     errors::MastodonError,
     oauth::utils::generate_oauth_token,
 };
-use super::types::{OauthApp, CreateAppData, CreateAppMultipartForm};
+use super::types::{OauthApp, CreateAppForm, CreateAppMultipartForm};
 
 // https://docs.joinmastodon.org/methods/apps/#create
 #[post("")]
 async fn create_app_view(
     db_pool: web::Data<DatabaseConnectionPool>,
-    request_data: Either<
-        JsonOrForm<CreateAppData>,
+    app_form: Either<
+        JsonOrForm<CreateAppForm>,
         // Some clients use multipart/form-data
         MultipartForm<CreateAppMultipartForm>,
     >,
 ) -> Result<HttpResponse, MastodonError> {
-    let request_data = match request_data {
-        Either::Left(data) => data.into_inner(),
+    let app_form = match app_form {
+        Either::Left(form) => form.into_inner(),
         Either::Right(form) => form.into_inner().into(),
     };
     let db_client = &**get_database_client(&db_pool).await?;
     let db_app_data = DbOauthAppData {
-        app_name: request_data.client_name,
-        website: request_data.website,
-        scopes: clean_scopes(&request_data.scopes),
-        redirect_uri: request_data.redirect_uris,
+        app_name: app_form.client_name,
+        website: app_form.website,
+        scopes: clean_scopes(&app_form.scopes),
+        redirect_uri: app_form.redirect_uris,
         client_id: Uuid::new_v4(),
         client_secret: generate_oauth_token(),
     };

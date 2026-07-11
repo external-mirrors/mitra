@@ -1,5 +1,6 @@
 use apx_core::{
     crypto::common::KeySerializationError,
+    url::canonical::NonCanonicalUri,
 };
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
@@ -34,6 +35,7 @@ use crate::{
     identifiers::{
         local_actor_id,
         local_actor_id_canonical,
+        local_affiliations_collection_path,
         local_instance_actor_id,
         LocalActorCollection,
     },
@@ -169,6 +171,8 @@ pub struct Actor {
     subscribers: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     featured: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    affiliations: Option<NonCanonicalUri>,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
     assertion_method: Vec<Multikey>,
@@ -259,6 +263,11 @@ pub fn build_local_actor(
     let actor_id = id_builder.build_string_unchecked(&actor_data.id);
     // TODO: add to actor data?
     let following = LocalActorCollection::Following.of(&actor_data.id);
+    let maybe_affiliations = account
+        .profile()
+        .is_group()
+        .then_some(local_affiliations_collection_path(account.id()))
+        .map(|path| authority.build_id_from_path(path));
 
     #[cfg(not(feature = "mini"))]
     let public_key_pem =
@@ -416,6 +425,7 @@ pub fn build_local_actor(
         featured: actor_data.featured
             .as_ref()
             .map(|uri| id_builder.build_string_unchecked(uri)),
+        affiliations: maybe_affiliations,
         assertion_method: verification_methods,
         public_key: maybe_public_key_pem,
         implements: vec![],
@@ -461,6 +471,7 @@ pub fn build_instance_actor(
         following: None,
         subscribers: None,
         featured: None,
+        affiliations: None,
         assertion_method: verification_methods,
         public_key: Some(public_key_pem),
         implements: Application::new().implements,
@@ -600,6 +611,13 @@ mod tests {
             &account,
         ).unwrap();
         assert_eq!(actor.object_type, GROUP);
+        assert_eq!(
+            actor.affiliations.unwrap().to_string(),
+            format!(
+                "https://server.example/ap/actors/{}/affiliations",
+                account.id,
+            ),
+        );
     }
 
     #[test]

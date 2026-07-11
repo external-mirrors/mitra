@@ -45,7 +45,7 @@ impl From<EndpointError> for HttpError {
 
 impl From<HandlerError> for HttpError {
     fn from(error: HandlerError) -> Self {
-         match error {
+        match error {
             HandlerError::ValidationError(error) =>
                 HttpError::ValidationError(error),
             HandlerError::DatabaseError(error) => error.into(),

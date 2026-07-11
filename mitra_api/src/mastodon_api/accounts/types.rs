@@ -73,6 +73,8 @@ use crate::mastodon_api::{
     uploads::{save_b64_file, UploadError},
 };
 
+use super::helpers::parse_profile_bio;
+
 pub const AUTHENTICATION_METHOD_PASSWORD: &str = "password";
 pub const AUTHENTICATION_METHOD_EIP4361: &str = "eip4361";
 pub const AUTHENTICATION_METHOD_CAIP122_MONERO: &str = "caip122_monero";
@@ -179,7 +181,9 @@ pub struct Account {
     pub created_at: DateTime<Utc>,
     pub note: String,
     pub avatar: String,
+    avatar_static: String,
     pub header: String,
+    header_static: String,
     pub locked: bool,
     pub mention_policy: String,
     pub bot: bool,
@@ -303,8 +307,10 @@ impl Account {
             display_name: profile.display_name,
             created_at: profile.created_at,
             note: profile.bio.unwrap_or_default(),
-            avatar: avatar_url,
-            header: header_url,
+            avatar: avatar_url.clone(),
+            avatar_static: avatar_url,
+            header: header_url.clone(),
+            header_static: header_url,
             locked: profile.manually_approves_followers,
             mention_policy: mention_policy.to_string(),
             bot: profile.actor_type == ActorType::Automated,
@@ -376,7 +382,7 @@ fn default_authentication_method() -> String { AUTHENTICATION_METHOD_PASSWORD.to
 
 /// https://docs.joinmastodon.org/methods/accounts/
 #[derive(Deserialize)]
-pub struct AccountCreateData {
+pub struct AccountCreateForm {
     #[serde(default = "default_authentication_method")]
     pub authentication_method: String,
 
@@ -428,7 +434,7 @@ impl AccountSourceData {
 
 // Supports partial updates
 #[derive(Deserialize)]
-pub struct AccountUpdateData {
+pub struct AccountUpdateForm {
     display_name: Option<String>,
     note: Option<String>,
     avatar: Option<String>,
@@ -477,7 +483,7 @@ fn process_b64_image_field_value(
     Ok(maybe_file_name)
 }
 
-impl AccountUpdateData {
+impl AccountUpdateForm {
     pub fn into_profile_data(
         self,
         profile: &DbActorProfile,
@@ -490,9 +496,7 @@ impl AccountUpdateData {
             profile_data.display_name = Some(display_name);
         };
         if let Some(bio_source) = self.note {
-            let bio = markdown_basic_to_html(&bio_source)
-                .map_err(|_| ValidationError("invalid markdown"))?;
-            profile_data.bio = Some(bio);
+            profile_data.bio = parse_profile_bio(Some(&bio_source))?;
             profile_data.bio_source = Some(bio_source);
         };
         profile_data.avatar = process_b64_image_field_value(
@@ -583,7 +587,7 @@ pub struct AccountUpdateMultipartForm {
     source_language: Option<Text<String>>,
 }
 
-impl From<AccountUpdateMultipartForm> for AccountUpdateData {
+impl From<AccountUpdateMultipartForm> for AccountUpdateForm {
     fn from(form: AccountUpdateMultipartForm) -> Self {
         let fields_attributes: Vec<_> = [
             (form.fields_attributes_0_name, form.fields_attributes_0_value),
@@ -654,7 +658,7 @@ pub struct IdentityClaim {
 }
 
 #[derive(Deserialize)]
-pub struct IdentityProofData {
+pub struct IdentityProofForm {
     pub proof_type: String,
     pub did: String,
     pub signature: String,
@@ -662,7 +666,7 @@ pub struct IdentityProofData {
 }
 
 #[derive(Deserialize)]
-pub struct IdentityProofDeletionRequest {
+pub struct IdentityProofDeleteForm {
     pub did: Did,
 }
 
@@ -757,14 +761,14 @@ pub struct IdenticonQueryParams {
 }
 
 #[derive(Deserialize)]
-pub struct FollowData {
+pub struct FollowForm {
     #[serde(default = "default_showing_reblogs")]
     pub reblogs: bool,
     #[serde(default = "default_showing_replies")]
     pub replies: bool,
 }
 
-impl Default for FollowData {
+impl Default for FollowForm {
     fn default() -> Self {
         Self {
             reblogs: default_showing_reblogs(),
@@ -879,7 +883,7 @@ fn default_actor_collection() -> String {
 }
 
 #[derive(Deserialize)]
-pub struct LoadActivitiesParams {
+pub struct LoadActivitiesRequest {
     #[serde(default = "default_actor_collection")]
     pub collection: String,
 }

@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use mitra_models::groups::types::GroupFilter;
 use mitra_validators::errors::ValidationError;
@@ -6,8 +6,19 @@ use mitra_validators::errors::ValidationError;
 use crate::mastodon_api::pagination::PageSize;
 
 #[derive(Deserialize)]
-pub struct GroupCreateData {
+pub struct GroupCreateForm {
     pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct GroupSource {
+    pub description: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct GroupUpdateForm {
+    pub description: Option<String>,
 }
 
 const GROUP_FILTER_FOLLOWING: &str = "following";

@@ -9,14 +9,17 @@ use apx_core::{
     did_key::DidKey,
     url::{
         ap_uri::with_ap_prefix,
-        canonical::GATEWAY_PATH_PREFIX,
+        canonical::{
+            NonCanonicalUri,
+            GATEWAY_PATH_PREFIX,
+        },
         http_uri::HttpUri,
     },
 };
 
 use mitra_config::Instance;
 
-use crate::identifiers::IdBuilder;
+use crate::identifiers::{IdBuilder, IdPath};
 
 #[derive(Clone)]
 pub enum AuthorityRoot {
@@ -156,6 +159,11 @@ impl Authority {
 
     pub fn id_builder(&self) -> IdBuilder {
         IdBuilder::new(self.http_base_uri.clone(), self.prefer_compatible)
+    }
+
+    pub fn build_id_from_path(&self, path: IdPath) -> NonCanonicalUri {
+        let id_builder = self.id_builder();
+        id_builder.build_from_path(&self.root, path)
     }
 }
 

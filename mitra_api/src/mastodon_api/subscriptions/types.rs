@@ -15,13 +15,13 @@ use mitra_models::{
 use crate::mastodon_api::serializers::serialize_datetime;
 
 #[derive(Deserialize)]
-pub struct SubscriberData {
+pub struct SubscriptionCreateForm {
     pub subscriber_id: Uuid,
     pub duration: i32,
 }
 
 #[derive(Deserialize)]
-pub struct InvoiceData {
+pub struct InvoiceForm {
     pub sender_id: Uuid,
     pub recipient_id: Uuid,
     pub chain_id: ChainId,

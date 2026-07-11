@@ -483,6 +483,9 @@ impl AutomatedAccountDetailed {
 
 pub struct AutomatedAccountData {
     pub username: String,
+    pub bio: Option<String>,
+    pub bio_source: Option<String>,
+    pub emojis: Vec<Uuid>,
     pub account_type: AutomatedAccountType,
     pub rsa_secret_key: RsaSecretKey,
     pub ed25519_secret_key: Ed25519SecretKey,

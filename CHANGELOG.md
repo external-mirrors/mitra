@@ -6,10 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Changed application name returned by `--version` from `mitra_cli` to `mitra`.
+- Fixed incorrect binary name in shell completions.
+- Added missing shell completions to deb package.
+
+## [5.7.0] - 2026-07-09
+
 ### Added
 
 - Accept 'ap' URIs with `ap+ef61` scheme.
 - Added `max_toot_chars` to `/api/v1/instance` response ([#240](https://codeberg.org/silverpill/mitra/pulls/240)).
+- Allowed to specify description on group creation.
+- Added API endpoint for deleting groups.
+- Added API endpoints for editing group info.
+- Added `group` field to `Status` Mastodon API entity.
+- Implemented FEP-5219 `affiliations` collection.
+- Added `configuration.accounts.max_note_length` field to `Instance` entity.
+- Added `configuration.accounts.max_display_name_length` field to `Instance` entity.
+- Maintain record of the total number of voters in a poll.
+- Add pagination `Link` header to `/api/v1/accounts/{account_id}/subscribers` response.
+- Added `avatar_static` and `header_static` fields to `Account` entity.
 
 ### Changed
 
@@ -17,6 +35,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed Rust edition to 2024.
 - Allowed implicit lists in query parameters.
 - Write warning to log when processing expired integrity proof.
+- Sort media types in `Instance.configuration.media_attachments.supported_mime_types` array.
+
+### Fixed
+
+- Fixed full text search not using index.
+- Remove custom emojis that are no longer used in display name or bio.
+- Clear poll results when poll type or poll options are changed.
+- Fixed stack overflow in background worker when optimizations are disabled.
+- Fixed "account not found" error when posting to a remote group.
 
 ## [5.6.0] - 2026-06-26
 

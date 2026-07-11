@@ -29,7 +29,7 @@ use crate::{
 
 use super::types::{
     MarkerQueryParams,
-    MarkerCreateData,
+    MarkerCreateForm,
     MarkerCreateMultipartForm,
     Markers,
 };
@@ -69,21 +69,21 @@ async fn get_marker_view(
 async fn update_marker_view(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
-    marker_data: Either<
-        JsonOrForm<MarkerCreateData>,
+    marker_form: Either<
+        JsonOrForm<MarkerCreateForm>,
         // Tuba uses multipart/form-data
         MultipartForm<MarkerCreateMultipartForm>,
     >,
 ) -> Result<HttpResponse, MastodonError> {
-    let marker_data = match marker_data {
-        Either::Left(data) => data.into_inner(),
+    let marker_form = match marker_form {
+        Either::Left(form) => form.into_inner(),
         Either::Right(form) => form.into_inner().into(),
     };
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let (timeline, last_read_id) = if let Some(last_read_id) = marker_data.home_last_read_id() {
+    let (timeline, last_read_id) = if let Some(last_read_id) = marker_form.home_last_read_id() {
         (Timeline::Home, last_read_id)
-    } else if let Some(last_read_id) = marker_data.notifications_last_read_id() {
+    } else if let Some(last_read_id) = marker_form.notifications_last_read_id() {
         (Timeline::Notifications, last_read_id)
     } else {
         return Err(ValidationError("marker data is missing").into());

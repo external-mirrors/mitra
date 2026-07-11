@@ -985,6 +985,7 @@ pub struct ProfileCreateData {
     pub webfinger_hostname: WebfingerHostname,
     pub display_name: Option<String>,
     pub bio: Option<String>,
+    pub bio_source: Option<String>,
     pub avatar: Option<MediaInfo>,
     pub banner: Option<MediaInfo>,
     pub manually_approves_followers: bool,

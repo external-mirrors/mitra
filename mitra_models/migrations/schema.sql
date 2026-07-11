@@ -239,7 +239,8 @@ CREATE TABLE poll (
     id UUID PRIMARY KEY REFERENCES post (id) ON DELETE CASCADE,
     multiple_choices BOOLEAN NOT NULL,
     ends_at TIMESTAMP WITH TIME ZONE,
-    results JSONB NOT NULL
+    results JSONB NOT NULL,
+    voters_count INTEGER CHECK (voters_count >= 0)
 );
 
 CREATE TABLE poll_vote (

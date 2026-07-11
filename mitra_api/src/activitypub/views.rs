@@ -52,6 +52,7 @@ use mitra_activitypub::{
     authentication::verify_signed_request,
     authority::Authority,
     builders::{
+        affiliation::Affiliation,
         announce::build_announce,
         collection::OrderedCollection,
         create_note::build_create_note,
@@ -76,6 +77,8 @@ use mitra_activitypub::{
         compatible_post_object_id,
         expect_compatible_actor_id,
         local_actor_id,
+        local_actor_id_canonical,
+        local_affiliations_collection_path,
         local_conversation_collection,
         local_object_id,
         local_object_replies,
@@ -93,6 +96,7 @@ use mitra_config::Config;
 use mitra_models::{
     accounts::{
         queries::{
+            get_group_account_by_id,
             get_managed_account_by_username,
             get_portable_user_by_id,
             get_portable_user_by_inbox_id,
@@ -132,6 +136,10 @@ use mitra_models::{
     profiles::{
         queries::get_remote_profile_by_actor_id,
         types::PaymentOption,
+    },
+    relationships::{
+        queries::get_related_combined,
+        types::RelationshipType,
     },
 };
 use mitra_services::media::{MediaServer, MediaStorage};
@@ -540,6 +548,51 @@ pub fn actor_scope() -> Scope {
         .service(subscribers_collection)
         .service(featured_collection)
         .service(proposal_view)
+}
+
+#[get("/actors/{account_id}/affiliations")]
+async fn affiliations_view(
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    account_id: web::Path<Uuid>,
+) -> Result<HttpResponse, HttpError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let group = get_group_account_by_id(db_client, *account_id).await?;
+    let related_profiles = get_related_combined(
+        db_client,
+        group.id,
+        &[RelationshipType::GroupAdmin],
+        false, // reverse relationships
+    ).await?;
+    let authority = Authority::from(&config.instance());
+    let affiliations = related_profiles
+        .into_iter()
+        .map(|profile| {
+            let affiliation = Affiliation::new(&authority, &profile);
+            serde_json::to_value(affiliation)
+                .expect("object should be serializable")
+        })
+        .collect();
+    let id_builder = authority.id_builder();
+    let actor_id = id_builder.build(&local_actor_id_canonical(
+        authority.root(),
+        group.id,
+        &group.profile.username,
+    ));
+    let collection_id = authority
+        .build_id_from_path(local_affiliations_collection_path(group.id));
+    let collection = OrderedCollection
+        ::new_with_items(collection_id.to_string(), affiliations)
+        .with_attributed_to(&actor_id.to_string());
+    let response = HttpResponse::Ok()
+        .content_type(AP_MEDIA_TYPE)
+        .json(collection);
+    Ok(response)
+}
+
+pub fn activitypub_scope() -> Scope {
+    web::scope("/ap")
+        .service(affiliations_view)
 }
 
 #[get("")]

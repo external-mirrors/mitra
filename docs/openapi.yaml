@@ -666,6 +666,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Subscription'
+          headers:
+            Link:
+              description: Link to the next page
+              schema:
+                type: string
+                example: '<https://social.example/api/v1/accounts/1/subscribers?limit=40&max_id=1934>; rel="next"'
         404:
           description: User not found
   /api/v1/accounts/{account_id}/follow:
@@ -1162,6 +1168,10 @@ paths:
                 name:
                   description: The name of the group
                   type: string
+                description:
+                  description: The description of the group
+                  type: string
+                  nullable: true
       responses:
         200:
           description: Successful operation
@@ -1213,6 +1223,60 @@ paths:
                   $ref: '#/components/schemas/Account'
         400:
           description: Invalid query parameters.
+  /api/v1/groups/{group_id}:
+    patch:
+      summary: Update group profile.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/group_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description:
+                  description: The description of the group
+                  type: string
+                  nullable: true
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        400:
+          description: Invalid group info
+    delete:
+      summary: Delete group.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/group_id'
+      responses:
+        204:
+          description: Group deleted
+  /api/v1/groups/{group_id}/source:
+    get:
+      summary: Obtain the source properties for a group profile so that it can be edited.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/group_id'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  description:
+                    description: The description of the group
+                    type: string
+                    nullable: true
   /api/v1/instance:
     get:
       summary: Information about the instance.
@@ -2045,13 +2109,13 @@ paths:
                     - $ref: '#/components/schemas/Visibility'
                     - description: |
                         Visibility of the post:
-                        
+
                         - `public` - visible to everyone
                         - `private` - visible to followers
                         - `subscribers` - visible to paid subscribers
                         - `conversation` - visible to people chosen by the conversation owner (the author of the top-level post)
                         - `direct` - visible to mentioned users
-                        
+
                         Default: `direct` when parent post is not public, otherwise `public`.
                 sensitive:
                   description: Mark post and attached media as sensitive?
@@ -3237,9 +3301,19 @@ components:
         avatar:
           description: An image icon that is shown next to posts and in the profile.
           type: string
+          format: uri
+        avatar_static:
+          description: An image icon that is shown next to posts and in the profile (identical to `avatar`).
+          type: string
+          format: uri
         header:
           description: An image banner that is shown above the profile and in profile cards.
           type: string
+          format: uri
+        header_static:
+          description: An image banner that is shown above the profile and in profile cards (identical to `header`).
+          type: string
+          format: uri
         locked:
           description: Whether the user manually approves follow requests.
           type: boolean
@@ -3621,6 +3695,12 @@ components:
       description: Limits related to accounts.
       type: object
       properties:
+        max_display_name_length:
+          description: The maximum length allowed for a user's display name.
+          type: integer
+        max_note_length:
+          description: The maximum length allowed for a profile bio.
+          type: integer
         max_profile_fields:
           description: The maximum number of custom profile fields allowed to be set.
           type: integer
@@ -4134,7 +4214,7 @@ components:
           description: How many votes have been received.
           type: integer
         voters_count:
-          description: How many unique accounts have voted on a multiple-choice poll.
+          description: How many users have voted on a poll. In a single-choice poll this number is equal to the number of votes.
           type: integer
         options:
           description: Possible answers for the poll.
@@ -4357,6 +4437,12 @@ components:
         reblog:
           description: The post being reposted.
           type: object
+        group:
+          allOf:
+            - description: The group to which this post is addressed.
+              nullable: true
+              example: null
+            - $ref: '#/components/schemas/Account'
         ipfs_cid:
           type: string
           nullable: true

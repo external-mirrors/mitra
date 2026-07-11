@@ -5,7 +5,7 @@ use uuid::Uuid;
 use mitra_models::oauth::types::{OauthApp as DbOauthApp};
 
 #[derive(Deserialize)]
-pub struct CreateAppData {
+pub struct CreateAppForm {
     pub client_name: String,
     pub redirect_uris: String,
     pub scopes: String,
@@ -20,7 +20,7 @@ pub struct CreateAppMultipartForm {
     website: Option<Text<String>>,
 }
 
-impl From<CreateAppMultipartForm> for CreateAppData {
+impl From<CreateAppMultipartForm> for CreateAppForm {
     fn from(form: CreateAppMultipartForm) -> Self {
         Self {
             client_name: form.client_name.into_inner(),

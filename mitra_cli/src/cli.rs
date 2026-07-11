@@ -1,10 +1,9 @@
-use clap::{CommandFactory, Parser};
+use clap::{Command as ClapCommand, Parser};
 use clap_complete::{
     generate,
     shells::Shell,
     Generator,
 };
-use log::Level;
 
 use crate::commands::{
     account::{
@@ -75,17 +74,6 @@ use crate::commands::{
         PruneReposts,
     },
 };
-
-/// Mitra admin CLI
-#[derive(Parser)]
-#[command(version)]
-pub struct Cli {
-    #[arg(long, default_value_t = Level::Warn)]
-    pub log_level: Level,
-
-    #[clap(subcommand)]
-    pub command: Command,
-}
 
 #[derive(Parser)]
 pub enum Command {
@@ -167,20 +155,10 @@ pub enum Command {
     },
 }
 
-pub fn print_completer<G: Generator>(generator: G) {
-    let mut cmd = Cli::command();
+pub fn print_completer(
+    generator: impl Generator,
+    cmd: &mut ClapCommand,
+) {
     let name = cmd.get_name().to_owned();
-
-    generate(generator, &mut cmd, name, &mut std::io::stdout());
-}
-
-#[cfg(test)]
-mod tests {
-    use clap::CommandFactory;
-    use super::*;
-
-    #[test]
-    fn test_cli() {
-        Cli::command().debug_assert();
-    }
+    generate(generator, cmd, name, &mut std::io::stdout());
 }

@@ -105,8 +105,8 @@ pub async fn run_server(
                     Ok(ErrorHandlerResponse::Response(response.map_into_left_body()))
                 })
                 .default_handler_server(|response| {
-                   log_response_error(Level::Error, &response);
-                   Ok(ErrorHandlerResponse::Response(response.map_into_left_body()))
+                    log_response_error(Level::Error, &response);
+                    Ok(ErrorHandlerResponse::Response(response.map_into_left_body()))
                 })
             )
             .wrap_fn(|request, service| {
@@ -139,6 +139,7 @@ pub async fn run_server(
             ))
             .service(metrics_api_scope(config.metrics.is_some()))
             .service(webfinger::webfinger_view)
+            .service(activitypub::activitypub_scope())
             .service(activitypub::actor_scope())
             .service(activitypub::instance_actor_scope())
             .service(activitypub::object_view)

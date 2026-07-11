@@ -153,6 +153,8 @@ pub struct Note {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     any_of: Vec<QuestionOption>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    voters_count: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     end_time: Option<DateTime<Utc>>,
 
     pub to: Vec<String>,
@@ -222,7 +224,7 @@ pub fn build_note(
         Visibility::Direct => (),
     };
 
-    let (one_of, any_of, end_time) = if let Some(ref poll) = post.poll {
+    let (one_of, any_of, voters_count, end_time) = if let Some(ref poll) = post.poll {
         object_type = QUESTION;
         let results = poll.results.inner().iter()
             .map(|result| {
@@ -236,12 +238,12 @@ pub fn build_note(
             })
             .collect();
         if poll.multiple_choices {
-            (vec![], results, poll.ends_at)
+            (vec![], results, poll.voters_count, poll.ends_at)
         } else {
-            (results, vec![], poll.ends_at)
+            (results, vec![], poll.voters_count, poll.ends_at)
         }
     } else {
-        (vec![], vec![], None)
+        (vec![], vec![], None, None)
     };
 
     let mut tags = vec![];
@@ -375,6 +377,7 @@ pub fn build_note(
         tag: tags,
         one_of: one_of,
         any_of: any_of,
+        voters_count: voters_count,
         end_time: end_time,
         to: primary_audience,
         cc: secondary_audience,
@@ -545,6 +548,7 @@ mod tests {
                 PollResult::new("option 1"),
                 PollResult::new("option 2"),
             ]),
+            voters_count: Some(0),
         };
         let conversation = Conversation {
             id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),
@@ -602,6 +606,7 @@ mod tests {
                     "replies": {"totalItems": 0},
                 },
             ],
+            "votersCount": 0,
             "endTime": "2023-03-27T12:13:46Z",
             "published": "2023-02-24T23:36:38Z",
             "to": [AP_PUBLIC],

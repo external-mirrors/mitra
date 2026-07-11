@@ -44,6 +44,7 @@ pub struct Poll {
     pub multiple_choices: bool,
     pub ends_at: Option<DateTime<Utc>>,
     pub results: PollResults,
+    pub voters_count: Option<i32>,
 }
 
 impl Poll {
@@ -56,6 +57,7 @@ pub struct PollData {
     pub multiple_choices: bool,
     pub ends_at: Option<DateTime<Utc>>,
     pub results: Vec<PollResult>,
+    pub voters_count: Option<i32>,
 }
 
 impl From<Poll> for PollData {
@@ -64,6 +66,7 @@ impl From<Poll> for PollData {
             multiple_choices: poll.multiple_choices,
             ends_at: poll.ends_at,
             results: poll.results.inner().to_vec(),
+            voters_count: poll.voters_count,
         }
     }
 }
