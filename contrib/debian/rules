@@ -3,7 +3,7 @@
 export DEB_BUILD_OPTIONS=noautodbgsym
 
 %:
-	dh $@
+	dh $@ --with shell_completions
 
 # https://manpages.debian.org/testing/debhelper/dh_installsystemd.1.en.html
 override_dh_installsystemd:

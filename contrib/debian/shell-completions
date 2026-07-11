@@ -1,0 +1,3 @@
+mode=gen
+command=./usr/bin/mitra completion --shell _SHELL_
+shells=bash
