@@ -1,5 +1,6 @@
 use anyhow::Error;
-use clap::Parser;
+use clap::{CommandFactory, Parser};
+use log::Level;
 use tokio::runtime::Builder;
 
 use mitra_adapters::init::{
@@ -14,7 +15,6 @@ use mitra_api::server::run_server;
 use mitra_config::SoftwareMetadata;
 use mitra_cli::cli::{
     print_completer,
-    Cli,
     Command,
 };
 use mitra_workers::workers::start_workers;
@@ -27,11 +27,23 @@ fn get_software_metadata() -> SoftwareMetadata {
     }
 }
 
+/// Mitra admin CLI
+#[derive(Parser)]
+#[command(name = "mitra", version)]
+struct Cli {
+    #[arg(long, default_value_t = Level::Warn)]
+    pub log_level: Level,
+
+    #[clap(subcommand)]
+    pub command: Command,
+}
+
 async fn run_async() -> Result<(), Error> {
     let opts: Cli = Cli::parse();
 
     if let Command::Completion { shell } = opts.command {
-        print_completer(shell);
+        let mut cli = Cli::command();
+        print_completer(shell, &mut cli);
         return Ok(());
     };
 
@@ -129,4 +141,20 @@ fn main() -> Result<(), Error> {
         .build()
         .expect("runtime options should be correct")
         .block_on(run_async())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cli() {
+        Cli::command().debug_assert();
+    }
+
+    #[test]
+    fn test_binary_name() {
+        let cli = Cli::command();
+        assert_eq!(cli.get_name(), "mitra");
+    }
 }

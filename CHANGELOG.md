@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Changed application name returned by `--version` from `mitra_cli` to `mitra`.
+- Fixed incorrect binary name in shell completions.
+
 ## [5.7.0] - 2026-07-09
 
 ### Added
