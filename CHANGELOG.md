@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [5.7.1] - 2026-07-12
+
 ### Fixed
 
 - Changed application name returned by `--version` from `mitra_cli` to `mitra`.
