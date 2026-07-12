@@ -1,13 +1,22 @@
 FROM alpine:3.24 AS base
 
-FROM base AS builder
+FROM base AS chef
 RUN apk add --no-cache \
     gcc \
     musl-dev \
     rust \
-    cargo
+    cargo \
+    cargo-chef
 WORKDIR /app/mitra
 ENV DEFAULT_CONFIG_PATH=/etc/mitra/config.yaml
+
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /app/mitra/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 RUN cargo build --release --features production
 
