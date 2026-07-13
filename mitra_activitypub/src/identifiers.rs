@@ -322,11 +322,16 @@ pub(crate) fn compatible_id(
     let canonical_object_id = parse_id_from_db_lenient(object_id)?;
     // TODO: FEP-EF61: at least one gateway must be stored
     let maybe_gateway = db_actor.gateways.first()
-        .map(|gateway| gateway.as_str());
+        .map(|gateway| HttpUri::parse(gateway))
+        .transpose()
+        .map_err(|_| DatabaseTypeError)?;
+    let id_builder = IdBuilder::new(maybe_gateway, true);
+    let http_uri = id_builder.build(&canonical_object_id);
     // Will return error if ID is portable and there is no gateway
-    let http_uri = canonical_object_id.to_http_uri(maybe_gateway)
-        .ok_or(DatabaseTypeError)?;
-    Ok(http_uri)
+    if let NonCanonicalUri::Ap((None, _)) = http_uri {
+        return Err(DatabaseTypeError);
+    };
+    Ok(http_uri.to_string())
 }
 
 fn compatible_actor_id(

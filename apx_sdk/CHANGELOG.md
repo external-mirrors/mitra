@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Implemented `Deserialize` for `NonCanonicalUri` type.
 - Added `origin()` method to `NonCanonicalUri` type.
 
+### Deprecated
+
+- Deprecated `CanonicalUri::to_http_uri` function.
+
 ### Removed
 
 - Removed incorrect implementation of `Deserialize` for `CanonicalUri`.
