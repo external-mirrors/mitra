@@ -143,7 +143,7 @@ These images and packages are maintained by the community.
 
 #### Docker images
 
-- https://hub.docker.com/r/bleakfuture0/mitra
+- https://codeberg.org/silverpill/-/packages/container/mitra/versions
 - https://hub.docker.com/r/fjox/mitra
 
 #### Alpine Linux
