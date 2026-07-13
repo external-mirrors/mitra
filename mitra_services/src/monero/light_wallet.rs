@@ -7,6 +7,7 @@ use monero::util::{
 };
 use monero_lws::{
     LwsRpcClient,
+    LwsRpcClientBuilder,
 };
 use thiserror::Error;
 
@@ -35,10 +36,9 @@ impl LightWalletClient {
         address: Address,
         view_key: PrivateKey,
     ) -> Self {
-        let client = LwsRpcClient::new_with_timeout(
-            config.lightwallet_api_url.clone(),
-            Some(REQUEST_TIMEOUT),
-        );
+        let client = LwsRpcClientBuilder::new()
+            .timeout(REQUEST_TIMEOUT)
+            .build(config.lightwallet_api_url.clone());
         Self { client, address, view_key }
     }
 

@@ -471,11 +471,11 @@ checksum = "4c7f02d4ea65f2c1853089ffd8d2787bdbc63de2f0d29dedbcf8ccdfa0ccd4cf"
 
 [[package]]
 name = "base58-monero"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "978e81a45367d2409ecd33369a45dda2e9a3ca516153ec194de1fbda4b9fb79d"
+checksum = "174416d4074aa8a817937521f15c35d50f70bf0dcb4662a2795d49f777803265"
 dependencies = [
- "thiserror 1.0.50",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -678,7 +678,7 @@ version = "4.5.61"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dec5be1eea072311774b7b84ded287adbd9f293f9d23456817605c6042f4f5e0"
 dependencies = [
- "heck 0.5.0",
+ "heck",
  "proc-macro2",
  "quote",
  "syn 2.0.117",
@@ -1438,12 +1438,6 @@ checksum = "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1"
 
 [[package]]
 name = "heck"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
-
-[[package]]
-name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
@@ -1465,9 +1459,9 @@ dependencies = [
 
 [[package]]
 name = "hex-literal"
-version = "0.4.1"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fe2267d4ed49bc07b63801559be28c718ea06c4738b7a03c94df7386d2cde46"
+checksum = "e712f64ec3850b98572bffac52e2c6f282b29fe6c5fa6d42334b30be438d95c1"
 
 [[package]]
 name = "hmac"
@@ -2223,9 +2217,9 @@ dependencies = [
 
 [[package]]
 name = "monero"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f25218523ad4a171ddda05251669afb788cdc2f0df94082aab856a2b09541c3f"
+checksum = "a69858fa38267958bb7159f176fe95d6602fa1109ead4c1a33618c1a8b3bd016"
 dependencies = [
  "base58-monero",
  "curve25519-dalek",
@@ -2235,14 +2229,15 @@ dependencies = [
  "sealed",
  "serde",
  "serde-big-array",
- "thiserror 1.0.50",
+ "thiserror 2.0.18",
  "tiny-keccak",
 ]
 
 [[package]]
 name = "monero-lws"
-version = "0.1.0"
-source = "git+https://github.com/silverpill/monero-lws?rev=ec718d02182d196909045cbb64820fb2ec2ab5b3#ec718d02182d196909045cbb64820fb2ec2ab5b3"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9e128a7796773ebf71d74eea1fdd84108735f094566f6ec2ed6e4e06f0583c7"
 dependencies = [
  "anyhow",
  "fixed-hash",
@@ -2259,9 +2254,9 @@ dependencies = [
 
 [[package]]
 name = "monero-rpc"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "546a1f3a4a139392dbc4a65ca8df5e5958878b747801539012d5e3986b9f8f42"
+checksum = "5995558c390b32b0918621f97fd1c2a47fc84432c9c4d437c80b32892f373bfd"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2595,7 +2590,7 @@ version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69700ea4603c5ef32d447708e6a19cd3e8ac197a000842e97f527daea5e4175f"
 dependencies = [
- "heck 0.5.0",
+ "heck",
  "proc-macro2",
  "quote",
  "syn 2.0.117",
@@ -2926,7 +2921,7 @@ name = "refinery-macros"
 version = "0.8.16"
 source = "git+https://github.com/silverpill/refinery?rev=f8a871a6a34e7e999c9a27ae61b6b0aa1c76f326#f8a871a6a34e7e999c9a27ae61b6b0aa1c76f326"
 dependencies = [
- "heck 0.5.0",
+ "heck",
  "proc-macro2",
  "quote",
  "refinery-core",
@@ -3226,11 +3221,10 @@ checksum = "584e070911c7017da6cb2eb0788d09f43d789029b5877d3e5ecc8acf86ceee21"
 
 [[package]]
 name = "sealed"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4a8caec23b7800fb97971a1c6ae365b6239aaeddfb934d6265f8505e795699d"
+checksum = "22f968c5ea23d555e670b449c1c5e7b2fc399fdaec1d304a17cd48e288abc107"
 dependencies = [
- "heck 0.4.1",
  "proc-macro2",
  "quote",
  "syn 2.0.117",
