@@ -4,6 +4,10 @@
 use std::fmt;
 use std::str::FromStr;
 
+use form_urlencoded::{
+    parse as parse_query,
+    Parse as ParseQuery,
+};
 use iri_string::types::UriRelativeString;
 use regex::Regex;
 
@@ -108,6 +112,28 @@ impl ApUri {
         self.authority.origin()
     }
 
+    /// Returns query parameters of this URI
+    fn query_pairs(&self) -> ParseQuery<'_> {
+        let query = self.location
+            .query_str()
+            .unwrap_or_default();
+        parse_query(query.as_bytes())
+    }
+
+    /// Returns gateways specified in this URI
+    pub fn gateways(&self) -> Vec<String> {
+        let mut gateways = vec![];
+        for (key, value) in self.query_pairs() {
+            if key == "gateways" {
+                gateways.extend(
+                    value
+                        .split(',')
+                        .map(|value| value.to_owned()));
+            };
+        };
+        gateways
+    }
+
     /// Returns this URI, but without the query component
     pub fn without_query(&self) -> Self {
         let mut cloned = self.clone();
@@ -164,6 +190,10 @@ mod tests {
         let url = "ap://did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor?gateways=https%3A%2F%2Fserver1.example,https%3A%2F%2Fserver2.example";
         let ap_uri = ApUri::parse(url).unwrap();
         assert_eq!(ap_uri.relative_uri(), "/actor?gateways=https%3A%2F%2Fserver1.example,https%3A%2F%2Fserver2.example");
+        assert_eq!(
+            ap_uri.gateways(),
+            vec!["https://server1.example".to_owned(), "https://server2.example".to_owned()],
+        );
         assert_eq!(ap_uri.to_string(), url);
     }
 

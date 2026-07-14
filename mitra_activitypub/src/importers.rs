@@ -108,6 +108,7 @@ use crate::{
 };
 
 // Gateway pool for resolving 'ap' URIs
+#[derive(Default)]
 pub struct FetcherContext {
     gateways: Vec<String>,
 }
@@ -134,10 +135,17 @@ impl FetcherContext {
     pub fn prepare_object_id(&mut self, object_id: &str) -> Result<String, FetchError> {
         let mut object_id = NonCanonicalUri::parse(object_id)
             .map_err(|_| FetchError::UrlError)?;
-        if let NonCanonicalUri::Ap((Some(ref gateway), _)) = object_id {
-            let gateway = gateway.to_string();
-            if !self.gateways.contains(&gateway) {
-                self.gateways.insert(0, gateway);
+        if let NonCanonicalUri::Ap((maybe_gateway, ap_uri)) = &object_id {
+            let mut gateways = vec![];
+            if let Some(gateway) = maybe_gateway {
+                gateways.push(gateway.to_string());
+            };
+            gateways.extend(ap_uri.gateways());
+            // Gateway from compatible ID should be first
+            for gateway in gateways.into_iter().rev() {
+                if !self.gateways.contains(&gateway) {
+                    self.gateways.insert(0, gateway);
+                };
             };
         };
         if let NonCanonicalUri::Ap((ref mut maybe_gateway, _)) = object_id {
@@ -1125,7 +1133,7 @@ mod tests {
 
     #[test]
     fn test_fetcher_context() {
-        let gateways = vec![];
+        let gateways = vec!["https://gateway.example".to_owned()];
         let actor_id = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let mut context = FetcherContext::from(gateways);
         let http_url = context.prepare_object_id(actor_id).unwrap();
@@ -1139,12 +1147,23 @@ mod tests {
     }
 
     #[test]
-    fn test_fetcher_context_prepare_with_query_params() {
+    fn test_fetcher_context_prepare_with_collection_query_params() {
         let gateways = vec![];
         let page_id = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/collection?page=1";
         let mut context = FetcherContext::from(gateways);
         let http_url = context.prepare_object_id(page_id).unwrap();
         assert_eq!(http_url, page_id);
+    }
+
+    #[test]
+    fn test_fetcher_context_prepare_with_gateways_query_parameter() {
+        let object_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/1?gateways=https%3A%2F%2Fgateway.example";
+        let mut context = FetcherContext::default();
+        let http_uri = context.prepare_object_id(object_id).unwrap();
+        assert_eq!(
+            http_uri,
+            "https://gateway.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/1?gateways=https%3A%2F%2Fgateway.example",
+        );
     }
 
     #[test]
