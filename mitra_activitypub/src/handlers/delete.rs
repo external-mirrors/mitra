@@ -42,11 +42,13 @@ pub async fn handle_delete(
 ) -> HandlerResult {
     let delete: Delete = serde_json::from_value(activity.clone())?;
     let db_client = &mut **get_database_client(db_pool).await?;
-    if delete.object == delete.actor {
+    let canonical_actor_id = canonicalize_id(&delete.actor)?;
+    let canonical_object_id = canonicalize_id(&delete.object)?;
+    if canonical_object_id == canonical_actor_id {
         // Self-delete
         let profile = match get_remote_profile_by_actor_id(
             db_client,
-            &delete.object,
+            &canonical_object_id.to_string(),
         ).await {
             Ok(profile) => profile,
             // Ignore Delete(Person) if profile is not found
@@ -59,7 +61,6 @@ pub async fn handle_delete(
         return Ok(Some(Descriptor::object("Actor")));
     };
     // Delete(Note)
-    let canonical_object_id = canonicalize_id(&delete.object)?;
     let post = match get_remote_post_by_object_id(
         db_client,
         &canonical_object_id.to_string(),
