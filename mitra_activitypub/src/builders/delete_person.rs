@@ -61,6 +61,7 @@ fn build_delete_person(
     }
 }
 
+#[cfg(not(feature = "mini"))]
 async fn get_delete_person_recipients(
     db_client: &impl DatabaseClient,
     user_id: Uuid,
@@ -83,7 +84,10 @@ pub async fn prepare_delete_person(
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let authority = Authority::from(instance);
     let activity = build_delete_person(&authority, account.profile());
+    #[cfg(not(feature = "mini"))]
     let recipients = get_delete_person_recipients(db_client, account.id()).await?;
+    #[cfg(feature = "mini")]
+    let recipients = crate::c2s::audience::get_recipients(instance, account);
     Ok(OutgoingActivityJobData::new(
         &authority,
         account,

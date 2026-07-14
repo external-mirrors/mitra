@@ -325,19 +325,27 @@ impl OutgoingActivityJobData {
                     .expect("did:key should be valid");
                 Authority::public_key(authority_public_key)
             };
-            let sender = get_managed_account_by_actor_id(
+            match get_managed_account_by_actor_id(
                 db_client,
                 &authority,
                 &canonical_actor_id,
-            ).await?;
-            let canonical_outbox =
-                LocalActorCollection::Outbox.of(&canonical_actor_id.to_string());
-            add_object_to_collection(
-                db_client,
-                sender.id(),
-                &canonical_outbox,
-                &canonical_activity_id.to_string(),
-            ).await?;
+            ).await {
+                Ok(sender) => {
+                    let canonical_outbox =
+                        LocalActorCollection::Outbox.of(&canonical_actor_id.to_string());
+                    add_object_to_collection(
+                        db_client,
+                        sender.id(),
+                        &canonical_outbox,
+                        &canonical_activity_id.to_string(),
+                    ).await?;
+                },
+                Err(DatabaseError::NotFound(_)) => {
+                    // Delete(Actor) activity
+                    log::warn!("outbox doesn't exist");
+                },
+                Err(other_error) => return Err(other_error),
+            };
         };
         Ok(())
     }
