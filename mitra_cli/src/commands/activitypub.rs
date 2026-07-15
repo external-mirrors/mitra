@@ -104,8 +104,10 @@ impl ImportObject {
         if let Some(limit) = self.fetcher_recursion_limit {
             ap_client.instance.federation.fetcher_recursion_limit = limit;
         };
+        let http_uri = FetcherContext::default()
+            .prepare_object_id(&self.object_id)?;
         let object: JsonValue =
-            ap_client.fetch_object(&self.object_id).await?;
+            ap_client.fetch_object(&http_uri).await?;
         let object_type = match self.object_type.as_str() {
             "object" => CoreType::Object,
             "actor" => CoreType::Actor,

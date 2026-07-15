@@ -25,6 +25,7 @@ use mitra_activitypub::{
         import_actor_by_webfinger_address,
         import_object,
         ApClient,
+        FetcherContext,
     },
 };
 use mitra_adapters::dynamic_config::get_dynamic_config;
@@ -246,7 +247,9 @@ async fn fetch_and_import_object(
     db_pool: &DatabaseConnectionPool,
     url: &str,
 ) -> Result<SearchResult, HandlerError> {
-    let object = ap_client.fetch_object(url).await?;
+    let http_uri = FetcherContext::default()
+        .prepare_object_id(url)?;
+    let object = ap_client.fetch_object(&http_uri).await?;
     let object_type = get_core_type(&object);
     let search_result = match object_type {
         CoreType::Object => {
