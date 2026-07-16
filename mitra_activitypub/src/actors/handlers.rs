@@ -74,6 +74,7 @@ use crate::{
     importers::ApClient,
     keys::{Multikey, PublicKeyPem},
     ownership::is_same_origin,
+    utils::parse_id_from_db,
     vocabulary::{
         APPLICATION,
         EMOJI,
@@ -758,9 +759,10 @@ pub async fn create_remote_profile(
     let db_client = &mut **get_database_client(db_pool).await?;
     let profile = create_profile(db_client, profile_data).await?;
     // Save actor object
+    let actor_id = parse_id_from_db(profile.expect_remote_actor_id())?;
     save_actor(
         db_client,
-        profile.expect_remote_actor_id(),
+        &actor_id,
         &actor_json,
         profile.id,
     ).await?;
@@ -838,9 +840,10 @@ pub async fn update_remote_profile(
     // Delete orphaned images after update
     deletion_queue.into_job(db_client).await?;
     // Save actor object
+    let actor_id = parse_id_from_db(profile.expect_remote_actor_id())?;
     save_actor(
         db_client,
-        profile.expect_remote_actor_id(),
+        &actor_id,
         &actor_json,
         profile.id,
     ).await?;

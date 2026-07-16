@@ -40,7 +40,7 @@ pub async fn save_activity(
 
 pub async fn save_actor(
     db_client: &impl DatabaseClient,
-    actor_id: &str,
+    actor_id: &CanonicalUri,
     actor_json: &JsonValue,
     profile_id: Uuid,
 ) -> Result<(), DatabaseError> {
@@ -57,7 +57,11 @@ pub async fn save_actor(
             object_data = $2,
             profile_id = $3
         ",
-        &[&actor_id, &actor_json, &profile_id],
+        &[
+            &actor_id.to_string(),
+            &actor_json,
+            &profile_id,
+        ],
     ).await?;
     Ok(())
 }
@@ -535,12 +539,13 @@ mod tests {
     #[serial]
     async fn test_save_actor() {
         let db_client = &mut create_test_database().await;
-        let canonical_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let actor_id_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let actor_id = CanonicalUri::parse_canonical(actor_id_str).unwrap();
         let profile = create_test_remote_profile(
             db_client,
             "test",
             "social.example",
-            canonical_id,
+            actor_id_str,
         ).await;
 
         // Create
@@ -551,7 +556,7 @@ mod tests {
             "outbox": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/outbox",
             "name": "test-1",
         });
-        save_actor(db_client, canonical_id, &actor_json, profile.id).await.unwrap();
+        save_actor(db_client, &actor_id, &actor_json, profile.id).await.unwrap();
 
         // Update
         let actor_json = json!({
@@ -561,10 +566,10 @@ mod tests {
             "outbox": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/outbox",
             "name": "test-2",
         });
-        save_actor(db_client, canonical_id, &actor_json, profile.id).await.unwrap();
+        save_actor(db_client, &actor_id, &actor_json, profile.id).await.unwrap();
 
         // Get
-        let actor_json_stored = get_actor(db_client, canonical_id).await.unwrap();
+        let actor_json_stored = get_actor(db_client, actor_id_str).await.unwrap();
         assert_eq!(actor_json_stored, actor_json);
     }
 
