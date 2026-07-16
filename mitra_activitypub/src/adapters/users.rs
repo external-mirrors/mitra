@@ -17,6 +17,7 @@ use crate::{
     },
     authority::{Authority, AuthorityRoot},
     builders::delete_person::prepare_delete_person,
+    identifiers::local_actor_id_canonical,
 };
 
 pub fn get_actor_data(
@@ -38,11 +39,16 @@ pub async fn create_or_update_local_actor(
 ) -> Result<(), DatabaseError> {
     let authority = Authority::from(&config.instance());
     let media_server = MediaServer::new(config);
+    let actor_id = local_actor_id_canonical(
+        authority.root(),
+        account.id(),
+        &account.profile().username,
+    );
     let actor = build_local_actor(&authority, &media_server, account)
         .map_err(|_| DatabaseError::type_error())?;
     let actor_json = serde_json::to_value(&actor)
         .expect("actor should be serializable");
-    save_actor(db_client, &actor.id, &actor_json, account.id()).await?;
+    save_actor(db_client, &actor_id, &actor_json, account.id()).await?;
     Ok(())
 }
 
