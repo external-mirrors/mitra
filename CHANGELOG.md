@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Make posts quotable on Mastodon ([#257](https://codeberg.org/silverpill/mitra/pulls/257)).
 - Allowed password digests to be stored in Pleroma format.
+- Added `ap outbox` command.
 
 ### Changed
 

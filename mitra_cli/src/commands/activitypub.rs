@@ -16,6 +16,7 @@ use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    adapters::users::get_actor_data,
     agent::build_federation_agent,
     authentication::{
         verify_signed_fetched_object,
@@ -48,7 +49,11 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
-    accounts::queries::get_user_by_name,
+    accounts::queries::{
+        get_managed_account_by_username,
+        get_user_by_name,
+    },
+    activitypub::helpers::get_collection_items_json,
     database::{
         db_client_await,
         get_database_client,
@@ -61,6 +66,8 @@ use mitra_models::{
 };
 use mitra_services::media::MediaServer;
 use mitra_utils::id::generate_ulid;
+
+const COLLECTION_LIMIT: u16 = 20;
 
 /// Fetch ActivityPub object and process it
 #[derive(Parser)]
@@ -82,8 +89,8 @@ pub struct ImportObject {
     collection_type: String,
     #[arg(long, default_value = "forward")]
     collection_order: String,
-    #[arg(long, default_value_t = 20)]
-    collection_limit: usize,
+    #[arg(long, default_value_t = COLLECTION_LIMIT)]
+    collection_limit: u16,
 }
 
 impl ImportObject {
@@ -160,7 +167,7 @@ impl ImportObject {
                     &self.object_id,
                     maybe_item_type,
                     order,
-                    self.collection_limit,
+                    self.collection_limit.into(),
                 ).await?;
                 println!("collection processed");
             },
@@ -502,12 +509,49 @@ impl SendActivity {
     }
 }
 
+/// Show activities in a local outbox
+#[derive(Parser)]
+pub struct ShowOutbox {
+    /// The owner of the outbox
+    username: String,
+
+    #[arg(long, default_value_t = COLLECTION_LIMIT)]
+    limit: u16,
+}
+
+impl ShowOutbox {
+    pub async fn execute(
+        self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
+        let account = get_managed_account_by_username(
+            db_client,
+            &self.username,
+        ).await?;
+        let authority = Authority::from(&config.instance());
+        let actor_data = get_actor_data(authority.root(), account.profile());
+        let activities = get_collection_items_json(
+            db_client,
+            &actor_data.outbox,
+            None, // no parameters
+            self.limit,
+        ).await?;
+        for activity in activities {
+            println!("{activity}");
+        };
+        Ok(())
+    }
+}
+
 /// ActivityPub commands
 #[derive(Subcommand)]
 pub enum ApCommand {
     Import(ImportObject),
     Fetch(FetchObject),
     Webfinger(Webfinger),
+    Outbox(ShowOutbox)
 }
 
 impl ApCommand {
@@ -520,6 +564,7 @@ impl ApCommand {
             Self::Import(command) => command.execute(config, db_pool).await,
             Self::Fetch(command) => command.execute(config, db_pool).await,
             Self::Webfinger(command) => command.execute(config, db_pool).await,
+            Self::Outbox(command) => command.execute(config, db_pool).await,
         }
     }
 }
