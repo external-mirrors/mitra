@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
-use apx_core::url::http_uri::HttpUri;
 use apx_sdk::fetch::FetchError;
 use chrono::{TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
@@ -200,21 +199,6 @@ pub struct OutgoingActivityJobData {
 }
 
 impl OutgoingActivityJobData {
-    fn mark_local_recipients(
-        instance_uri: &str,
-        recipients: &mut [Recipient],
-    ) -> () {
-        // If portable actor has local account,
-        // activity will be simply added to its inbox
-        let instance_uri = HttpUri::parse(instance_uri)
-            .expect("instance URI should be valid");
-        for recipient in recipients.iter_mut() {
-            let recipient_inbox = parse_http_url_from_db(&recipient.inbox)
-                .expect("actor inbox URL should be valid");
-            recipient.is_local = recipient_inbox.origin() == instance_uri.origin();
-        };
-    }
-
     fn sort_recipients(mut recipients: Vec<Recipient>) -> Vec<Recipient> {
         // De-duplicate recipients.
         // Keys are inboxes, not actor IDs, because one actor
@@ -235,11 +219,8 @@ impl OutgoingActivityJobData {
         authority: &Authority,
         sender: &impl ManagedAccount,
         activity: impl Serialize,
-        mut recipients: Vec<Recipient>,
+        recipients: Vec<Recipient>,
     ) -> Self {
-        let instance_uri = authority.expect_server_uri().as_str();
-        #[cfg(not(feature = "mini"))]
-        Self::mark_local_recipients(instance_uri, &mut recipients);
         let recipients = Self::sort_recipients(recipients);
         let activity = serde_json::to_value(activity)
             .expect("activity should be serializable");
@@ -269,7 +250,6 @@ impl OutgoingActivityJobData {
             assert!(matches!(endpoint_type, EndpointType::Outbox));
             recipients.extend(Recipient::for_inbox(&recipient));
         };
-        Self::mark_local_recipients(instance_uri, &mut recipients);
         // Deliver to actor's clones
         let actor_data = sender.profile.expect_actor_data();
         for gateway_url in &actor_data.gateways {
@@ -302,7 +282,7 @@ impl OutgoingActivityJobData {
     }
 
     async fn save_activity(
-        &mut self,
+        &self,
         db_client: &impl DatabaseClient,
     ) -> Result<(), DatabaseError> {
         // Activity ID should be present
@@ -359,29 +339,6 @@ impl OutgoingActivityJobData {
                 &canonical_activity_id.to_string(),
             ).await?;
         };
-        // TODO: move to process_queued_outgoing_activities and remove .is_local
-        // Immediately put into inbox if recipient is local
-        for recipient in self.recipients.iter_mut() {
-            // TODO: FEP-EF61: bulk add
-            if recipient.is_local {
-                let profile = get_remote_profile_by_actor_id(
-                    db_client,
-                    &recipient.id,
-                ).await?;
-                if profile.has_portable_account() {
-                    add_object_to_collection(
-                        db_client,
-                        profile.id,
-                        &profile.expect_actor_data().inbox,
-                        &canonical_activity_id.to_string(),
-                    ).await?;
-                    log::info!("added activity to inbox collection");
-                } else {
-                    log::warn!("local inbox doesn't exist: {}", recipient.inbox);
-                };
-                recipient.is_delivered = true;
-            };
-        };
         Ok(())
     }
 
@@ -411,7 +368,7 @@ impl OutgoingActivityJobData {
     }
 
     pub async fn save_and_enqueue(
-        mut self,
+        self,
         db_client: &impl DatabaseClient,
     ) -> Result<(), DatabaseError> {
         self.save_activity(db_client).await?;
@@ -481,6 +438,40 @@ pub async fn process_queued_outgoing_activities(
             delete_job_from_queue(db_client, job.id).await?;
             continue;
         };
+
+        let activity_id = job_data.activity["id"].as_str()
+            .ok_or(DatabaseTypeError)?;
+        let canonical_activity_id = canonicalize_id(activity_id)
+            .map_err(|_| DatabaseTypeError)?;
+        // If portable actor has local account,
+        // activity will be simply added to its inbox
+        #[cfg(not(feature = "mini"))]
+        for recipient in recipients.iter_mut() {
+            let recipient_inbox = parse_http_url_from_db(&recipient.inbox)
+                .expect("actor inbox URL should be valid");
+            let is_local = recipient_inbox.origin() == instance.uri().origin();
+            // TODO: FEP-EF61: bulk add
+            if is_local && !recipient.is_delivered {
+                let db_client = &**get_database_client(db_pool).await?;
+                let profile = get_remote_profile_by_actor_id(
+                    db_client,
+                    &recipient.id,
+                ).await?;
+                if profile.has_portable_account() {
+                    add_object_to_collection(
+                        db_client,
+                        profile.id,
+                        &profile.expect_actor_data().inbox,
+                        &canonical_activity_id.to_string(),
+                    ).await?;
+                    log::info!("added activity to inbox collection");
+                } else {
+                    log::warn!("local inbox doesn't exist: {}", recipient.inbox);
+                };
+                recipient.is_delivered = true;
+            };
+        };
+
         if !instance.federation.enabled {
             log::info!(
                 "(private mode) not delivering activity to {} inboxes: {}",

@@ -213,9 +213,6 @@ pub struct Recipient {
     // This flag is set if inbox is 410 Gone
     #[serde(default)]
     pub is_gone: bool,
-
-    // Local portable actor (HTTP request is not needed)
-    pub is_local: bool,
 }
 
 impl Recipient {
@@ -227,7 +224,6 @@ impl Recipient {
             is_delivered: false,
             is_unreachable: false,
             is_gone: false,
-            is_local: false,
         }
     }
 

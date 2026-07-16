@@ -68,6 +68,8 @@ impl CanonicalUri {
         }
     }
 
+    #[deprecated]
+    #[expect(clippy::question_mark)]
     pub fn to_http_uri(&self, maybe_gateway: Option<&str>) -> Option<String> {
         let http_uri = match self {
             Self::Http(http_uri) => http_uri.to_string(),
@@ -220,6 +222,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[expect(deprecated)]
     fn test_http_uri_from_http_uri() {
         let input = "https://social.example/users/test";
         let canonical_uri = CanonicalUri::parse_canonical(input).unwrap();
@@ -228,6 +231,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(deprecated)]
     fn test_http_uri_from_ap_uri() {
         let input = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let canonical_uri = CanonicalUri::parse_canonical(input).unwrap();
@@ -238,6 +242,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(deprecated)]
     fn test_http_uri_from_ap_uri_no_gateway() {
         let input = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let canonical_uri = CanonicalUri::parse_canonical(input).unwrap();

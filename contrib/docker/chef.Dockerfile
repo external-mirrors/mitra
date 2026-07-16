@@ -1,19 +1,27 @@
 FROM alpine:3.24 AS base
 
-FROM base AS builder
+FROM base AS chef
 RUN apk add --no-cache \
     gcc \
     musl-dev \
     rust \
-    cargo
+    cargo \
+    cargo-chef
 WORKDIR /app/mitra
 ENV DEFAULT_CONFIG_PATH=/etc/mitra/config.yaml
+
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /app/mitra/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 RUN cargo build --release --features production
 
 FROM base AS web
-# libgcc is needed to prevent "symbol not found" errors when executing COPY
-RUN apk add --no-cache jq libgcc
+RUN apk add --no-cache jq
 WORKDIR /app/mitra-web
 COPY --from=builder /app/mitra/target/release/mitra /usr/bin/mitra
 RUN export base_url="https://codeberg.org/api/v1/repos/silverpill/mitra-web/releases" && \
@@ -26,7 +34,7 @@ RUN export base_url="https://codeberg.org/api/v1/repos/silverpill/mitra-web/rele
 RUN tar -xvf /tmp/mitra-web.tar.gz
 
 FROM base AS prod
-RUN apk add --no-cache ca-certificates libgcc
+RUN apk add --no-cache ca-certificates gcc
 WORKDIR /usr/bin
 RUN mkdir -p /var/lib/mitra && \
     mkdir -p /etc/mitra

@@ -25,6 +25,7 @@ use mitra_activitypub::{
         import_actor_by_webfinger_address,
         import_object,
         ApClient,
+        FetcherContext,
     },
 };
 use mitra_adapters::dynamic_config::get_dynamic_config;
@@ -246,7 +247,9 @@ async fn fetch_and_import_object(
     db_pool: &DatabaseConnectionPool,
     url: &str,
 ) -> Result<SearchResult, HandlerError> {
-    let object = ap_client.fetch_object(url).await?;
+    let http_uri = FetcherContext::default()
+        .prepare_object_id(url)?;
+    let object = ap_client.fetch_object(&http_uri).await?;
     let object_type = get_core_type(&object);
     let search_result = match object_type {
         CoreType::Object => {
@@ -504,6 +507,23 @@ mod tests {
     fn test_parse_search_query_url() {
         let query = "https://social.example/notes/1";
         let result = parse_search_query(query);
-        assert!(matches!(result, SearchQuery::Url(_)));
+        let SearchQuery::Url(parsed) = result else { unreachable!() };
+        assert_eq!(parsed, query);
+    }
+
+    #[test]
+    fn test_parse_search_query_ap_uri() {
+        let query = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let result = parse_search_query(query);
+        let SearchQuery::Url(parsed) = result else { unreachable!() };
+        assert_eq!(parsed, query);
+    }
+
+    #[test]
+    fn test_parse_search_query_http_with_unicode() {
+        let query = "https://zh.wikipedia.org/wiki/百分号编码";
+        let result = parse_search_query(query);
+        let SearchQuery::Url(parsed) = result else { unreachable!() };
+        assert_eq!(parsed, "https://zh.wikipedia.org/wiki/%E7%99%BE%E5%88%86%E5%8F%B7%E7%BC%96%E7%A0%81");
     }
 }

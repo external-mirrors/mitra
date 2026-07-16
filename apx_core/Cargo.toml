@@ -21,6 +21,8 @@ bs58 = "0.5.1"
 chrono = { version = "0.4.34", default-features = false, features = ["std", "serde", "clock"] }
 # Used for working with EdDSA signatures
 ed25519-dalek = { version = "2.0.0", features = ["pem", "pkcs8", "rand_core"] }
+# Used to parse URI query parameters
+form_urlencoded = "1.2.2"
 # Used to work with hexadecimal strings
 hex = "0.4.3"
 # Used for verifying HTTP signatures

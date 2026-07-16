@@ -14,7 +14,10 @@ use crate::{
     authority::Authority,
     contexts::{build_default_context, Context},
     deliverer::Recipient,
-    identifiers::{local_activity_id, local_actor_id},
+    identifiers::{
+        local_activity_id_unified,
+        local_actor_id_unified,
+    },
     queues::OutgoingActivityJobData,
     vocabulary::DELETE,
 };
@@ -35,11 +38,19 @@ struct DeletePerson {
 }
 
 fn build_delete_person(
-    instance_uri: &str,
+    authority: &Authority,
     actor_profile: &DbActorProfile,
 ) -> DeletePerson {
-    let actor_id = local_actor_id(instance_uri, &actor_profile.username);
-    let activity_id = local_activity_id(instance_uri, DELETE, actor_profile.id);
+    let actor_id = local_actor_id_unified(
+        authority,
+        actor_profile.id,
+        &actor_profile.username,
+    );
+    let activity_id = local_activity_id_unified(
+        authority,
+        DELETE,
+        actor_profile.id,
+    );
     DeletePerson {
         _context: build_default_context(),
         activity_type: DELETE.to_string(),
@@ -71,7 +82,7 @@ pub async fn prepare_delete_person(
     account: &impl ManagedAccount,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let authority = Authority::from(instance);
-    let activity = build_delete_person(instance.uri_str(), account.profile());
+    let activity = build_delete_person(&authority, account.profile());
     let recipients = get_delete_person_recipients(db_client, account.id()).await?;
     Ok(OutgoingActivityJobData::new(
         &authority,
@@ -83,6 +94,7 @@ pub async fn prepare_delete_person(
 
 #[cfg(test)]
 mod tests {
+    use apx_sdk::core::url::http_uri::HttpUri;
     use mitra_models::profiles::types::DbActorProfile;
     use super::*;
 
@@ -90,8 +102,10 @@ mod tests {
 
     #[test]
     fn test_build_delete_person() {
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let authority = Authority::server(&instance_uri);
         let profile = DbActorProfile::local_for_test("testuser");
-        let activity = build_delete_person(INSTANCE_URI, &profile);
+        let activity = build_delete_person(&authority, &profile);
         assert_eq!(
             activity.id,
             format!("{}/activities/delete/{}", INSTANCE_URI, profile.id),
