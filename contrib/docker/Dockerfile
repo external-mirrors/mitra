@@ -12,7 +12,7 @@ COPY . .
 RUN cargo build --release --features production
 
 FROM base AS web
-# libgcc is needed to prevent "symbol not found" errors when executing COPY
+# libgcc is needed to prevent "symbol not found" errors when executing `mitra --version`
 RUN apk add --no-cache jq libgcc
 WORKDIR /app/mitra-web
 COPY --from=builder /app/mitra/target/release/mitra /usr/bin/mitra
