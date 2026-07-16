@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added support for resolving 'ap' URIs with `gateways` parameter to `ap fetch` and `ap import` commands.
 - Added support for resolving 'ap' URIs with `gateways` parameter to `/api/v2/search` API endpoint.
 - Accept portable `Delete(Person)` activities.
+- Forward `EncryptedActivity` activities.
 
 ## [5.7.1] - 2026-07-12
 
