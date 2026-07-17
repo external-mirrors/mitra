@@ -101,7 +101,10 @@ pub fn prepare_undo_follow(
         follow_request_id,
         follow_request_has_deprecated_ap_id,
     );
+    #[cfg(not(feature = "mini"))]
     let recipients = Recipient::for_inbox(target_actor);
+    #[cfg(feature = "mini")]
+    let recipients = crate::c2s::audience::get_recipients(instance, sender);
     Ok(OutgoingActivityJobData::new(
         &authority,
         sender,

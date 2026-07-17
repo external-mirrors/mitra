@@ -77,7 +77,10 @@ pub fn prepare_accept_follow(
         &source_actor_id,
         &follow_activity_id,
     );
+    #[cfg(not(feature = "mini"))]
     let recipients = Recipient::for_inbox(source_actor);
+    #[cfg(feature = "mini")]
+    let recipients = crate::c2s::audience::get_recipients(instance, sender);
     Ok(OutgoingActivityJobData::new(
         &authority,
         sender,
