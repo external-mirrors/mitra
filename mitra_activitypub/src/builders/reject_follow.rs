@@ -14,8 +14,8 @@ use crate::{
     deliverer::Recipient,
     identifiers::{
         compatible_id,
-        local_activity_id,
-        local_actor_id,
+        local_activity_id_unified,
+        local_actor_id_unified,
     },
     queues::OutgoingActivityJobData,
     vocabulary::REJECT,
@@ -37,14 +37,19 @@ struct RejectFollow {
 }
 
 fn build_reject_follow(
-    instance_uri: &str,
+    authority: &Authority,
     actor_profile: &DbActorProfile,
     source_actor_id: &str,
     follow_activity_id: &str,
 ) -> RejectFollow {
     // Reject(Follow) is idempotent so its ID can be random
-    let activity_id = local_activity_id(instance_uri, REJECT, generate_ulid());
-    let actor_id = local_actor_id(instance_uri, &actor_profile.username);
+    let activity_id =
+        local_activity_id_unified(authority, REJECT, generate_ulid());
+    let actor_id = local_actor_id_unified(
+        authority,
+        actor_profile.id,
+        &actor_profile.username,
+    );
     RejectFollow {
         _context: build_default_context(),
         activity_type: REJECT.to_string(),
@@ -68,7 +73,7 @@ pub fn prepare_reject_follow(
         follow_activity_id,
     )?;
     let activity = build_reject_follow(
-        instance.uri_str(),
+        &authority,
         &sender.profile,
         &source_actor_id,
         &follow_activity_id,
@@ -93,11 +98,12 @@ mod tests {
 
     #[test]
     fn test_build_reject_follow() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let target = DbActorProfile::local_for_test("user");
         let follow_activity_id = "https://remote.example/objects/999";
         let follower_id = "https://remote.example/users/123";
         let activity = build_reject_follow(
-            INSTANCE_URI,
+            &authority,
             &target,
             follower_id,
             follow_activity_id,
