@@ -132,6 +132,9 @@ impl ApUri {
                         .split(',')
                         .map(|value| value.to_owned()));
             };
+            if key == "@gateway" {
+                gateways.push(value.to_string());
+            };
         };
         gateways
     }
@@ -192,6 +195,17 @@ mod tests {
         let url = "ap://did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor?gateways=https%3A%2F%2Fserver1.example,https%3A%2F%2Fserver2.example";
         let ap_uri = ApUri::parse(url).unwrap();
         assert_eq!(ap_uri.relative_uri(), "/actor?gateways=https%3A%2F%2Fserver1.example,https%3A%2F%2Fserver2.example");
+        assert_eq!(
+            ap_uri.gateways(),
+            vec!["https://server1.example".to_owned(), "https://server2.example".to_owned()],
+        );
+        assert_eq!(ap_uri.to_string(), url);
+    }
+
+    #[test]
+    fn test_parse_with_query_multiple_gateway_params() {
+        let url = "ap://did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor?@gateway=https%3A%2F%2Fserver1.example&@gateway=https%3A%2F%2Fserver2.example";
+        let ap_uri = ApUri::parse(url).unwrap();
         assert_eq!(
             ap_uri.gateways(),
             vec!["https://server1.example".to_owned(), "https://server2.example".to_owned()],
