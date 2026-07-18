@@ -21,14 +21,16 @@ use crate::{
 // authority: DID regexp plus percent sign (see also: DID_RE in apx_core::did)
 const AP_URI_RE: &str = r"^ap(\+ef61)?://(?P<did>did(:|%3A)[[:alpha:]]+(:|%3A)[A-Za-z0-9._:%-]+)(?P<path>/.+)$";
 const AP_URI_SCHEME: &str = "ap";
-const AP_URI_PREFIX: &str = "ap://";
 
+/// Returns `true` if given URI is an 'ap' URI.
+///
+/// Does not perform validation.
 pub fn is_ap_uri(uri: &str) -> bool {
-    uri.starts_with(AP_URI_PREFIX)
+    uri.starts_with("ap:") || uri.starts_with("ap+ef61:")
 }
 
 pub fn with_ap_prefix(did_url: &str) -> String {
-    format!("{}{}", AP_URI_PREFIX, did_url)
+    format!("ap://{}", did_url)
 }
 
 // Removes query parameters from relative URI

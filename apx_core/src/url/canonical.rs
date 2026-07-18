@@ -267,6 +267,17 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_uri_ap_plus_ef61() {
+        let url = "ap+ef61://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let uri = NonCanonicalUri::parse(url).unwrap();
+        assert!(matches!(uri, NonCanonicalUri::Ap((None, _))));
+        assert_eq!(
+            uri.to_string(),
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        );
+    }
+
+    #[test]
     fn test_parse_uri_ap_with_gateway() {
         let url = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let uri = NonCanonicalUri::parse(url).unwrap();
@@ -382,6 +393,13 @@ mod tests {
     #[test]
     fn test_parse_canonical_ap_uri_percent_encoded_did() {
         let url = "ap://did%3Akey%3Az6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor";
+        let error = CanonicalUri::parse_canonical(url).err().unwrap();
+        assert_eq!(error.0, "URI is not canonical");
+    }
+
+    #[test]
+    fn test_parse_canonical_ap_plus_ef61() {
+        let url = "ap+ef61://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let error = CanonicalUri::parse_canonical(url).err().unwrap();
         assert_eq!(error.0, "URI is not canonical");
     }

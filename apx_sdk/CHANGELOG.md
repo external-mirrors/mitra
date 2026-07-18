@@ -20,6 +20,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Removed incorrect implementation of `Deserialize` for `CanonicalUri`.
 
+### Fixed
+
+- Fixed parsing of `ap+ef61` URIs into `CanonicalUri` and `NonCanonicalUri`.
+
 ## [0.26.0] - 2026-07-02
 
 ### Added
