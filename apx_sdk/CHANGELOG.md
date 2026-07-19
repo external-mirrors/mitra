@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Renamed `MultibaseError::UnknownBase` to `UnexpectedBase`.
+- Changed return error type in `PublicKey::from_multikey` and `PublicKey::from_pem` methods to `KeySerializationError`.
 
 ### Deprecated
 
