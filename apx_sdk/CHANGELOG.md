@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `origin()` method to `NonCanonicalUri` type.
 - Added `gateways()` method to `ApUri` type.
 
+### Changed
+
+- Renamed `MultibaseError::UnknownBase` to `UnexpectedBase`.
+
 ### Deprecated
 
 - Deprecated `CanonicalUri::to_http_uri` function.
