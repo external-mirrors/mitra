@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Improved error messages when parsing verification methods.
+- Accept unsigned request to inbox endpoint if activity is signed.
 
 ### Fixed
 

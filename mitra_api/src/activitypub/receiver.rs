@@ -83,8 +83,7 @@ pub async fn receive_activity(
         object_id == activity_actor
     } else { false };
 
-    // HTTP signature is required
-    let mut signer = match verify_signed_request(
+    let mut maybe_signer = match verify_signed_request(
         &ap_client,
         db_pool,
         method_adapter(request.method()),
@@ -97,7 +96,7 @@ pub async fn receive_activity(
         Ok((_key_id, request_signer)) => {
             let request_signer_id = request_signer.expect_remote_actor_id();
             log::debug!("request signed by {}", request_signer_id);
-            request_signer
+            Some(request_signer)
         },
         Err(error) => {
             if is_self_delete && matches!(
@@ -109,7 +108,11 @@ pub async fn receive_activity(
                 // or if signer is not found in local database
                 return Ok(());
             };
-            return Err(error.into());
+            match error {
+                AuthenticationError::NoHttpSignature => (),
+                _ => return Err(error.into()),
+            };
+            None
         },
     };
 
@@ -124,19 +127,21 @@ pub async fn receive_activity(
         is_self_delete,
     ).await {
         Ok(activity_signer) => {
-            let signer_id = signer.expect_remote_actor_id();
-            let activity_signer_id = activity_signer.expect_remote_actor_id();
-            if activity_signer_id != signer_id {
-                log::warn!(
-                    "request signer {} is different from activity signer {}",
-                    signer_id,
-                    activity_signer_id,
-                );
-            } else {
-                log::debug!("activity signed by {}", activity_signer_id);
+            if let Some(request_signer) = maybe_signer {
+                let request_signer_id = request_signer.expect_remote_actor_id();
+                let activity_signer_id = activity_signer.expect_remote_actor_id();
+                if request_signer_id != activity_signer_id {
+                    log::warn!(
+                        "request signer {} is different from activity signer {}",
+                        request_signer_id,
+                        activity_signer_id,
+                    );
+                } else {
+                    log::debug!("activity signed by {}", activity_signer_id);
+                };
             };
             // Activity signature has higher priority
-            signer = activity_signer;
+            maybe_signer = Some(activity_signer);
         },
         Err(AuthenticationError::NoJsonSignature) => (), // ignore
         Err(other_error) => {
@@ -144,6 +149,8 @@ pub async fn receive_activity(
         },
     };
 
+    // Signature is required
+    let signer = maybe_signer.ok_or(AuthenticationError::NoHttpSignature)?;
     let signer_hostname = get_moderation_domain(signer.expect_actor_data())?;
     if filter.is_incoming_blocked(signer_hostname.as_str()) {
         log::info!("ignoring activity from blocked instance {signer_hostname}");
