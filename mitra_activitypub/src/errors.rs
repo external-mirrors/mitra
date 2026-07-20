@@ -6,6 +6,8 @@ use mitra_models::database::DatabaseError;
 use mitra_services::media::MediaStorageError;
 use mitra_validators::errors::ValidationError;
 
+use crate::authentication::AuthenticationError;
+
 #[derive(Debug, Error)]
 pub enum HandlerError {
     #[error("local object")]
@@ -39,5 +41,18 @@ impl From<DeserializationError> for HandlerError {
 impl From<ValidationError> for HandlerError {
     fn from(error: ValidationError) -> Self {
         Self::ValidationError(error.to_string())
+    }
+}
+
+impl From<AuthenticationError> for HandlerError {
+    fn from(error: AuthenticationError) -> Self {
+        match error {
+            AuthenticationError::DatabaseError(db_error) => db_error.into(),
+            _ => {
+                // HTTP signatures are not verified in handlers
+                let error_message = format!("invalid integrity proof: {error}");
+                Self::ValidationError(error_message)
+            },
+        }
     }
 }

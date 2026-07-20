@@ -230,11 +230,7 @@ async fn handle_fep_1b12_announce(
                 }
             }
         },
-        Err(AuthenticationError::DatabaseError(db_error)) => return Err(db_error.into()),
-        Err(other_error) => {
-            log::warn!("{other_error}");
-            return Err(ValidationError("invalid integrity proof").into());
-        },
+        Err(other_error) => return Err(other_error.into()),
     };
     // Authorization
     verify_activity_owner(&activity)?;

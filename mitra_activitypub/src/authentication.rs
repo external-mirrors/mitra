@@ -396,11 +396,7 @@ pub async fn verify_signed_fetched_object(
         Err(AuthenticationError::NoJsonSignature) =>
             // Return origin verification error
             return Err(fetch_error.into()),
-        Err(AuthenticationError::DatabaseError(db_error)) =>
-            return Err(db_error.into()),
-        Err(other_error) =>
-            // TODO: add AuthenticationError variant?
-            return Err(HandlerError::ValidationError(other_error.to_string())),
+        Err(other_error) => return Err(other_error.into()),
     };
     Ok(())
 }
