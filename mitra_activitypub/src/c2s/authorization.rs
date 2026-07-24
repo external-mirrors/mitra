@@ -148,12 +148,9 @@ pub fn verify_embedded_ownership(
     let root_owner = get_owner(object, get_core_type(object))?;
     let objects = find_objects(object);
     for object in objects {
+        // TODO: check ownership on anonymous objects too
         if get_object_id_opt(object).is_none() {
             // Skip anonymous objects
-            continue;
-        };
-        if is_object_signed(object) {
-            // Skip signed objects
             continue;
         };
         // Embedded object must have the same owner
@@ -163,6 +160,11 @@ pub fn verify_embedded_ownership(
             return Err(ValidationError("ambiguous ownership"));
         };
         if !is_same_id(&object_owner, &root_owner)? {
+            if is_object_signed(object) {
+                // Signed embedded objects could be allowed
+                // but currently they are not verified
+                log::warn!("embedded object is signed");
+            };
             return Err(ValidationError("embedded object has different owner"))
         };
     };
@@ -317,6 +319,24 @@ mod tests {
                         },
                     ],
                 },
+            },
+        });
+        let result = verify_embedded_ownership(&activity);
+        assert_eq!(result.err().unwrap().0, "embedded object has different owner");
+    }
+
+    #[test]
+    fn test_verify_embedded_ownership_signed_embedded() {
+        let activity = json!({
+            "id": "https://social.example/activities/123",
+            "type": "Announce",
+            "actor": "https://social.example/actors/1",
+            "object": {
+                "id": "https://social.example/notes/1",
+                "type": "Note",
+                "attributedTo": "https://social.example/actors/2",
+                "content": "Test",
+                "proof": { },
             },
         });
         let result = verify_embedded_ownership(&activity);

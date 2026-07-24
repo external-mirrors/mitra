@@ -24,6 +24,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fixed canonicalization of `ap+ef61` URIs.
 
+### Security
+
+- Don't accept FEP-ae97 activities where embedded objects are signed and have different owner.
+
 ## [5.7.1] - 2026-07-12
 
 ### Fixed

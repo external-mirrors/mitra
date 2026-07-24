@@ -214,7 +214,7 @@ async fn handle_fep_1b12_announce(
             error.ignore_if_missing_or_unsupported()?;
             if is_same_origin(&announce_id, activity_id)? {
                 // Embedded activity can be trusted; don't fetch
-                // NOTE: assuming remote server validates C2S activities
+                // WARNING: assuming remote server validates C2S activities
                 activity.clone()
             } else {
                 // Verify activity by fetching it from origin
