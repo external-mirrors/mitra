@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Accept unsigned request to inbox endpoint if activity is signed.
 - Improved error message when verification of FEP-1b12 and FEP-171b integrity proof fails.
 - Ignore HTTP and JSON signatures where unsupported algorithms are used.
+- Don't prune posts addressed to local groups.
 
 ### Fixed
 

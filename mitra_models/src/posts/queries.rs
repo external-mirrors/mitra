@@ -1760,6 +1760,19 @@ pub async fn find_extraneous_posts(
                         OR actor_profile.portable_user_id IS NOT NULL
                     )
             )
+            -- not addressed to a local group
+            AND NOT EXISTS (
+                SELECT 1
+                FROM post
+                JOIN actor_profile ON post.group_id = actor_profile.id
+                WHERE
+                    post.id = ANY(context.posts)
+                    AND (
+                        actor_profile.user_id IS NOT NULL
+                        OR actor_profile.automated_account_id IS NOT NULL
+                        OR actor_profile.portable_user_id IS NOT NULL
+                    )
+            )
             -- no local reactions on any post from context
             AND NOT EXISTS (
                 SELECT 1
