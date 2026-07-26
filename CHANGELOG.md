@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Improved error message when verification of FEP-1b12 and FEP-171b integrity proof fails.
 - Ignore HTTP and JSON signatures where unsupported algorithms are used.
 - Don't prune posts addressed to local groups.
+- Add `id`, `attributedTo` and `object` properties to items in `affiliations` collection.
 
 ### Fixed
 

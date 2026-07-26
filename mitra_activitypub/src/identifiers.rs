@@ -147,6 +147,12 @@ pub fn local_conversation_history_collection(
     )
 }
 
+pub fn local_relationship_path(
+    relationship_id: i32,
+) -> IdPath {
+    IdPath(format!("/ap/relationships/{relationship_id}"))
+}
+
 pub fn local_affiliations_collection_path(
     internal_actor_id: Uuid,
 ) -> IdPath {

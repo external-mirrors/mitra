@@ -568,7 +568,8 @@ async fn affiliations_view(
     let affiliations = related_profiles
         .into_iter()
         .map(|profile| {
-            let affiliation = Affiliation::new(&authority, &profile);
+            let affiliation =
+                Affiliation::new(&authority, &group.profile, &profile);
             serde_json::to_value(affiliation)
                 .expect("object should be serializable")
         })
