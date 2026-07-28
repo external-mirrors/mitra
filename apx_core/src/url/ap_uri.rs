@@ -8,7 +8,10 @@ use form_urlencoded::{
     parse as parse_query,
     Parse as ParseQuery,
 };
-use iri_string::types::UriRelativeString;
+use iri_string::{
+    build::{Builder as UriBuilder},
+    types::UriRelativeString,
+};
 use regex::Regex;
 
 use crate::{
@@ -35,13 +38,11 @@ pub fn with_ap_prefix(did_url: &str) -> String {
 
 // Removes query parameters from relative URI
 fn remove_query(uri: UriRelativeString) -> UriRelativeString {
-    let without_query = format!(
-        "{}{}",
-        uri.path_str(),
-        uri.fragment().map(|frag| format!("#{frag}")).unwrap_or_default(),
-    );
-    UriRelativeString::from_str(&without_query)
+    let mut builder = UriBuilder::from(&uri);
+    builder.unset_query();
+    builder.build()
         .expect("URI should be valid")
+        .into()
 }
 
 /// FEP-ef61 'ap' URI
