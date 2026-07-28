@@ -123,6 +123,7 @@ use mitra_models::{
         DatabaseError,
     },
     emojis::queries::get_local_emoji_by_name,
+    groups::helpers::get_affiliated_profiles,
     oauth::queries::get_user_by_oauth_token,
     posts::helpers::{
         add_related_posts,
@@ -136,10 +137,6 @@ use mitra_models::{
     profiles::{
         queries::get_remote_profile_by_actor_id,
         types::PaymentOption,
-    },
-    relationships::{
-        queries::get_related_combined,
-        types::RelationshipType,
     },
 };
 use mitra_services::media::{MediaServer, MediaStorage};
@@ -558,12 +555,7 @@ async fn affiliations_view(
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let group = get_group_account_by_id(db_client, *account_id).await?;
-    let related_profiles = get_related_combined(
-        db_client,
-        group.id,
-        &[RelationshipType::GroupAdmin],
-        false, // reverse relationships
-    ).await?;
+    let related_profiles = get_affiliated_profiles(db_client, group.id).await?;
     let authority = Authority::from(&config.instance());
     let affiliations = related_profiles
         .into_iter()

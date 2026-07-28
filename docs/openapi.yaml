@@ -1277,6 +1277,22 @@ paths:
                     description: The description of the group
                     type: string
                     nullable: true
+  /api/v1/groups/{group_id}/members:
+    get:
+      summary: List group members.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/group_id'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Affiliation'
   /api/v1/instance:
     get:
       summary: Information about the instance.
@@ -3442,6 +3458,16 @@ components:
               description: Client configurations.
               type: object
               example: {"mitra-web":{"theme":"dark"}}
+    Affiliation:
+      type: object
+      properties:
+        account:
+          $ref: '#/components/schemas/Account'
+        affiliation:
+          description: Affiliation type
+          type: string
+          enum:
+            - admin
     Aliases:
       type: object
       properties:

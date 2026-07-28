@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added support for resolving 'ap' URIs with `gateways` parameter to `/api/v2/search` API endpoint.
 - Accept portable `Delete(Person)` activities.
 - Forward `EncryptedActivity` activities.
+- Added `/api/v1/groups/{group_id}/members` API endpoint.
 
 ### Changed
 
