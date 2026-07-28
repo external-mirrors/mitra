@@ -33,6 +33,10 @@ pub async fn update_expired_subscriptions(
             sender,
             recipient,
         );
+        if sender.is_anonymous() {
+            // Don't generate notification
+            continue;
+        };
         if let Some(ref remote_sender) = sender.actor_json {
             prepare_remove_subscriber(
                 instance,
@@ -45,10 +49,6 @@ pub async fn update_expired_subscriptions(
                 subscription.recipient_id,
                 subscription.sender_id,
             ).await?;
-        };
-        if sender.is_anonymous() {
-            // Don't generate notification
-            continue;
         };
         create_subscriber_leaving_notification(
             db_client,
