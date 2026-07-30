@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fixed canonicalization of `ap+ef61` URIs.
 - Fixed database error on anonymous subscription expiration.
+- Don't reject posts where `Link` attachment contains `&` character in `href`.
 
 ### Security
 
