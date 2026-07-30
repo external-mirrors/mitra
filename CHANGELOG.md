@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Ignore HTTP and JSON signatures where unsupported algorithms are used.
 - Don't prune posts addressed to local groups.
 - Add `id`, `attributedTo` and `object` properties to items in `affiliations` collection.
+- Return error if `group_id` is specified when posting a reply.
 
 ### Fixed
 

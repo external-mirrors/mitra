@@ -179,6 +179,9 @@ async fn create_status(
         None
     };
     let maybe_group = if let Some(group_id) = status_form.group_id {
+        if maybe_in_reply_to.is_some() {
+            return Err(ValidationError("group_id can't be specified for a reply").into());
+        };
         match get_profile_by_id(db_client, group_id).await {
             Ok(profile) if profile.is_group() => Some(profile),
             Ok(_) | Err(DatabaseError::NotFound(_)) => {
