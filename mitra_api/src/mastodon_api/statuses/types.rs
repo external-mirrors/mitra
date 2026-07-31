@@ -110,6 +110,12 @@ fn tracking_status_to_str(tracking_mode: Option<TrackingStatus>) -> &'static str
     }
 }
 
+#[derive(Serialize)]
+pub struct StatusConversation {
+    pub id: Uuid,
+    pub root_id: Uuid,
+}
+
 // https://docs.joinmastodon.org/entities/Status/
 #[derive(Serialize)]
 pub struct Status {
@@ -154,6 +160,7 @@ pub struct Status {
     pub ipfs_cid: Option<String>,
     links: Vec<Status>,
     group: Option<Account>,
+    pub conversation: Option<StatusConversation>,
 
     // Custom fields: authorized user
     conversation_tracking: Option<&'static str>,
@@ -253,6 +260,12 @@ impl Status {
             )
         });
         let visibility = visibility_to_str(post.visibility);
+        let conversation = post.conversation.as_ref().map(|conversation| {
+            StatusConversation {
+                id: conversation.id,
+                root_id: conversation.root_id,
+            }
+        });
         let mut emoji_reactions = vec![];
         let mut favourites_count = 0;
         for reaction in post.reactions {
@@ -328,6 +341,7 @@ impl Status {
             ipfs_cid: post.ipfs_cid,
             links: links,
             group: maybe_group,
+            conversation,
         }
     }
 }

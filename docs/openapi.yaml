@@ -4384,6 +4384,18 @@ components:
               - delete_any_post
               - delete_any_profile
               - manage_subscription_options
+    StatusConversation:
+      description: Identifiers for the conversation to which a post belongs.
+      type: object
+      properties:
+        id:
+          description: The ID of the conversation.
+          type: string
+          format: uuid
+        root_id:
+          description: The ID of the conversation's root post.
+          type: string
+          format: uuid
     Status:
       type: object
       properties:
@@ -4503,6 +4515,12 @@ components:
           type: array
           items:
             type: object
+        conversation:
+          allOf:
+            - description: The conversation to which this post belongs. Reposts have no conversation of their own. The root post might not be visible to the requester.
+              nullable: true
+              example: null
+            - $ref: '#/components/schemas/StatusConversation'
         favourited:
           description: Have you favourited this post?
           type: boolean
