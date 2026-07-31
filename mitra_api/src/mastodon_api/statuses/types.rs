@@ -1,4 +1,7 @@
-use std::time::Duration;
+use std::{
+    collections::HashSet,
+    time::Duration,
+};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -517,6 +520,26 @@ pub struct Context {
     pub descendants: Vec<Status>,
 }
 
+#[derive(Deserialize)]
+pub struct StatusListQueryParams {
+    #[serde(default)]
+    pub id: Vec<Uuid>,
+}
+
+impl StatusListQueryParams {
+    const STATUS_LIST_LIMIT: usize = PageSize::MAX as usize;
+
+    pub fn status_ids(&self) -> Result<Vec<Uuid>, ValidationError> {
+        let mut status_ids = self.id.clone();
+        let mut unique_ids = HashSet::new();
+        status_ids.retain(|status_id| unique_ids.insert(*status_id));
+        if status_ids.len() > Self::STATUS_LIST_LIMIT {
+            return Err(ValidationError("too many status IDs"));
+        };
+        Ok(status_ids)
+    }
+}
+
 fn default_favourite_list_page_size() -> PageSize { PageSize::new(40) }
 
 #[derive(Deserialize)]
@@ -607,5 +630,29 @@ mod tests {
             status_json["created_at"].as_str().unwrap(),
             "2023-02-24T23:36:38.000Z",
         );
+    }
+
+    #[test]
+    fn test_status_list_query_params_status_ids() {
+        let status_id_1 = Uuid::new_v4();
+        let status_id_2 = Uuid::new_v4();
+        let query_params = StatusListQueryParams {
+            id: vec![status_id_1, status_id_2, status_id_1],
+        };
+        assert_eq!(
+            query_params.status_ids().unwrap(),
+            vec![status_id_1, status_id_2],
+        );
+    }
+
+    #[test]
+    fn test_status_list_query_params_limit() {
+        let query_params = StatusListQueryParams {
+            id: (0..StatusListQueryParams::STATUS_LIST_LIMIT + 1)
+                .map(|_| Uuid::new_v4())
+                .collect(),
+        };
+        let error = query_params.status_ids().unwrap_err();
+        assert_eq!(error.to_string(), "too many status IDs");
     }
 }

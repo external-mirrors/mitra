@@ -2051,6 +2051,32 @@ paths:
         204:
           description: Account deleted
   /api/v1/statuses:
+    get:
+      summary: Obtain information about multiple posts.
+      security:
+        - tokenAuth: []
+      parameters:
+        - name: 'id[]'
+          in: query
+          description: The IDs of the posts to return.
+          required: false
+          schema:
+            type: array
+            maxItems: 20
+            items:
+              type: string
+              format: uuid
+      responses:
+        200:
+          description: Successful operation. Posts that do not exist or are not visible are omitted.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Status'
+        400:
+          description: Invalid request.
     post:
       summary: Create new post.
       security:
