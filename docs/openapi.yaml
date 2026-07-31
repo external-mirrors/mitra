@@ -2062,7 +2062,6 @@ paths:
           required: false
           schema:
             type: array
-            maxItems: 20
             items:
               type: string
               format: uuid

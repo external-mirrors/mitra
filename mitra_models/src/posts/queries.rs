@@ -2744,6 +2744,53 @@ mod tests {
         assert_eq!(timeline.iter().any(|post| post.id == post_2.id), false);
     }
 
+        #[tokio::test]
+    #[serial]
+    async fn test_get_posts_by_ids_for_view() {
+        let db_client = &mut create_test_database().await;
+        let viewer = create_test_user(db_client, "viewer").await;
+        let author = create_test_user(db_client, "author").await;
+        let public_post = create_test_local_post(
+            db_client,
+            author.id,
+            "public post",
+        ).await;
+        let followers_post_data = PostCreateData {
+            content: "followers post".to_string(),
+            visibility: Visibility::Followers,
+            ..Default::default()
+        };
+        let followers_post = create_post(
+            db_client,
+            author.id,
+            followers_post_data,
+        ).await.unwrap();
+        let missing_id = Uuid::new_v4();
+        let post_ids = [followers_post.id, missing_id, public_post.id];
+
+        let posts = get_posts_by_ids_for_view(
+            db_client,
+            &post_ids,
+            None,
+        ).await.unwrap();
+        // Followers-only post is not included
+        assert_eq!(
+            posts.iter().map(|post| post.id).collect::<Vec<_>>(),
+            vec![public_post.id],
+        );
+
+        follow(db_client, viewer.id, author.id).await.unwrap();
+        let posts = get_posts_by_ids_for_view(
+            db_client,
+            &post_ids,
+            Some(viewer.id),
+        ).await.unwrap();
+        assert_eq!(
+            posts.iter().map(|post| post.id).collect::<Vec<_>>(),
+            vec![followers_post.id, public_post.id],
+        );
+    }
+
     #[tokio::test]
     #[serial]
     async fn test_get_thread() {
@@ -2809,52 +2856,6 @@ mod tests {
         ).await.unwrap();
         assert_eq!(root.id, post_1.id);
         assert_eq!(thread.len(), 2);
-    }
-
-    #[tokio::test]
-    #[serial]
-    async fn test_get_posts_by_ids_for_view() {
-        let db_client = &mut create_test_database().await;
-        let viewer = create_test_user(db_client, "viewer").await;
-        let author = create_test_user(db_client, "author").await;
-        let public_post = create_test_local_post(
-            db_client,
-            author.id,
-            "public post",
-        ).await;
-        let followers_post_data = PostCreateData {
-            content: "followers post".to_string(),
-            visibility: Visibility::Followers,
-            ..Default::default()
-        };
-        let followers_post = create_post(
-            db_client,
-            author.id,
-            followers_post_data,
-        ).await.unwrap();
-        let missing_id = Uuid::new_v4();
-        let post_ids = [followers_post.id, missing_id, public_post.id];
-
-        let posts = get_posts_by_ids_for_view(
-            db_client,
-            &post_ids,
-            None,
-        ).await.unwrap();
-        assert_eq!(
-            posts.iter().map(|post| post.id).collect::<Vec<_>>(),
-            vec![public_post.id],
-        );
-
-        follow(db_client, viewer.id, author.id).await.unwrap();
-        let posts = get_posts_by_ids_for_view(
-            db_client,
-            &post_ids,
-            Some(viewer.id),
-        ).await.unwrap();
-        assert_eq!(
-            posts.iter().map(|post| post.id).collect::<Vec<_>>(),
-            vec![followers_post.id, public_post.id],
-        );
     }
 
     #[tokio::test]
