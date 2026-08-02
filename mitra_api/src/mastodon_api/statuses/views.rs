@@ -17,7 +17,7 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use mitra_activitypub::{
-    adapters::posts::delete_local_post,
+    adapters::posts::{delete_local_post, delete_group_post},
     authority::Authority,
     builders::{
         announce::prepare_announce,
@@ -37,7 +37,10 @@ use mitra_activitypub::{
     },
     queues::FetcherJobData,
 };
-use mitra_adapters::posts::check_post_limits;
+use mitra_adapters::{
+    groups::can_delete_group_post,
+    posts::check_post_limits,
+};
 use mitra_config::Config;
 use mitra_models::{
     accounts::types::Permission,
@@ -723,6 +726,35 @@ async fn get_thread_view(
     Ok(HttpResponse::Ok().json(statuses))
 }
 
+#[delete("/{status_id}/thread")]
+async fn delete_from_thread_view(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    post_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let post = get_post_by_id_for_view(
+        db_client,
+        Some(&current_user.profile),
+        *post_id,
+    ).await?;
+    let group = post.group.as_ref()
+        .ok_or(DatabaseError::NotFound("post"))?;
+    if !can_delete_group_post(db_client, &current_user.profile, group).await? {
+        return Err(MastodonError::PermissionError);
+    };
+    delete_group_post(
+        &config,
+        db_client,
+        &post,
+        &current_user,
+    ).await?;
+    let empty = serde_json::json!({});
+    Ok(HttpResponse::NoContent().json(empty))
+}
+
 #[post("/{status_id}/favourite")]
 async fn favourite(
     auth: BearerAuth,
@@ -1396,6 +1428,7 @@ pub fn status_api_scope() -> Scope {
         .service(delete_status)
         .service(get_context)
         .service(get_thread_view)
+        .service(delete_from_thread_view)
         .service(favourite)
         .service(unfavourite)
         .service(get_favourited_by)

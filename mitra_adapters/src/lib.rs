@@ -1,5 +1,6 @@
 pub mod accounts;
 pub mod dynamic_config;
+pub mod groups;
 pub mod init;
 mod logger;
 pub mod media;

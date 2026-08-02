@@ -2,6 +2,7 @@ use apx_sdk::deserialization::deserialize_into_object_id;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
+use mitra_adapters::groups::can_delete_group_post;
 use mitra_models::{
     database::{
         get_database_client,
@@ -13,10 +14,6 @@ use mitra_models::{
     profiles::queries::{
         delete_profile,
         get_remote_profile_by_actor_id,
-    },
-    relationships::{
-        queries::has_relationship,
-        types::RelationshipType,
     },
 };
 use mitra_validators::{
@@ -96,12 +93,7 @@ pub async fn handle_delete(
         Some(PermissionType::Owner)
     } else {
         if let Some(ref group) = post.group {
-            if actor_profile.id == group.id || has_relationship(
-                db_client,
-                actor_profile.id,
-                group.id,
-                RelationshipType::GroupAdmin,
-            ).await? {
+            if can_delete_group_post(db_client, &actor_profile, group).await? {
                 Some(PermissionType::GroupModerator)
             } else {
                 None

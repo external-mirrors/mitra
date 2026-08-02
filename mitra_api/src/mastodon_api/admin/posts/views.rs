@@ -37,6 +37,7 @@ async fn delete_post_view(
     };
     let post = get_post_by_id(db_client, *post_id).await?;
     if post.is_local() {
+        // Federate as self-delete
         delete_local_post(
             &config,
             db_client,
