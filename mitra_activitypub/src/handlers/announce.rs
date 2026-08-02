@@ -35,7 +35,7 @@ use mitra_validators::{
 };
 
 use crate::{
-    authentication::{verify_signed_object, AuthenticationError},
+    authentication::verify_signed_object,
     authority::Authority,
     identifiers::{
         canonicalize_id,
@@ -210,10 +210,11 @@ async fn handle_fep_1b12_announce(
         false, // fetch signer
     ).await {
         Ok(_) => activity.clone(),
-        Err(AuthenticationError::NoJsonSignature) => {
+        Err(error) => {
+            error.ignore_if_missing_or_unsupported()?;
             if is_same_origin(&announce_id, activity_id)? {
                 // Embedded activity can be trusted; don't fetch
-                // NOTE: assuming remote server validates C2S activities
+                // WARNING: assuming remote server validates C2S activities
                 activity.clone()
             } else {
                 // Verify activity by fetching it from origin
@@ -229,11 +230,6 @@ async fn handle_fep_1b12_announce(
                     },
                 }
             }
-        },
-        Err(AuthenticationError::DatabaseError(db_error)) => return Err(db_error.into()),
-        Err(other_error) => {
-            log::warn!("{other_error}");
-            return Err(ValidationError("invalid integrity proof").into());
         },
     };
     // Authorization

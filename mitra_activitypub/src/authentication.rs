@@ -134,6 +134,24 @@ pub enum AuthenticationError {
     InvalidPortableObject(#[from] PortableObjectAuthenticationError),
 }
 
+impl AuthenticationError {
+    pub fn ignore_if_missing_or_unsupported(self) -> Result<(), Self> {
+        match self {
+            // These errors can be ignored
+            AuthenticationError::NoHttpSignature
+                | AuthenticationError::NoJsonSignature => (),
+            // These errors should be warned about
+            AuthenticationError::UnsupportedVerificationMethod
+                | AuthenticationError::UnsupportedSignatureAlgorithm =>
+            {
+                log::warn!("{self}");
+            },
+            _ => return Err(self),
+        };
+        Ok(())
+    }
+}
+
 async fn get_signer(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
@@ -396,11 +414,7 @@ pub async fn verify_signed_fetched_object(
         Err(AuthenticationError::NoJsonSignature) =>
             // Return origin verification error
             return Err(fetch_error.into()),
-        Err(AuthenticationError::DatabaseError(db_error)) =>
-            return Err(db_error.into()),
-        Err(other_error) =>
-            // TODO: add AuthenticationError variant?
-            return Err(HandlerError::ValidationError(other_error.to_string())),
+        Err(other_error) => return Err(other_error.into()),
     };
     Ok(())
 }

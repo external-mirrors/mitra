@@ -36,6 +36,9 @@ pub enum KeySerializationError {
 
     #[error(transparent)]
     Rsa(#[from] RsaSerializationError),
+
+    #[error("{0}")]
+    Multikey(&'static str),
 }
 
 /// Public key
@@ -47,25 +50,23 @@ pub enum PublicKey {
 
 impl PublicKey {
     /// Parses multikey string
-    pub fn from_multikey(public_key_multibase: &str) -> Result<Self, &'static str> {
+    pub fn from_multikey(public_key_multibase: &str) -> Result<Self, KeySerializationError> {
         let public_key_multicode = Multibase::Base58Btc
             .decode_exact(public_key_multibase)
-            .map_err(|_| "invalid key encoding")?;
+            .map_err(|_| KeySerializationError::Multikey("invalid key encoding"))?;
         let public_key_decoded = Multicodec::decode(&public_key_multicode)
-            .map_err(|_| "unexpected key type")?;
+            .map_err(|_| KeySerializationError::Multikey("unexpected key type"))?;
         let public_key = match public_key_decoded {
             (Multicodec::RsaPub, public_key_der) => {
-                let public_key = rsa_public_key_from_pkcs1_der(&public_key_der)
-                    .map_err(|_| "invalid key encoding")?;
+                let public_key = rsa_public_key_from_pkcs1_der(&public_key_der)?;
                 PublicKey::Rsa(public_key)
             },
             (Multicodec::Ed25519Pub, public_key_bytes) => {
                 // Validate Ed25519 key
-                let public_key = ed25519_public_key_from_bytes(&public_key_bytes)
-                    .map_err(|_| "invalid key encoding")?;
+                let public_key = ed25519_public_key_from_bytes(&public_key_bytes)?;
                 PublicKey::Ed25519(public_key)
             },
-            _ => return Err("unexpected key type"),
+            _ => return Err(KeySerializationError::Multikey("unexpected key type")),
         };
         Ok(public_key)
     }
@@ -82,12 +83,11 @@ impl PublicKey {
     }
 
     /// Parses public key in PEM format
-    pub fn from_pem(public_key_pem: &str) -> Result<Self, &'static str> {
+    pub fn from_pem(public_key_pem: &str) -> Result<Self, KeySerializationError> {
         let public_key = match deserialize_rsa_public_key(public_key_pem) {
             Ok(public_key) => PublicKey::Rsa(public_key),
             Err(_) => {
-                let public_key = ed25519_public_key_from_pkcs8_pem(public_key_pem)
-                    .map_err(|_| "unexpected key type")?;
+                let public_key = ed25519_public_key_from_pkcs8_pem(public_key_pem)?;
                 PublicKey::Ed25519(public_key)
             },
         };

@@ -29,7 +29,7 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    authentication::{verify_signed_object, AuthenticationError},
+    authentication::verify_signed_object,
     authority::Authority,
     identifiers::canonicalize_id,
     importers::{get_user_by_actor_id, ApClient},
@@ -97,7 +97,8 @@ async fn handle_fep_171b_add(
         false, // fetch signer
     ).await {
         Ok(_) => (),
-        Err(AuthenticationError::NoJsonSignature) => {
+        Err(error) => {
+            error.ignore_if_missing_or_unsupported()?;
             // Verify activity by fetching it from origin
             match ap_client.fetch_object(activity_id).await {
                 Ok(activity_fetched) => {
@@ -110,11 +111,6 @@ async fn handle_fep_171b_add(
                     return Ok(None);
                 },
             };
-        },
-        Err(AuthenticationError::DatabaseError(db_error)) => return Err(db_error.into()),
-        Err(other_error) => {
-            log::warn!("{other_error}");
-            return Err(ValidationError("invalid integrity proof").into());
         },
     };
     // Authorization

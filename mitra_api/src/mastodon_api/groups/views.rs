@@ -34,6 +34,10 @@ use mitra_models::{
         DatabaseConnectionPool,
     },
     groups::{
+        helpers::{
+            get_affiliated_profiles,
+            get_group_by_id,
+        },
         queries::{
             create_group,
             get_related_groups,
@@ -79,6 +83,7 @@ use crate::{
 };
 
 use super::types::{
+    Affiliation,
     GroupCreateForm,
     GroupListQueryParams,
     GroupSource,
@@ -287,6 +292,30 @@ async fn delete_group_view(
     Ok(HttpResponse::NoContent().json(empty))
 }
 
+#[get("/{group_id}/members")]
+async fn group_members_view(
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    group_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let group = get_group_by_id(db_client, *group_id).await?;
+    let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
+    let media_server = ClientMediaServer::new(&config, &base_url);
+    let affiliations: Vec<_> = get_affiliated_profiles(db_client, group.id)
+        .await?
+        .into_iter()
+        .map(|related_profile| Affiliation::from_related_profile(
+            &authority,
+            &media_server,
+            related_profile,
+        ))
+        .collect();
+    Ok(HttpResponse::Ok().json(affiliations))
+}
+
 pub fn group_api_scope() -> Scope {
     web::scope("/v1/groups")
         .service(create_group_view)
@@ -294,4 +323,5 @@ pub fn group_api_scope() -> Scope {
         .service(get_group_source)
         .service(update_group_view)
         .service(delete_group_view)
+        .service(group_members_view)
 }

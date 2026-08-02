@@ -1277,6 +1277,22 @@ paths:
                     description: The description of the group
                     type: string
                     nullable: true
+  /api/v1/groups/{group_id}/members:
+    get:
+      summary: List group members.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/group_id'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Affiliation'
   /api/v1/instance:
     get:
       summary: Information about the instance.
@@ -2035,6 +2051,31 @@ paths:
         204:
           description: Account deleted
   /api/v1/statuses:
+    get:
+      summary: Obtain information about multiple posts.
+      security:
+        - tokenAuth: []
+      parameters:
+        - name: 'id[]'
+          in: query
+          description: The IDs of the posts to return.
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              format: uuid
+      responses:
+        200:
+          description: Successful operation. Posts that do not exist or are not visible are omitted.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Status'
+        400:
+          description: Invalid request.
     post:
       summary: Create new post.
       security:
@@ -3442,6 +3483,16 @@ components:
               description: Client configurations.
               type: object
               example: {"mitra-web":{"theme":"dark"}}
+    Affiliation:
+      type: object
+      properties:
+        account:
+          $ref: '#/components/schemas/Account'
+        affiliation:
+          description: Affiliation type
+          type: string
+          enum:
+            - admin
     Aliases:
       type: object
       properties:
@@ -4333,6 +4384,18 @@ components:
               - delete_any_post
               - delete_any_profile
               - manage_subscription_options
+    StatusConversation:
+      description: Identifiers for the conversation to which a post belongs.
+      type: object
+      properties:
+        id:
+          description: The ID of the conversation.
+          type: string
+          format: uuid
+        root_id:
+          description: The ID of the conversation's root post.
+          type: string
+          format: uuid
     Status:
       type: object
       properties:
@@ -4452,6 +4515,12 @@ components:
           type: array
           items:
             type: object
+        conversation:
+          allOf:
+            - description: The conversation to which this post belongs. Reposts have no conversation of their own. The root post might not be visible to the requester.
+              nullable: true
+              example: null
+            - $ref: '#/components/schemas/StatusConversation'
         favourited:
           description: Have you favourited this post?
           type: boolean

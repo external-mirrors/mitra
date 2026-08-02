@@ -12,6 +12,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `origin()` method to `NonCanonicalUri` type.
 - Added `gateways()` method to `ApUri` type.
 
+### Changed
+
+- Renamed `MultibaseError::UnknownBase` to `UnexpectedBase`.
+- Changed return error type in `PublicKey::from_multikey` and `PublicKey::from_pem` methods to `KeySerializationError`.
+
 ### Deprecated
 
 - Deprecated `CanonicalUri::to_http_uri` function.
@@ -19,6 +24,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Removed
 
 - Removed incorrect implementation of `Deserialize` for `CanonicalUri`.
+
+### Fixed
+
+- Fixed parsing of `ap+ef61` URIs into `CanonicalUri` and `NonCanonicalUri`.
 
 ## [0.26.0] - 2026-07-02
 

@@ -6,11 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [5.8.0] - 2026-07-31
+
 ### Added
 
 - Added support for resolving 'ap' URIs with `gateways` parameter to `ap fetch` and `ap import` commands.
 - Added support for resolving 'ap' URIs with `gateways` parameter to `/api/v2/search` API endpoint.
 - Accept portable `Delete(Person)` activities.
+- Forward `EncryptedActivity` activities.
+- Added `/api/v1/groups/{group_id}/members` API endpoint.
+- Load `affiliations` collection and FEP-1b12 "moderators" when importing a group actor.
+- Added `/api/v1/statuses?id[]=` API endpoint ([#248](https://codeberg.org/silverpill/mitra/pulls/248)).
+- Added `conversation` property to `Status` entity ([#249](https://codeberg.org/silverpill/mitra/pulls/249)).
+
+### Changed
+
+- Improved error messages when parsing verification methods.
+- Accept unsigned request to inbox endpoint if activity is signed.
+- Improved error message when verification of FEP-1b12 and FEP-171b integrity proof fails.
+- Ignore HTTP and JSON signatures where unsupported algorithms are used.
+- Don't prune posts addressed to local groups.
+- Add `id`, `attributedTo` and `object` properties to items in `affiliations` collection.
+- Return error if `group_id` is specified when posting a reply.
+
+### Fixed
+
+- Fixed canonicalization of `ap+ef61` URIs.
+- Fixed database error on anonymous subscription expiration.
+- Don't reject posts where `Link` attachment contains `&` character in `href`.
+
+### Security
+
+- Don't accept FEP-ae97 activities where embedded objects are signed and have different owner.
 
 ## [5.7.1] - 2026-07-12
 

@@ -1,4 +1,7 @@
-use std::time::Duration;
+use std::{
+    collections::HashSet,
+    time::Duration,
+};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -107,6 +110,12 @@ fn tracking_status_to_str(tracking_mode: Option<TrackingStatus>) -> &'static str
     }
 }
 
+#[derive(Serialize)]
+pub struct StatusConversation {
+    pub id: Uuid,
+    pub root_id: Uuid,
+}
+
 // https://docs.joinmastodon.org/entities/Status/
 #[derive(Serialize)]
 pub struct Status {
@@ -151,6 +160,7 @@ pub struct Status {
     pub ipfs_cid: Option<String>,
     links: Vec<Status>,
     group: Option<Account>,
+    pub conversation: Option<StatusConversation>,
 
     // Custom fields: authorized user
     conversation_tracking: Option<&'static str>,
@@ -250,6 +260,12 @@ impl Status {
             )
         });
         let visibility = visibility_to_str(post.visibility);
+        let conversation = post.conversation.as_ref().map(|conversation| {
+            StatusConversation {
+                id: conversation.id,
+                root_id: conversation.root_id,
+            }
+        });
         let mut emoji_reactions = vec![];
         let mut favourites_count = 0;
         for reaction in post.reactions {
@@ -325,6 +341,7 @@ impl Status {
             ipfs_cid: post.ipfs_cid,
             links: links,
             group: maybe_group,
+            conversation,
         }
     }
 }
@@ -517,6 +534,26 @@ pub struct Context {
     pub descendants: Vec<Status>,
 }
 
+#[derive(Deserialize)]
+pub struct StatusListQueryParams {
+    #[serde(default)]
+    pub id: Vec<Uuid>,
+}
+
+impl StatusListQueryParams {
+    const STATUS_LIST_LIMIT: usize = PageSize::MAX as usize;
+
+    pub fn status_ids(&self) -> Result<Vec<Uuid>, ValidationError> {
+        let mut status_ids = self.id.clone();
+        let mut unique_ids = HashSet::new();
+        status_ids.retain(|status_id| unique_ids.insert(*status_id));
+        if status_ids.len() > Self::STATUS_LIST_LIMIT {
+            return Err(ValidationError("too many status IDs"));
+        };
+        Ok(status_ids)
+    }
+}
+
 fn default_favourite_list_page_size() -> PageSize { PageSize::new(40) }
 
 #[derive(Deserialize)]
@@ -607,5 +644,29 @@ mod tests {
             status_json["created_at"].as_str().unwrap(),
             "2023-02-24T23:36:38.000Z",
         );
+    }
+
+    #[test]
+    fn test_status_list_query_params_status_ids() {
+        let status_id_1 = Uuid::new_v4();
+        let status_id_2 = Uuid::new_v4();
+        let query_params = StatusListQueryParams {
+            id: vec![status_id_1, status_id_2, status_id_1],
+        };
+        assert_eq!(
+            query_params.status_ids().unwrap(),
+            vec![status_id_1, status_id_2],
+        );
+    }
+
+    #[test]
+    fn test_status_list_query_params_limit() {
+        let query_params = StatusListQueryParams {
+            id: (0..StatusListQueryParams::STATUS_LIST_LIMIT + 1)
+                .map(|_| Uuid::new_v4())
+                .collect(),
+        };
+        let error = query_params.status_ids().unwrap_err();
+        assert_eq!(error.to_string(), "too many status IDs");
     }
 }

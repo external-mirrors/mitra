@@ -29,8 +29,8 @@ pub enum MultibaseError {
     #[error("invalid base string")]
     InvalidBaseString,
 
-    #[error("unknown base")]
-    UnknownBase,
+    #[error("unexpected base")]
+    UnexpectedBase,
 
     #[error(transparent)]
     Base58Error(#[from] bs58::decode::Error),
@@ -72,7 +72,7 @@ impl Multibase {
                 let data = Base64UrlUnpadded::decode_vec(encoded_data)?;
                 (Self::Base64UrlNoPad, data)
             },
-            _ => return Err(MultibaseError::UnknownBase),
+            _ => return Err(MultibaseError::UnexpectedBase),
         };
         Ok(output)
     }
@@ -81,7 +81,7 @@ impl Multibase {
     pub fn decode_exact(self, value: &str) -> Result<Vec<u8>, MultibaseError> {
         let (_encoding, data) = Self::decode(value)?;
         if !matches!(self, _encoding) {
-            return Err(MultibaseError::UnknownBase);
+            return Err(MultibaseError::UnexpectedBase);
         };
         Ok(data)
     }

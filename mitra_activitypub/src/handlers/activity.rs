@@ -68,6 +68,7 @@ use super::{
 const FORWARDER_LIMIT: usize = 50;
 
 pub enum Descriptor {
+    None,
     Object(String),
     Target(String),
 }
@@ -85,6 +86,7 @@ impl Descriptor {
 impl fmt::Display for Descriptor {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::None => write!(formatter, ""),
             Self::Object(object) => write!(formatter, "{object}"),
             Self::Target(target) => write!(formatter, "target: {target}"),
         }
@@ -191,6 +193,12 @@ pub async fn handle_activity(
         },
         DELETE => {
             handle_delete(ap_client, db_pool, activity).await?
+        },
+        ENCRYPTED_ACTIVITY => {
+            // No side effects
+            // https://codeberg.org/silverpill/feps/src/branch/main/0806/fep-0806.md
+            log::info!("received encrypted activity: {activity}");
+            Some(Descriptor::None)
         },
         FOLLOW => {
             handle_follow(ap_client, db_pool, activity).await?

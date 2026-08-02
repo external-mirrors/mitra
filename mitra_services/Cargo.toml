@@ -20,11 +20,11 @@ hex = { version = "0.4.3", features = ["serde"] }
 # Used for logging
 log = "0.4.20"
 # Used to work with Monero addresses
-monero = "0.21.0"
+monero = "0.22.0"
 # Used to work with monero-wallet-rpc
-monero-rpc = { version = "0.5.0", default-features = false, features = ["rpc_authentication", "rustls-tls"] }
+monero-rpc = { version = "0.5.1", default-features = false, features = ["rpc_authentication", "rustls-tls"] }
 # Used to work with monero-lws API
-monero-lws = { git = "https://github.com/silverpill/monero-lws", rev = "ec718d02182d196909045cbb64820fb2ec2ab5b3" }
+monero-lws = { version = "0.2.0" }
 # Used for working with regular expressions
 regex = "1.10.6"
 # Used for making async HTTP requests

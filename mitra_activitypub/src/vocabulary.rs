@@ -57,6 +57,7 @@ pub const ACCEPT_AGREEMENT: &str = "AcceptAgreement";
 // Misc
 pub const CHAT_MESSAGE: &str = "ChatMessage"; // Pleroma
 pub const EMOJI: &str = "Emoji";
+pub const ENCRYPTED_ACTIVITY: &str = "EncryptedActivity";
 pub const HASHTAG: &str = "Hashtag";
 pub const LOCK: &str = "Lock"; // Lemmy
 pub const MULTIKEY: &str = "Multikey";

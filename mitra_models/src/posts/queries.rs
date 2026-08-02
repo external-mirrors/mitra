@@ -1241,6 +1241,41 @@ pub async fn get_post_by_id(
     Ok(post)
 }
 
+/// Get posts by ID, preserving the order of the provided IDs.
+pub async fn get_posts_by_ids_for_view(
+    db_client: &impl DatabaseClient,
+    post_ids: &[Uuid],
+    current_user_id: Option<Uuid>,
+) -> Result<Vec<PostDetailed>, DatabaseError> {
+    let statement = format!(
+        "
+        SELECT
+            post,
+            actor_profile AS post_author,
+            {post_subqueries}
+        FROM unnest($post_ids::uuid[])
+            WITH ORDINALITY AS requested(id, rank)
+        JOIN post ON post.id = requested.id
+        JOIN actor_profile ON post.author_id = actor_profile.id
+        WHERE post.repost_of_id IS NULL
+            AND {visibility_filter}
+        ORDER BY requested.rank
+        ",
+        post_subqueries=post_subqueries(),
+        visibility_filter=build_visibility_filter(),
+    );
+    let query = query!(
+        &statement,
+        post_ids=post_ids,
+        current_user_id=current_user_id,
+    )?;
+    let rows = db_client.query(query.sql(), query.parameters()).await?;
+    let posts = rows.iter()
+        .map(PostDetailed::try_from)
+        .collect::<Result<_, _>>()?;
+    Ok(posts)
+}
+
 /// Given a post ID, finds all items in thread.
 /// Results are sorted by tree path.
 pub async fn get_thread(
@@ -1754,6 +1789,19 @@ pub async fn find_extraneous_posts(
                 JOIN actor_profile ON post_mention.profile_id = actor_profile.id
                 WHERE
                     post_mention.post_id = ANY(context.posts)
+                    AND (
+                        actor_profile.user_id IS NOT NULL
+                        OR actor_profile.automated_account_id IS NOT NULL
+                        OR actor_profile.portable_user_id IS NOT NULL
+                    )
+            )
+            -- not addressed to a local group
+            AND NOT EXISTS (
+                SELECT 1
+                FROM post
+                JOIN actor_profile ON post.group_id = actor_profile.id
+                WHERE
+                    post.id = ANY(context.posts)
                     AND (
                         actor_profile.user_id IS NOT NULL
                         OR actor_profile.automated_account_id IS NOT NULL
@@ -2694,6 +2742,53 @@ mod tests {
         assert_eq!(timeline.len(), 1);
         assert_eq!(timeline.iter().any(|post| post.id == post_1.id), true);
         assert_eq!(timeline.iter().any(|post| post.id == post_2.id), false);
+    }
+
+        #[tokio::test]
+    #[serial]
+    async fn test_get_posts_by_ids_for_view() {
+        let db_client = &mut create_test_database().await;
+        let viewer = create_test_user(db_client, "viewer").await;
+        let author = create_test_user(db_client, "author").await;
+        let public_post = create_test_local_post(
+            db_client,
+            author.id,
+            "public post",
+        ).await;
+        let followers_post_data = PostCreateData {
+            content: "followers post".to_string(),
+            visibility: Visibility::Followers,
+            ..Default::default()
+        };
+        let followers_post = create_post(
+            db_client,
+            author.id,
+            followers_post_data,
+        ).await.unwrap();
+        let missing_id = Uuid::new_v4();
+        let post_ids = [followers_post.id, missing_id, public_post.id];
+
+        let posts = get_posts_by_ids_for_view(
+            db_client,
+            &post_ids,
+            None,
+        ).await.unwrap();
+        // Followers-only post is not included
+        assert_eq!(
+            posts.iter().map(|post| post.id).collect::<Vec<_>>(),
+            vec![public_post.id],
+        );
+
+        follow(db_client, viewer.id, author.id).await.unwrap();
+        let posts = get_posts_by_ids_for_view(
+            db_client,
+            &post_ids,
+            Some(viewer.id),
+        ).await.unwrap();
+        assert_eq!(
+            posts.iter().map(|post| post.id).collect::<Vec<_>>(),
+            vec![followers_post.id, public_post.id],
+        );
     }
 
     #[tokio::test]

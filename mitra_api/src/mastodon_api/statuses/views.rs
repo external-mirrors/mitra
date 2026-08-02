@@ -59,6 +59,7 @@ use mitra_models::{
         create_post,
         delete_repost,
         get_post_by_id,
+        get_posts_by_ids_for_view,
         get_post_reactions,
         get_post_reposts,
         get_repost_by_author,
@@ -103,7 +104,7 @@ use mitra_validators::{
 };
 
 use crate::{
-    http::{get_request_base_url, JsonOrQsForm},
+    http::{get_request_base_url, JsonOrQsForm, MultiQuery},
     mastodon_api::{
         accounts::types::Account,
         auth::get_current_user,
@@ -131,6 +132,7 @@ use super::types::{
     ReblogForm,
     RebloggedByQueryParams,
     Status,
+    StatusListQueryParams,
     StatusCreateForm,
     StatusPreview,
     StatusPreviewForm,
@@ -177,6 +179,9 @@ async fn create_status(
         None
     };
     let maybe_group = if let Some(group_id) = status_form.group_id {
+        if maybe_in_reply_to.is_some() {
+            return Err(ValidationError("group_id can't be specified for a reply").into());
+        };
         match get_profile_by_id(db_client, group_id).await {
             Ok(profile) if profile.is_group() => Some(profile),
             Ok(_) | Err(DatabaseError::NotFound(_)) => {
@@ -411,6 +416,41 @@ async fn preview_status(
         emojis,
     );
     Ok(HttpResponse::Ok().json(preview))
+}
+
+// https://docs.joinmastodon.org/methods/statuses/#view-multiple-statuses
+#[get("")]
+async fn get_status_list(
+    auth: Option<BearerAuth>,
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    query_params: MultiQuery<StatusListQueryParams>,
+) -> Result<HttpResponse, MastodonError> {
+    let status_ids = query_params.status_ids()?;
+
+    let db_client = &**get_database_client(&db_pool).await?;
+    let maybe_current_user = match auth {
+        Some(auth) => Some(get_current_user(db_client, auth.token()).await?),
+        None => None,
+    };
+    let posts = get_posts_by_ids_for_view(
+        db_client,
+        &status_ids,
+        maybe_current_user.as_ref().map(|user| user.id),
+    ).await?;
+
+    let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
+    let media_server = ClientMediaServer::new(&config, &base_url);
+    let statuses = build_status_list(
+        db_client,
+        &authority,
+        &media_server,
+        maybe_current_user.as_ref(),
+        posts,
+    ).await?;
+    Ok(HttpResponse::Ok().json(statuses))
 }
 
 #[get("/{status_id}")]
@@ -1348,6 +1388,7 @@ pub fn status_api_scope() -> Scope {
         // Routes without status ID
         .service(create_status)
         .service(preview_status)
+        .service(get_status_list)
         // Routes with status ID
         .service(get_status)
         .service(get_status_source)

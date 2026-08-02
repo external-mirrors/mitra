@@ -8,7 +8,10 @@ use form_urlencoded::{
     parse as parse_query,
     Parse as ParseQuery,
 };
-use iri_string::types::UriRelativeString;
+use iri_string::{
+    build::{Builder as UriBuilder},
+    types::UriRelativeString,
+};
 use regex::Regex;
 
 use crate::{
@@ -21,25 +24,25 @@ use crate::{
 // authority: DID regexp plus percent sign (see also: DID_RE in apx_core::did)
 const AP_URI_RE: &str = r"^ap(\+ef61)?://(?P<did>did(:|%3A)[[:alpha:]]+(:|%3A)[A-Za-z0-9._:%-]+)(?P<path>/.+)$";
 const AP_URI_SCHEME: &str = "ap";
-const AP_URI_PREFIX: &str = "ap://";
 
+/// Returns `true` if given URI is an 'ap' URI.
+///
+/// Does not perform validation.
 pub fn is_ap_uri(uri: &str) -> bool {
-    uri.starts_with(AP_URI_PREFIX)
+    uri.starts_with("ap:") || uri.starts_with("ap+ef61:")
 }
 
 pub fn with_ap_prefix(did_url: &str) -> String {
-    format!("{}{}", AP_URI_PREFIX, did_url)
+    format!("ap://{}", did_url)
 }
 
 // Removes query parameters from relative URI
 fn remove_query(uri: UriRelativeString) -> UriRelativeString {
-    let without_query = format!(
-        "{}{}",
-        uri.path_str(),
-        uri.fragment().map(|frag| format!("#{frag}")).unwrap_or_default(),
-    );
-    UriRelativeString::from_str(&without_query)
+    let mut builder = UriBuilder::from(&uri);
+    builder.unset_query();
+    builder.build()
         .expect("URI should be valid")
+        .into()
 }
 
 /// FEP-ef61 'ap' URI
@@ -130,6 +133,9 @@ impl ApUri {
                         .split(',')
                         .map(|value| value.to_owned()));
             };
+            if key == "@gateway" {
+                gateways.push(value.to_string());
+            };
         };
         gateways
     }
@@ -190,6 +196,17 @@ mod tests {
         let url = "ap://did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor?gateways=https%3A%2F%2Fserver1.example,https%3A%2F%2Fserver2.example";
         let ap_uri = ApUri::parse(url).unwrap();
         assert_eq!(ap_uri.relative_uri(), "/actor?gateways=https%3A%2F%2Fserver1.example,https%3A%2F%2Fserver2.example");
+        assert_eq!(
+            ap_uri.gateways(),
+            vec!["https://server1.example".to_owned(), "https://server2.example".to_owned()],
+        );
+        assert_eq!(ap_uri.to_string(), url);
+    }
+
+    #[test]
+    fn test_parse_with_query_multiple_gateway_params() {
+        let url = "ap://did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor?@gateway=https%3A%2F%2Fserver1.example&@gateway=https%3A%2F%2Fserver2.example";
+        let ap_uri = ApUri::parse(url).unwrap();
         assert_eq!(
             ap_uri.gateways(),
             vec!["https://server1.example".to_owned(), "https://server2.example".to_owned()],

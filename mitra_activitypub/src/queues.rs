@@ -53,6 +53,7 @@ use crate::{
     handlers::activity::handle_activity,
     identifiers::canonicalize_id,
     importers::{
+        import_affiliations,
         import_featured,
         import_from_outbox,
         import_replies,
@@ -628,6 +629,7 @@ pub enum FetcherJobData {
         #[serde(default)]
         use_context: bool,
     },
+    Affiliations { actor_id: String },
 }
 
 impl FetcherJobData {
@@ -689,6 +691,14 @@ pub async fn fetcher_queue_executor(
                     db_pool,
                     &object_id,
                     use_context,
+                    COLLECTION_LIMIT,
+                ).await
+            },
+            FetcherJobData::Affiliations { actor_id } => {
+                import_affiliations(
+                    config,
+                    db_pool,
+                    &actor_id,
                     COLLECTION_LIMIT,
                 ).await
             },

@@ -404,10 +404,12 @@ pub(super) fn get_object_content(
 }
 
 fn create_content_link(url: &str) -> String {
-    format!(
+    let link = format!(
         r#"<p><a href="{0}" rel="noopener">{0}</a></p>"#,
         url,
-    )
+    );
+    // Clean to pass the sanitization check in `validate_content`
+    clean_remote_content(&link)
 }
 
 fn is_gnu_social_link(author_id: &str, attachment: &MediaAttachment) -> bool {

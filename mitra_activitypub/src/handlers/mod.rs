@@ -1,6 +1,7 @@
 mod accept;
 pub mod activity;
 mod add;
+pub(crate) mod affiliation;
 mod agreement;
 mod announce;
 mod block;

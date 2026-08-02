@@ -61,6 +61,7 @@ use mitra_models::{
         DatabaseTypeError,
     },
     filter_rules::types::FilterAction,
+    groups::helpers::update_affiliations,
     notifications::helpers::create_signup_notifications,
     posts::helpers::get_local_post_by_id,
     posts::queries::{
@@ -91,6 +92,10 @@ use crate::{
     filter::FederationFilter,
     handlers::{
         activity::handle_activity,
+        affiliation::{
+            handle_affiliations,
+            handle_fep_1b12_moderators,
+        },
         note::{
             create_remote_post,
             update_remote_post,
@@ -1126,6 +1131,50 @@ pub async fn import_replies(
         Some(item_type),
         CollectionOrder::Forward,
         limit,
+    ).await?;
+    Ok(())
+}
+
+pub async fn import_affiliations(
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+    group_actor_id: &str,
+    limit: usize,
+) -> Result<(), HandlerError> {
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Actor {
+        affiliations: Option<NonCanonicalUri>,
+        // FEP-1b12 "moderators"
+        attributed_to: Option<NonCanonicalUri>,
+    }
+
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
+    let group = get_remote_profile_by_actor_id(
+        db_client_await!(db_pool),
+        group_actor_id,
+    ).await?;
+    let actor_data = group.expect_actor_data();
+    let mut context = FetcherContext::from(actor_data);
+    let actor_http_uri = context.prepare_object_id(&actor_data.id)?;
+    let actor: Actor = ap_client.fetch_object(&actor_http_uri).await?;
+    let affiliations = if let Some(collection_id) = actor.affiliations {
+        let http_uri = context.prepare_object_id(&collection_id.to_string())?;
+        let items = fetch_collection(&ap_client, &http_uri, limit).await?;
+        handle_affiliations(&ap_client, db_pool, items).await?
+    } else if let Some(collection_id) = actor.attributed_to {
+        let http_uri = context.prepare_object_id(&collection_id.to_string())?;
+        let items = fetch_collection(&ap_client, &http_uri, limit).await?;
+        handle_fep_1b12_moderators(&ap_client, db_pool, items).await?
+    } else {
+        log::info!("group has no affiliated actors: {group_actor_id}");
+        return Ok(());
+    };
+    let db_client = &mut **get_database_client(db_pool).await?;
+    update_affiliations(
+        db_client,
+        group.id,
+        affiliations,
     ).await?;
     Ok(())
 }

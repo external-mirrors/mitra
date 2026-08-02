@@ -28,12 +28,20 @@ use crate::{
     vocabulary::MULTIKEY,
 };
 
+fn into_validation_error(key_error: KeySerializationError) -> ValidationError {
+    match key_error {
+        KeySerializationError::Rsa(_) => ValidationError("invalid RSA key"),
+        KeySerializationError::Ed25519(_) => ValidationError("invalid Ed25519 key"),
+        KeySerializationError::Multikey(message) => ValidationError(message),
+    }
+}
+
 fn to_db_key(key_id: &str, public_key: PublicKey) -> Result<DbActorKey, ValidationError> {
     let key_id = canonicalize_id(key_id)?;
     let (key_type, key_data) = match public_key {
         PublicKey::Rsa(public_key) => {
             let public_key_der = rsa_public_key_to_pkcs1_der(&public_key)
-                .map_err(|_| ValidationError("invalid public key"))?;
+                .map_err(|error| into_validation_error(error.into()))?;
             (PublicKeyType::RsaPkcs1, public_key_der)
         },
         PublicKey::Ed25519(public_key) => {
@@ -82,7 +90,7 @@ impl PublicKeyPem {
 
     pub fn public_key(&self) -> Result<PublicKey, ValidationError> {
         let public_key = PublicKey::from_pem(&self.public_key_pem)
-            .map_err(ValidationError)?;
+            .map_err(into_validation_error)?;
         Ok(public_key)
     }
 
@@ -137,7 +145,7 @@ impl Multikey {
 
     pub fn public_key(&self) -> Result<PublicKey, ValidationError> {
         let public_key = PublicKey::from_multikey(&self.public_key_multibase)
-            .map_err(ValidationError)?;
+            .map_err(into_validation_error)?;
         Ok(public_key)
     }
 
