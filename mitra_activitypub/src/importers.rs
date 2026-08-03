@@ -246,7 +246,7 @@ impl ApClient {
         let object_json = object.extract_fragment()?;
         let object_id = get_object_id(&object_json)?;
         if is_local_origin(&self.instance, object_id) {
-            return Err(HandlerError::LocalObject);
+            return Err(HandlerError::LocalObject(object_id.to_owned()));
         };
         let object: T = serde_json::from_value(object_json)?;
         Ok(object)
@@ -317,7 +317,7 @@ pub async fn import_actor(
 ) -> Result<DbActorProfile, HandlerError> {
     let actor: Actor = serde_json::from_value(actor)?;
     if actor.is_local(ap_client.instance.uri().origin())? {
-        return Err(HandlerError::LocalObject);
+        return Err(HandlerError::LocalObject(actor.id().to_owned()));
     };
     let canonical_actor_id = canonicalize_id(actor.id())?;
     let maybe_profile = get_remote_profile_by_actor_id(
@@ -446,7 +446,7 @@ impl ActorIdResolver {
         if canonical_actor_id.origin() == ap_client.instance.uri().origin() {
             // Local ID
             if self.only_remote {
-                return Err(HandlerError::LocalObject);
+                return Err(HandlerError::LocalObject(actor_id.to_owned()));
             };
             let authority = Authority::from(&ap_client.instance);
             let profile = if self.include_automated_accounts {
@@ -507,7 +507,7 @@ pub async fn import_actor_by_webfinger_address(
     webfinger_address: &WebfingerAddress,
 ) -> Result<DbActorProfile, HandlerError> {
     if webfinger_address.hostname() == ap_client.instance.webfinger_hostname() {
-        return Err(HandlerError::LocalObject);
+        return Err(HandlerError::LocalObject(webfinger_address.to_string()));
     };
     let agent = ap_client.agent();
     let actor_id = perform_webfinger_query(&agent, webfinger_address).await?;
@@ -611,7 +611,7 @@ pub(crate) async fn import_post(
                 ) {
                     if objects.is_empty() {
                         // Initial object must not be local
-                        return Err(HandlerError::LocalObject);
+                        return Err(HandlerError::LocalObject(object_id));
                     };
                     // Object is a local post
                     // Verify post exists, return error if it doesn't
