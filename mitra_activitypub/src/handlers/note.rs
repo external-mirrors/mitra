@@ -657,11 +657,11 @@ async fn get_object_tags(
             if let Some(href) = tag.href {
                 // NOTE: `href` attribute is usually actor ID
                 // but also can be actor URL (profile link).
-                match ActorIdResolver::default().resolve(
-                    ap_client,
-                    db_pool,
-                    &href,
-                ).await {
+                match ActorIdResolver::default()
+                    .include_automated_accounts()
+                    .resolve(ap_client, db_pool, &href)
+                    .await
+                {
                     Ok(profile) => {
                         if !mentions.contains(&profile.id) {
                             mentions.push(profile.id);
@@ -1060,11 +1060,11 @@ pub async fn create_remote_post(
     ).await?;
 
     let maybe_group_id = if let Some(actor_id) = object.audience.first() {
-        match ActorIdResolver::default().only_remote().resolve(
-            ap_client,
-            db_pool,
-            actor_id,
-        ).await {
+        match ActorIdResolver::default()
+            .include_automated_accounts()
+            .resolve(ap_client, db_pool, actor_id)
+            .await
+        {
             Ok(profile) => {
                 if profile.is_group() {
                     log::info!("post addressed to group {profile}");

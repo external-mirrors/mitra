@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Include object ID in "local object" error message.
 
+### Fixed
+
+- Fixed "local object" error during processing of a post addressed to a local group.
+
 ## [5.8.0] - 2026-07-31
 
 ### Added
