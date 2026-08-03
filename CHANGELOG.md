@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Include object ID in "local object" error message.
+- Use mitra-web background color on OAuth pages.
 
 ### Fixed
 
