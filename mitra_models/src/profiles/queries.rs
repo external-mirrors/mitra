@@ -1055,7 +1055,7 @@ mod tests {
     use crate::{
         accounts::{
             queries::create_user,
-            test_utils::create_test_portable_user,
+            test_utils::create_test_nomadic_account,
             types::UserCreateData,
         },
         database::test_utils::create_test_database,
@@ -1286,24 +1286,24 @@ mod tests {
     #[serial]
     async fn test_update_profile_with_unmanaged_account() {
         let db_client = &mut create_test_database().await;
-        let user = create_test_portable_user(
+        let account = create_test_nomadic_account(
             db_client,
             "test",
             "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
         ).await;
-        assert_eq!(user.profile.webfinger_hostname(), WebfingerHostname::Local);
-        let mut profile_data = ProfileUpdateData::from(&user.profile);
+        assert_eq!(account.profile.webfinger_hostname(), WebfingerHostname::Local);
+        let mut profile_data = ProfileUpdateData::from(&account.profile);
         let bio = "test bio";
         profile_data.bio = Some(bio.to_string());
         let (profile_updated, _) = update_profile(
             db_client,
-            user.id,
+            account.id,
             profile_data,
         ).await.unwrap();
-        assert_eq!(profile_updated.acct, user.profile.acct);
+        assert_eq!(profile_updated.acct, account.profile.acct);
         assert_eq!(
             profile_updated.webfinger_hostname(),
-            user.profile.webfinger_hostname(),
+            account.profile.webfinger_hostname(),
         );
     }
 

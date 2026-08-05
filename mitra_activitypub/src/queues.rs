@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use mitra_config::Config;
 use mitra_models::{
-    accounts::types::{ManagedAccount, PortableUser},
+    accounts::types::{ManagedAccount, NomadicAccountDetailed},
     activitypub::queries::{
         save_activity,
         add_object_to_collection,
@@ -240,7 +240,7 @@ impl OutgoingActivityJobData {
 
     pub fn new_forwarded(
         instance_uri: &str,
-        sender: &PortableUser,
+        sender: &NomadicAccountDetailed,
         activity: &JsonValue,
         recipients_actors: Vec<DbActor>,
         endpoint_type: EndpointType,
@@ -268,7 +268,7 @@ impl OutgoingActivityJobData {
             recipients.push(recipient);
         };
         let recipients = Self::sort_recipients(recipients);
-        let sender = Sender::from_portable_user(instance_uri, sender)?;
+        let sender = Sender::from_nomadic_account(instance_uri, sender)?;
         let job_data = Self {
             activity: activity.clone(),
             sender: sender,

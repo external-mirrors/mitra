@@ -103,9 +103,9 @@ use mitra_models::{
         queries::{
             get_group_account_by_id,
             get_managed_account_by_username,
-            get_portable_user_by_id,
-            get_portable_user_by_inbox_id,
-            get_portable_user_by_outbox_id,
+            get_nomadic_account_by_id,
+            get_nomadic_account_by_inbox_id,
+            get_nomadic_account_by_outbox_id,
             get_user_by_name,
         },
         types::Role,
@@ -1028,7 +1028,7 @@ async fn apgateway_inbox_push_view(
         request_uri,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
-    let recipient = match get_portable_user_by_inbox_id(
+    let recipient = match get_nomadic_account_by_inbox_id(
         db_client_await!(&db_pool),
         &canonical_collection_id.to_string(),
     ).await {
@@ -1089,7 +1089,7 @@ async fn apgateway_inbox_pull_view(
         .without_query_and_fragment();
     let canonical_collection_id = canonicalize_id(&collection_id)?;
     let db_client = &**get_database_client(&db_pool).await?;
-    let collection_owner = get_portable_user_by_inbox_id(
+    let collection_owner = get_nomadic_account_by_inbox_id(
         db_client,
         &canonical_collection_id.to_string(),
     ).await?;
@@ -1133,7 +1133,7 @@ async fn apgateway_outbox_push_view(
         request_uri,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
-    let collection_owner = get_portable_user_by_outbox_id(
+    let collection_owner = get_nomadic_account_by_outbox_id(
         db_client,
         &canonical_collection_id.to_string(),
     ).await?;
@@ -1191,7 +1191,7 @@ async fn apgateway_outbox_pull_view(
     ).await?;
     let canonical_collection_id = canonicalize_id(&collection_id)?;
     let db_client = &**get_database_client(&db_pool).await?;
-    let collection_owner = get_portable_user_by_outbox_id(
+    let collection_owner = get_nomadic_account_by_outbox_id(
         db_client,
         &canonical_collection_id.to_string(),
     ).await?;
@@ -1289,7 +1289,7 @@ async fn apgateway_media_upload_view(
         HttpError::AuthError("invalid signature")
     })?;
     let db_client = &**get_database_client(&db_pool).await?;
-    let signer = match get_portable_user_by_id(
+    let signer = match get_nomadic_account_by_id(
         db_client,
         signer.id,
     ).await {
@@ -1375,7 +1375,7 @@ async fn apgateway_media_delete_view(
         HttpError::AuthError("invalid signature")
     })?;
     let db_client = &**get_database_client(&db_pool).await?;
-    let signer = match get_portable_user_by_id(
+    let signer = match get_nomadic_account_by_id(
         db_client,
         signer.id,
     ).await {

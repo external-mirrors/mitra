@@ -13,8 +13,8 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Config;
 use mitra_models::{
     accounts::queries::{
-        get_portable_user_by_actor_id,
-        get_portable_user_by_id,
+        get_nomadic_account_by_actor_id,
+        get_nomadic_account_by_id,
     },
     activitypub::queries::{
         add_object_to_collection,
@@ -258,7 +258,7 @@ pub async fn handle_activity(
                     log::warn!("activity has already been forwarded from inbox");
                     continue;
                 };
-                let recipient = get_portable_user_by_id(
+                let recipient = get_nomadic_account_by_id(
                     db_client,
                     recipient.id,
                 ).await?;
@@ -285,17 +285,17 @@ pub async fn handle_activity(
                 };
             };
         };
-        match get_portable_user_by_actor_id(
+        match get_nomadic_account_by_actor_id(
             db_client,
             &canonical_actor_id.to_string(),
         ).await {
-            Ok(actor) if is_new_activity => {
+            Ok(account) if is_new_activity => {
                 // Activity has been performed by a local actor:
                 // add to outbox and forward
                 add_object_to_collection(
                     db_client,
-                    actor.id,
-                    &actor.profile.expect_actor_data().outbox,
+                    account.id,
+                    &account.profile.expect_actor_data().outbox,
                     &canonical_activity_id.to_string(),
                 ).await?;
                 let remote_recipients = recipients.iter()
@@ -304,7 +304,7 @@ pub async fn handle_activity(
                 // Forward only if HTTP signature can be created
                 if let Some(job_data) = OutgoingActivityJobData::new_forwarded(
                     config.instance().uri_str(),
-                    &actor,
+                    &account,
                     &activity_clone,
                     remote_recipients,
                     EndpointType::Outbox,

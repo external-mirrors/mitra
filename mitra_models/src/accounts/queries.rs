@@ -36,11 +36,11 @@ use super::types::{
     BoxedManagedAccount,
     ClientConfig,
     DbClientConfig,
-    DbPortableUser,
     DbUser,
     InviteCode,
-    PortableUser,
-    PortableUserData,
+    NomadicAccount,
+    NomadicAccountData,
+    NomadicAccountDetailed,
     Role,
     SharedClientConfig,
     User,
@@ -632,10 +632,10 @@ pub async fn get_managed_account_by_username(
     Ok(account)
 }
 
-pub async fn create_portable_user(
+pub async fn create_nomadic_account(
     db_client: &mut impl DatabaseClient,
-    user_data: PortableUserData,
-) -> Result<PortableUser, DatabaseError> {
+    account_data: NomadicAccountData,
+) -> Result<NomadicAccountDetailed, DatabaseError> {
     let transaction = db_client.transaction().await?;
     let row = transaction.query_one(
         "
@@ -644,18 +644,18 @@ pub async fn create_portable_user(
         WHERE id = $1
         FOR UPDATE
         ",
-        &[&user_data.profile_id],
+        &[&account_data.profile_id],
     ).await?;
     let username: String = row.try_get("username")?;
     // Ensure there are no local accounts with a similar name
     check_local_username_unique(&transaction, &username).await?;
     // Use invite code
-    if let Some(ref invite_code) = user_data.invite_code {
+    if let Some(ref invite_code) = account_data.invite_code {
         use_invite_code(&transaction, invite_code).await?;
     };
     // Create user
     let rsa_secret_key_der =
-        rsa_secret_key_to_pkcs1_der(&user_data.rsa_secret_key)
+        rsa_secret_key_to_pkcs1_der(&account_data.rsa_secret_key)
             .map_err(|_| DatabaseTypeError)?;
     let row = transaction.query_one(
         "
@@ -669,13 +669,13 @@ pub async fn create_portable_user(
         RETURNING portable_user_account
         ",
         &[
-            &user_data.profile_id,
+            &account_data.profile_id,
             &rsa_secret_key_der,
-            &user_data.ed25519_secret_key,
-            &user_data.invite_code,
+            &account_data.ed25519_secret_key,
+            &account_data.invite_code,
         ],
     ).await.map_err(catch_unique_violation("portable user"))?;
-    let db_user: DbPortableUser = row.try_get("portable_user_account")?;
+    let db_account: NomadicAccount = row.try_get("portable_user_account")?;
     // Create reverse FK and generate local 'acct'
     let row = transaction.query_one(
         "
@@ -687,37 +687,37 @@ pub async fn create_portable_user(
         WHERE id = $1
         RETURNING actor_profile
         ",
-        &[&user_data.profile_id],
+        &[&account_data.profile_id],
     ).await?;
     let db_profile: DbActorProfile = row.try_get("actor_profile")?;
-    let user = PortableUser::new(db_user, db_profile)?;
+    let account = NomadicAccountDetailed::new(db_account, db_profile)?;
     transaction.commit().await?;
-    Ok(user)
+    Ok(account)
 }
 
-pub async fn get_portable_user_by_id(
+pub async fn get_nomadic_account_by_id(
     db_client: &impl DatabaseClient,
-    user_id: Uuid,
-) -> Result<PortableUser, DatabaseError> {
+    account_id: Uuid,
+) -> Result<NomadicAccountDetailed, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT portable_user_account, actor_profile
         FROM portable_user_account JOIN actor_profile USING (id)
         WHERE id = $1
         ",
-        &[&user_id],
+        &[&account_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
-    let db_user: DbPortableUser = row.try_get("portable_user_account")?;
+    let db_account: NomadicAccount = row.try_get("portable_user_account")?;
     let db_profile: DbActorProfile = row.try_get("actor_profile")?;
-    let user = PortableUser::new(db_user, db_profile)?;
-    Ok(user)
+    let account = NomadicAccountDetailed::new(db_account, db_profile)?;
+    Ok(account)
 }
 
-pub async fn get_portable_user_by_actor_id(
+pub async fn get_nomadic_account_by_actor_id(
     db_client: &impl DatabaseClient,
     actor_id: &str,
-) -> Result<PortableUser, DatabaseError> {
+) -> Result<NomadicAccountDetailed, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT portable_user_account, actor_profile
@@ -727,16 +727,16 @@ pub async fn get_portable_user_by_actor_id(
         &[&actor_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
-    let db_user: DbPortableUser = row.try_get("portable_user_account")?;
+    let db_account: NomadicAccount = row.try_get("portable_user_account")?;
     let db_profile: DbActorProfile = row.try_get("actor_profile")?;
-    let user = PortableUser::new(db_user, db_profile)?;
-    Ok(user)
+    let account = NomadicAccountDetailed::new(db_account, db_profile)?;
+    Ok(account)
 }
 
-pub async fn get_portable_user_by_inbox_id(
+pub async fn get_nomadic_account_by_inbox_id(
     db_client: &impl DatabaseClient,
     collection_id: &str, // canonical
-) -> Result<PortableUser, DatabaseError> {
+) -> Result<NomadicAccountDetailed, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT portable_user_account, actor_profile
@@ -746,16 +746,16 @@ pub async fn get_portable_user_by_inbox_id(
         &[&collection_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
-    let db_user: DbPortableUser = row.try_get("portable_user_account")?;
+    let db_account: NomadicAccount = row.try_get("portable_user_account")?;
     let db_profile: DbActorProfile = row.try_get("actor_profile")?;
-    let user = PortableUser::new(db_user, db_profile)?;
-    Ok(user)
+    let account = NomadicAccountDetailed::new(db_account, db_profile)?;
+    Ok(account)
 }
 
-pub async fn get_portable_user_by_outbox_id(
+pub async fn get_nomadic_account_by_outbox_id(
     db_client: &impl DatabaseClient,
     collection_id: &str, // canonical
-) -> Result<PortableUser, DatabaseError> {
+) -> Result<NomadicAccountDetailed, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT portable_user_account, actor_profile
@@ -765,10 +765,10 @@ pub async fn get_portable_user_by_outbox_id(
         &[&collection_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
-    let db_user: DbPortableUser = row.try_get("portable_user_account")?;
+    let db_account: NomadicAccount = row.try_get("portable_user_account")?;
     let db_profile: DbActorProfile = row.try_get("actor_profile")?;
-    let user = PortableUser::new(db_user, db_profile)?;
-    Ok(user)
+    let account = NomadicAccountDetailed::new(db_account, db_profile)?;
+    Ok(account)
 }
 
 pub async fn get_accounts_for_admin(
@@ -821,7 +821,7 @@ mod tests {
             test_utils::{
                 create_test_automated_account,
                 create_test_user,
-                create_test_portable_user,
+                create_test_nomadic_account,
             },
             types::{AccountType, Role},
         },
@@ -994,7 +994,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_create_portable_user() {
+    async fn test_create_nomadic_account() {
         let db_client = &mut create_test_database().await;
         let profile_data = ProfileCreateData {
             username: "test".to_string(),
@@ -1016,40 +1016,40 @@ mod tests {
         let ed25519_secret_key = generate_weak_ed25519_key();
         let invite_code =
             create_invite_code(db_client, Some("test")).await.unwrap();
-        let user_data = PortableUserData {
+        let account_data = NomadicAccountData {
             profile_id: profile.id,
             rsa_secret_key: rsa_secret_key.clone(),
             ed25519_secret_key: ed25519_secret_key,
             invite_code: Some(invite_code),
         };
-        let user = create_portable_user(db_client, user_data).await.unwrap();
-        assert_eq!(user.id, profile.id);
-        assert_eq!(user.rsa_secret_key, rsa_secret_key);
-        assert_eq!(user.ed25519_secret_key, ed25519_secret_key);
-        assert!(user.profile.has_portable_account());
-        assert_eq!(user.profile.webfinger_hostname(), WebfingerHostname::Local);
-        assert_eq!(user.profile.acct.unwrap(), "test");
+        let account = create_nomadic_account(db_client, account_data).await.unwrap();
+        assert_eq!(account.id, profile.id);
+        assert_eq!(account.rsa_secret_key, rsa_secret_key);
+        assert_eq!(account.ed25519_secret_key, ed25519_secret_key);
+        assert!(account.profile.has_portable_account());
+        assert_eq!(account.profile.webfinger_hostname(), WebfingerHostname::Local);
+        assert_eq!(account.profile.acct.unwrap(), "test");
     }
 
     #[tokio::test]
     #[serial]
-    async fn test_get_portable_user_by() {
+    async fn test_get_nomadic_account_by() {
         let db_client = &mut create_test_database().await;
-        let user = create_test_portable_user(
+        let account = create_test_nomadic_account(
             db_client,
             "test",
             "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
         ).await;
-        let user_id = user.id;
+        let account_id = account.id;
 
-        let user = get_portable_user_by_id(db_client, user_id).await.unwrap();
-        assert_eq!(user.id, user_id);
+        let account = get_nomadic_account_by_id(db_client, account_id).await.unwrap();
+        assert_eq!(account.id, account_id);
 
-        let user = get_portable_user_by_actor_id(
+        let account = get_nomadic_account_by_actor_id(
             db_client,
-            &user.profile.expect_actor_data().id,
+            &account.profile.expect_actor_data().id,
         ).await.unwrap();
-        assert_eq!(user.id, user_id);
+        assert_eq!(account.id, account_id);
     }
 
     #[tokio::test]
@@ -1057,7 +1057,7 @@ mod tests {
     async fn test_get_accounts_for_admin() {
         let db_client = &mut create_test_database().await;
         let account_1 = create_test_user(db_client, "test").await;
-        let account_2 = create_test_portable_user(
+        let account_2 = create_test_nomadic_account(
             db_client,
             "nomad",
             "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",

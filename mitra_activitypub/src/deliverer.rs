@@ -45,7 +45,7 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
 use mitra_models::{
-    accounts::types::{ManagedAccount, PortableUser},
+    accounts::types::{ManagedAccount, NomadicAccountDetailed},
     profiles::types::{DbActor, PublicKeyType},
 };
 
@@ -149,29 +149,29 @@ impl Sender {
 
     // Returns None if the registered secret key doesn't correspond to
     // any of public keys associated with the actor
-    pub fn from_portable_user(
+    pub fn from_nomadic_account(
         instance_uri: &str,
-        user: &PortableUser,
+        account: &NomadicAccountDetailed,
     ) -> Option<Self> {
-        let rsa_public_key = RsaPublicKey::from(&user.rsa_secret_key);
+        let rsa_public_key = RsaPublicKey::from(&account.rsa_secret_key);
         let rsa_public_key_der = rsa_public_key_to_pkcs1_der(&rsa_public_key)
             .expect("RSA key should be serializable");
-        let rsa_key_id = &user.profile.public_keys
+        let rsa_key_id = &account.profile.public_keys
             .find_by_value(&rsa_public_key_der)?
             .id;
         let http_rsa_key_id = db_url_to_http_url(rsa_key_id, instance_uri)
             .expect("RSA key ID should be valid");
         let ed25519_public_key =
-            ed25519_public_key_from_secret_key(&user.ed25519_secret_key);
-        let ed25519_key_id = &user.profile.public_keys
+            ed25519_public_key_from_secret_key(&account.ed25519_secret_key);
+        let ed25519_key_id = &account.profile.public_keys
             .find_by_value(ed25519_public_key.as_bytes())?
             .id;
         let http_ed25519_key_id = db_url_to_http_url(ed25519_key_id, instance_uri)
             .expect("RSA key ID should be valid");
         let sender = Self {
-            rsa_secret_key: user.rsa_secret_key.clone(),
+            rsa_secret_key: account.rsa_secret_key.clone(),
             rsa_key_id: http_rsa_key_id,
-            ed25519_secret_key: user.ed25519_secret_key,
+            ed25519_secret_key: account.ed25519_secret_key,
             ed25519_key_id: http_ed25519_key_id,
         };
         Some(sender)

@@ -580,7 +580,7 @@ impl ManagedAccount for BoxedManagedAccount {
 
 #[derive(FromSql)]
 #[postgres(name = "portable_user_account")]
-pub struct DbPortableUser {
+pub struct NomadicAccount {
     id: Uuid,
     rsa_secret_key: Vec<u8>,
     ed25519_secret_key: Vec<u8>,
@@ -591,51 +591,51 @@ pub struct DbPortableUser {
 }
 
 // Represents portable (remote) actor with local account (unmanaged)
-pub struct PortableUser {
+pub struct NomadicAccountDetailed {
     pub id: Uuid,
     pub profile: DbActorProfile,
     pub rsa_secret_key: RsaSecretKey,
     pub ed25519_secret_key: Ed25519SecretKey,
 }
 
-impl PortableUser {
+impl NomadicAccountDetailed {
     pub fn new(
-        db_user: DbPortableUser,
+        db_account: NomadicAccount,
         db_profile: DbActorProfile,
     ) -> Result<Self, DatabaseTypeError> {
         db_profile.check_consistency()?;
         if !db_profile.is_portable() {
             return Err(DatabaseTypeError);
         };
-        if db_user.id != db_profile.id {
+        if db_account.id != db_profile.id {
             return Err(DatabaseTypeError);
         };
-        if db_profile.portable_user_id != Some(db_user.id) {
+        if db_profile.portable_user_id != Some(db_account.id) {
             return Err(DatabaseTypeError);
         };
         let rsa_secret_key =
-            rsa_secret_key_from_pkcs1_der(&db_user.rsa_secret_key)
+            rsa_secret_key_from_pkcs1_der(&db_account.rsa_secret_key)
                 .map_err(|_| DatabaseTypeError)?;
         let ed25519_secret_key =
-            ed25519_secret_key_from_bytes(&db_user.ed25519_secret_key)
+            ed25519_secret_key_from_bytes(&db_account.ed25519_secret_key)
                 .map_err(|_| DatabaseTypeError)?;
-        let user = Self {
-            id: db_user.id,
+        let account = Self {
+            id: db_account.id,
             rsa_secret_key,
             ed25519_secret_key,
             profile: db_profile,
         };
-        Ok(user)
+        Ok(account)
     }
 }
 
-impl fmt::Display for PortableUser {
+impl fmt::Display for NomadicAccountDetailed {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(formatter, "{}", self.profile)
     }
 }
 
-pub struct PortableUserData {
+pub struct NomadicAccountData {
     pub profile_id: Uuid,
     pub rsa_secret_key: RsaSecretKey,
     pub ed25519_secret_key: Ed25519SecretKey,

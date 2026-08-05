@@ -18,7 +18,7 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
 use mitra_models::{
-    accounts::types::{PortableUser, User},
+    accounts::types::{NomadicAccountDetailed, User},
     activitypub::queries::get_object,
     database::DatabaseClient,
 };
@@ -104,7 +104,7 @@ fn find_objects(object: &JsonValue) -> Vec<&JsonValue> {
 
 pub fn verify_public_keys(
     instance: &Instance,
-    maybe_account: Option<&PortableUser>,
+    maybe_account: Option<&NomadicAccountDetailed>,
     object: &JsonValue,
 ) -> Result<(), ValidationError> {
     let objects = find_objects(object);

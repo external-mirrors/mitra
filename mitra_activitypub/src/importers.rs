@@ -37,18 +37,18 @@ use mitra_config::{Config, Instance, Limits, RegistrationType};
 use mitra_models::{
     accounts::{
         queries::{
-            create_portable_user,
+            create_nomadic_account,
             get_managed_account_by_id,
             get_managed_account_by_username,
-            get_portable_user_by_actor_id,
+            get_nomadic_account_by_actor_id,
             get_user_by_id,
             get_user_by_name,
             is_valid_invite_code,
         },
         types::{
             BoxedManagedAccount,
-            PortableUser,
-            PortableUserData,
+            NomadicAccountData,
+            NomadicAccountDetailed,
             User,
         },
     },
@@ -1100,7 +1100,7 @@ pub async fn register_portable_actor(
     db_pool: &DatabaseConnectionPool,
     actor_json: JsonValue,
     maybe_invite_code: Option<String>,
-) -> Result<(PortableUser, bool), HandlerError> {
+) -> Result<(NomadicAccountDetailed, bool), HandlerError> {
     verify_portable_object(&actor_json)
         .map_err(|error| {
             log::warn!("{error}");
@@ -1108,11 +1108,11 @@ pub async fn register_portable_actor(
         })?;
     let actor: Actor = serde_json::from_value(actor_json.clone())?;
     let canonical_actor_id = canonicalize_id(actor.id())?;
-    match get_portable_user_by_actor_id(
+    match get_nomadic_account_by_actor_id(
         db_client_await!(db_pool),
         &canonical_actor_id.to_string(),
     ).await {
-        Ok(user) => return Ok((user, false)), // return keys
+        Ok(account) => return Ok((account, false)), // return keys
         Err(DatabaseError::NotFound(_)) => (), // continue registration
         Err(other_error) => return Err(other_error.into()),
     };
@@ -1160,20 +1160,20 @@ pub async fn register_portable_actor(
         },
         Err(other_error) => return Err(other_error.into()),
     };
-    // Create user
+    // Create account
     let rsa_secret_key = generate_rsa_key()
         .map_err(|_| DatabaseError::from(DatabaseTypeError))?;
     let ed25519_secret_key = generate_ed25519_key();
-    let user_data = PortableUserData {
+    let account_data = NomadicAccountData {
         profile_id: profile.id,
         rsa_secret_key: rsa_secret_key,
         ed25519_secret_key: ed25519_secret_key,
         invite_code: maybe_invite_code,
     };
     let db_client = &mut **get_database_client(db_pool).await?;
-    let user = create_portable_user(db_client, user_data).await?;
-    create_signup_notifications(db_client, user.id).await?;
-    Ok((user, true))
+    let account = create_nomadic_account(db_client, account_data).await?;
+    create_signup_notifications(db_client, account.id).await?;
+    Ok((account, true))
 }
 
 #[cfg(test)]
