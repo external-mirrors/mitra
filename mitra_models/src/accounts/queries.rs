@@ -477,35 +477,6 @@ pub async fn get_active_user_count(
     Ok(count)
 }
 
-pub async fn get_accounts_for_admin(
-    db_client: &impl DatabaseClient,
-) -> Result<Vec<AccountAdminInfo>, DatabaseError> {
-    let rows = db_client.query(
-        "
-        SELECT
-            actor_profile,
-            portable_user_account.id IS NOT NULL as is_portable,
-            user_account.user_role AS role,
-            max(oauth_token.created_at) AS last_login
-        FROM actor_profile
-        LEFT JOIN user_account USING (id)
-        LEFT JOIN portable_user_account USING (id)
-        LEFT JOIN oauth_token ON (oauth_token.owner_id = user_account.id)
-        WHERE user_id IS NOT NULL OR portable_user_id IS NOT NULL
-        GROUP BY
-            actor_profile.id,
-            user_account.id,
-            portable_user_account.id
-        ORDER BY actor_profile.created_at DESC
-        ",
-        &[],
-    ).await?;
-    let users = rows.iter()
-        .map(AccountAdminInfo::try_from)
-        .collect::<Result<_, _>>()?;
-    Ok(users)
-}
-
 pub async fn create_automated_account(
     db_client: &mut impl DatabaseClient,
     account_data: AutomatedAccountData,
@@ -800,6 +771,35 @@ pub async fn get_portable_user_by_outbox_id(
     Ok(user)
 }
 
+pub async fn get_accounts_for_admin(
+    db_client: &impl DatabaseClient,
+) -> Result<Vec<AccountAdminInfo>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT
+            actor_profile,
+            portable_user_account.id IS NOT NULL as is_portable,
+            user_account.user_role AS role,
+            max(oauth_token.created_at) AS last_login
+        FROM actor_profile
+        LEFT JOIN user_account USING (id)
+        LEFT JOIN portable_user_account USING (id)
+        LEFT JOIN oauth_token ON (oauth_token.owner_id = user_account.id)
+        WHERE user_id IS NOT NULL OR portable_user_id IS NOT NULL
+        GROUP BY
+            actor_profile.id,
+            user_account.id,
+            portable_user_account.id
+        ORDER BY actor_profile.created_at DESC
+        ",
+        &[],
+    ).await?;
+    let users = rows.iter()
+        .map(AccountAdminInfo::try_from)
+        .collect::<Result<_, _>>()?;
+    Ok(users)
+}
+
 #[cfg(test)]
 mod tests {
     use apx_core::{
@@ -1040,5 +1040,27 @@ mod tests {
             &user.profile.expect_actor_data().id,
         ).await.unwrap();
         assert_eq!(user.id, user_id);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_accounts_for_admin() {
+        let db_client = &mut create_test_database().await;
+        let account_1 = create_test_user(db_client, "test").await;
+        let account_2 = create_test_portable_user(
+            db_client,
+            "nomad",
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        ).await;
+        let accounts = get_accounts_for_admin(db_client).await.unwrap();
+        assert_eq!(accounts.len(), 2);
+        let account = &accounts[0];
+        assert_eq!(account.profile.id, account_2.id);
+        assert_eq!(account.is_portable, true);
+        assert_eq!(account.role, None);
+        let account = &accounts[1];
+        assert_eq!(account.profile.id, account_1.id);
+        assert_eq!(account.is_portable, false);
+        assert_eq!(account.role, Some(Role::NormalUser));
     }
 }
