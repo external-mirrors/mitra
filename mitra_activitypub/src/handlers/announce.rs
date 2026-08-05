@@ -20,11 +20,9 @@ use mitra_models::{
     },
     posts::queries::{
         create_post,
-        delete_repost,
         get_post_by_id,
         get_remote_post_by_object_id,
         get_remote_repost_by_activity_id,
-        get_repost_by_author,
     },
     posts::types::{PostCreateData, Visibility},
     profiles::types::DbActor,
@@ -53,6 +51,7 @@ use crate::{
 
 use super::{
     create::handle_create,
+    delete::handle_delete,
     like::handle_like,
     note::normalize_audience,
     undo::handle_undo,
@@ -241,29 +240,12 @@ async fn handle_fep_1b12_announce(
     ).await?;
     match activity_type {
         DELETE => {
-            let db_client = &mut **get_database_client(db_pool).await?;
-            let object_id = object_to_id(&activity["object"])
-                .map_err(|_| ValidationError("invalid activity object"))?;
-            let post_id = match get_remote_post_by_object_id(
-                db_client,
-                &object_id,
-            ).await {
-                Ok(post) => post.id,
-                // Ignore Announce(Delete) if post is not found
-                Err(DatabaseError::NotFound(_)) => return Ok(None),
-                Err(other_error) => return Err(other_error.into()),
-            };
-            // Don't delete post, only remove announcement
-            // https://join-lemmy.org/docs/contributors/05-federation.html#delete-post-or-comment
-            match get_repost_by_author(db_client, post_id, group.id).await {
-                Ok(repost) => {
-                    delete_repost(db_client, repost.id).await?;
-                },
-                // Ignore Announce(Delete) if repost is not found
-                Err(DatabaseError::NotFound(_)) => return Ok(None),
-                Err(other_error) => return Err(other_error.into()),
-            };
-            Ok(Some(Descriptor::object(activity_type)))
+            let maybe_type = handle_delete(
+                ap_client,
+                db_pool,
+                activity,
+            ).await?;
+            Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
         },
         CREATE => {
             let maybe_object_type = handle_create(

@@ -8,21 +8,26 @@ use mitra_models::{
         DatabaseConnectionPool,
         DatabaseError,
     },
-    posts::queries::{
-        delete_post,
-        get_remote_post_by_object_id,
-    },
+    posts::queries::delete_post,
     profiles::queries::{
         delete_profile,
         get_remote_profile_by_actor_id,
+    },
+    relationships::{
+        queries::has_relationship,
+        types::RelationshipType,
     },
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    authority::Authority,
     builders::add_context_activity::sync_conversation,
     identifiers::canonicalize_id,
-    importers::ApClient,
+    importers::{
+        get_post_by_object_id,
+        ApClient,
+    },
 };
 
 use super::{Descriptor, HandlerResult};
@@ -35,12 +40,18 @@ struct Delete {
     object: String,
 }
 
+enum PermissionType {
+    Owner,
+    GroupModerator,
+}
+
 pub async fn handle_delete(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     let delete: Delete = serde_json::from_value(activity.clone())?;
+    let authority = Authority::from(&ap_client.instance);
     let db_client = &mut **get_database_client(db_pool).await?;
     let canonical_actor_id = canonicalize_id(&delete.actor)?;
     let canonical_object_id = canonicalize_id(&delete.object)?;
@@ -61,9 +72,10 @@ pub async fn handle_delete(
         return Ok(Some(Descriptor::object("Actor")));
     };
     // Delete(Note)
-    let post = match get_remote_post_by_object_id(
+    let post = match get_post_by_object_id(
         db_client,
-        &canonical_object_id.to_string(),
+        &authority,
+        &canonical_object_id,
     ).await {
         Ok(post) => post,
         // Ignore Delete(Note) if post is not found
@@ -75,9 +87,26 @@ pub async fn handle_delete(
         db_client,
         &canonical_actor_id.to_string(),
     ).await?;
-    if post.author.id != actor_profile.id {
-        return Err(ValidationError("actor is not an author").into());
+    let maybe_permission = if actor_profile.id == post.author.id {
+        Some(PermissionType::Owner)
+    } else {
+        if let Some(ref group) = post.group {
+            if actor_profile.id == group.id || has_relationship(
+                db_client,
+                actor_profile.id,
+                group.id,
+                RelationshipType::GroupAdmin,
+            ).await? {
+                Some(PermissionType::GroupModerator)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     };
+    maybe_permission
+        .ok_or(ValidationError("actor doesn't have permission to delete object"))?;
     let deletion_queue = delete_post(db_client, post.id).await?;
     deletion_queue.into_job(db_client).await?;
     sync_conversation(
