@@ -13,17 +13,19 @@ RUN cargo build --release --features production
 
 FROM base AS web
 # libgcc is needed to prevent "symbol not found" errors when executing `mitra --version`
-RUN apk add --no-cache jq libgcc
+RUN apk add --no-cache nodejs npm jq libgcc
 WORKDIR /app/mitra-web
 COPY --from=builder /app/mitra/target/release/mitra /usr/bin/mitra
-RUN export base_url="https://codeberg.org/api/v1/repos/silverpill/mitra-web/releases" && \
-    export version=$(mitra --version) && \
+RUN export version=$(mitra --version | cut -d ' ' -f 2) && \
     export url=$( \
-        (wget -O- "${base_url}/${version}" | jq -re '.assets[0].browser_download_url') || \
-        (wget -O- "${base_url}/latest"     | jq -re '.assets[0].browser_download_url') \
+        (wget -O- "https://codeberg.org/api/v1/repos/silverpill/mitra-web/tags/v${version}" | jq -re '.tarball_url') || \
+        echo "https://codeberg.org/api/v1/repos/silverpill/mitra-web/archive/main.tar.gz" \
     ) && \
     wget -O /tmp/mitra-web.tar.gz $url
-RUN tar -xvf /tmp/mitra-web.tar.gz
+RUN tar --strip-components=1 -xvf /tmp/mitra-web.tar.gz mitra-web
+RUN npm install --no-save
+RUN npx allow-scripts
+RUN npm run build
 
 FROM base AS prod
 RUN apk add --no-cache ca-certificates libgcc
