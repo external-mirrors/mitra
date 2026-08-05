@@ -114,7 +114,7 @@ pub enum Command {
     SetRole(SetRole),
     RevokeOauthTokens(RevokeOauthTokens),
     ImportObject(ImportObject),
-    #[command(visible_alias = "fetch-replies")]
+    #[command(hide = true, alias = "fetch-replies")]
     LoadReplies(LoadReplies),
     FetchObject(FetchObject),
     Webfinger(Webfinger),

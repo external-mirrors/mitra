@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Include object ID in "local object" error message.
 - Use mitra-web background color on OAuth pages.
 
+### Deprecated
+
+- Deprecated `load-replies` command.
+
 ### Fixed
 
 - Fixed "local object" error during processing of a post addressed to a local group.
