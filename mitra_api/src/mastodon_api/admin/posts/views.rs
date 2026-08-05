@@ -14,6 +14,7 @@ use mitra_config::Config;
 use mitra_models::{
     accounts::types::Permission,
     database::{get_database_client, DatabaseConnectionPool},
+    moderation_actions::helpers::on_local_post_deleted,
     posts::queries::{delete_post, get_post_by_id},
 };
 
@@ -40,6 +41,11 @@ async fn delete_post_view(
             &config,
             db_client,
             &post,
+        ).await?;
+        on_local_post_deleted(
+            db_client,
+            current_user.id,
+            post.author.id,
         ).await?;
     } else {
         let deletion_queue = delete_post(db_client, post.id).await?;

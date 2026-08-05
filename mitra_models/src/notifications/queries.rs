@@ -9,6 +9,7 @@ use crate::relationships::types::RelationshipType;
 
 use super::types::{EventType, NotificationDetailed};
 
+#[expect(clippy::too_many_arguments)]
 pub(super) async fn create_notification(
     db_client: &impl DatabaseClient,
     sender_id: Uuid,
@@ -16,6 +17,7 @@ pub(super) async fn create_notification(
     post_id: Option<Uuid>,
     reaction_id: Option<Uuid>,
     invoice_id: Option<Uuid>,
+    moderation_action_id: Option<Uuid>,
     event_type: EventType,
 ) -> Result<(), DatabaseError> {
     db_client.execute(
@@ -26,9 +28,10 @@ pub(super) async fn create_notification(
             post_id,
             reaction_id,
             invoice_id,
+            moderation_action_id,
             event_type
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         ",
         &[
             &sender_id,
@@ -36,6 +39,7 @@ pub(super) async fn create_notification(
             &post_id,
             &reaction_id,
             &invoice_id,
+            &moderation_action_id,
             &event_type,
         ],
     ).await?;
@@ -60,7 +64,8 @@ pub async fn get_notifications(
             {post_subqueries},
             post_reaction.content AS reaction_content,
             emoji AS reaction_emoji,
-            invoice.payout_amount AS payment_amount
+            invoice.payout_amount AS payment_amount,
+            moderation_action
         FROM notification
         JOIN actor_profile AS sender
         ON notification.sender_id = sender.id
@@ -74,6 +79,8 @@ pub async fn get_notifications(
         ON post_reaction.emoji_id = emoji.id
         LEFT JOIN invoice
         ON notification.invoice_id = invoice.id
+        LEFT JOIN moderation_action
+        ON notification.moderation_action_id = moderation_action.id
         WHERE
             notification.recipient_id = $1
             AND NOT EXISTS (

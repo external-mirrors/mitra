@@ -1,9 +1,14 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use mitra_activitypub::authority::Authority;
 use mitra_models::{
     accounts::types::User,
+    moderation_actions::types::{
+        ModerationAction,
+        ModerationActionType,
+    },
     notifications::types::{
         EventType,
         NotificationDetailed as DbNotificationDetailed,
@@ -32,13 +37,41 @@ pub struct NotificationQueryParams {
     pub limit: PageSize,
 }
 
+// https://docs.joinmastodon.org/entities/AccountWarning/
+#[derive(Serialize)]
+pub struct AccountWarning {
+    id: Uuid,
+    action: &'static str,
+    text: String,
+    status_ids: Option<Vec<Uuid>>,
+    target_account: Option<Account>, // not nullable in Mastodon
+    appeal: Option<()>,
+    created_at: DateTime<Utc>,
+}
+
+impl AccountWarning {
+    fn from_db(action: ModerationAction) -> Self {
+        Self {
+            id: action.id,
+            action: match action.action_type {
+                ModerationActionType::PostDeleted => "delete_statuses",
+            },
+            text: action.reason.unwrap_or_default(),
+            status_ids: None,
+            target_account: None,
+            appeal: None,
+            created_at: action.created_at,
+        }
+    }
+}
+
 #[derive(Serialize)]
 pub struct EmojiReaction {
     content: String,
     emoji: Option<CustomEmoji>,
 }
 
-// https://docs.joinmastodon.org/entities/notification/
+// https://docs.joinmastodon.org/entities/Notification/
 #[derive(Serialize)]
 pub struct Notification {
     pub id: String,
@@ -49,7 +82,9 @@ pub struct Notification {
 
     account: Account,
     status: Option<Status>,
+    moderation_warning: Option<AccountWarning>,
 
+    // Additional fields
     reaction: Option<EmojiReaction>,
     // Pleroma compatibility
     emoji: Option<String>,
@@ -95,7 +130,10 @@ impl Notification {
             EventType::SubscriberLeaving => "subscriber_leaving",
             EventType::Move => "move",
             EventType::SignUp => "admin.sign_up",
+            EventType::ModerationWarning => "moderation_warning",
         };
+        let maybe_moderation_warning = notification.moderation_action
+            .map(AccountWarning::from_db);
         let maybe_reaction = if let Some(content) = notification.reaction_content {
             let maybe_custom_emoji = notification.reaction_emoji
                 .map(|emoji| CustomEmoji::from_db(media_server, emoji));
@@ -118,6 +156,7 @@ impl Notification {
             subtype: maybe_event_subtype,
             account,
             status,
+            moderation_warning: maybe_moderation_warning,
             reaction: maybe_reaction,
             emoji: maybe_emoji_content,
             emoji_url: maybe_emoji_url,

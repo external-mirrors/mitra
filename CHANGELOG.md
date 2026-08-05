@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add description to OAuth authorization code page.
 - Added `delete` command to `account` command group.
 - Added `/api/v2/admin/accounts` Mastodon API endpoint.
+- Send `moderation_warning` notification when post is deleted by admin.
 
 ### Changed
 

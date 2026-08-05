@@ -402,6 +402,15 @@ CREATE TABLE subscription (
     CHECK (sender_id != recipient_id)
 );
 
+CREATE TABLE moderation_action (
+    id UUID PRIMARY KEY,
+    moderator_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
+    target_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
+    action_type SMALLINT NOT NULL,
+    reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE notification (
     id SERIAL PRIMARY KEY,
     sender_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
@@ -409,6 +418,7 @@ CREATE TABLE notification (
     post_id UUID REFERENCES post (id) ON DELETE CASCADE,
     reaction_id UUID REFERENCES post_reaction (id) ON DELETE CASCADE,
     invoice_id UUID REFERENCES invoice (id) ON DELETE CASCADE,
+    moderation_action_id UUID REFERENCES moderation_action (id) ON DELETE CASCADE,
     event_type SMALLINT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );

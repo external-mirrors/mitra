@@ -3498,6 +3498,24 @@ components:
               description: Client configurations.
               type: object
               example: {"mitra-web":{"theme":"dark"}}
+    AccountWarning:
+      type: object
+      properties:
+        id:
+          description: The ID of the moderation warning.
+          type: string
+          format: uuid
+        action:
+          description: Action taken against the user.
+          type: string
+          enum:
+            - delete_statuses
+        text:
+          description: Message from the moderator to the target account.
+          type: string
+        created_at:
+          type: string
+          format: date-time
     AdminAccount:
       type: object
       properties:
@@ -4225,6 +4243,7 @@ components:
             - payment_anonymous
             - move
             - admin.sign_up
+            - moderation_warning
           example: favourite
         subtype:
           description: The subtype of the event.
@@ -4236,6 +4255,8 @@ components:
           $ref: '#/components/schemas/Account'
         status:
           $ref: '#/components/schemas/Status'
+        moderation_warning:
+          $ref: '#/components/schemas/AccountWarning'
         reaction:
           description: Emoji reaction.
           type: object
