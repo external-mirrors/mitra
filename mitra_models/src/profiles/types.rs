@@ -38,7 +38,7 @@ use super::checks::{
     check_public_keys,
 };
 
-pub const ANONYMOUS: &str = "anonymous";
+pub(crate) const ANONYMOUS: &str = "anonymous";
 
 #[derive(Clone, Copy)]
 pub enum Origin {

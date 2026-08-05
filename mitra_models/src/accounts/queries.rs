@@ -778,17 +778,23 @@ pub async fn get_accounts_for_admin(
         "
         SELECT
             actor_profile,
+            automated_account.account_type AS automated_account_type,
             portable_user_account.id IS NOT NULL as is_portable,
             user_account.user_role AS role,
             max(oauth_token.created_at) AS last_login
         FROM actor_profile
         LEFT JOIN user_account USING (id)
+        LEFT JOIN automated_account USING (id)
         LEFT JOIN portable_user_account USING (id)
         LEFT JOIN oauth_token ON (oauth_token.owner_id = user_account.id)
-        WHERE user_id IS NOT NULL OR portable_user_id IS NOT NULL
+        WHERE
+            user_id IS NOT NULL
+            OR automated_account_id IS NOT NULL
+            OR portable_user_id IS NOT NULL
         GROUP BY
             actor_profile.id,
             user_account.id,
+            automated_account.id,
             portable_user_account.id
         ORDER BY actor_profile.created_at DESC
         ",
@@ -812,8 +818,12 @@ mod tests {
     use serial_test::serial;
     use crate::{
         accounts::{
-            test_utils::{create_test_user, create_test_portable_user},
-            types::Role,
+            test_utils::{
+                create_test_automated_account,
+                create_test_user,
+                create_test_portable_user,
+            },
+            types::{AccountType, Role},
         },
         database::test_utils::create_test_database,
         posts::types::Visibility,
@@ -1052,15 +1062,20 @@ mod tests {
             "nomad",
             "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
         ).await;
+        let account_3 = create_test_automated_account(db_client).await;
         let accounts = get_accounts_for_admin(db_client).await.unwrap();
-        assert_eq!(accounts.len(), 2);
+        assert_eq!(accounts.len(), 3);
         let account = &accounts[0];
-        assert_eq!(account.profile.id, account_2.id);
-        assert_eq!(account.is_portable, true);
+        assert_eq!(account.account_type, AccountType::Anonymous);
+        assert_eq!(account.profile.id, account_3.id);
         assert_eq!(account.role, None);
         let account = &accounts[1];
+        assert_eq!(account.account_type, AccountType::Nomadic);
+        assert_eq!(account.profile.id, account_2.id);
+        assert_eq!(account.role, None);
+        let account = &accounts[2];
+        assert_eq!(account.account_type, AccountType::User);
         assert_eq!(account.profile.id, account_1.id);
-        assert_eq!(account.is_portable, false);
         assert_eq!(account.role, Some(Role::NormalUser));
     }
 }

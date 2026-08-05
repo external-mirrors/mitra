@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Include object ID in "local object" error message.
 - Use mitra-web background color on OAuth pages.
 - Delete orphaned local groups after their owner is deleted.
+- Show automated accounts in `account list` command output.
+- Add "type" column to `account list` command output.
 
 ### Deprecated
 

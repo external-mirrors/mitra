@@ -642,9 +642,17 @@ pub struct PortableUserData {
     pub invite_code: Option<String>,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum AccountType {
+    User,
+    Group,
+    Anonymous,
+    Nomadic,
+}
+
 pub struct AccountAdminInfo {
+    pub account_type: AccountType,
     pub profile: DbActorProfile,
-    pub is_portable: bool,
     pub role: Option<Role>,
     pub last_login: Option<DateTime<Utc>>,
 }
@@ -655,10 +663,29 @@ impl TryFrom<&Row> for AccountAdminInfo {
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
         let profile = row.try_get("actor_profile")?;
+        let maybe_automated_account_type = row.try_get("automated_account_type")?;
         let is_portable = row.try_get("is_portable")?;
+        let account_type = if let Some(automated_account_type) =
+            maybe_automated_account_type
+        {
+            match automated_account_type {
+                AutomatedAccountType::Anonymous => AccountType::Anonymous,
+                AutomatedAccountType::Group => AccountType::Group,
+                _ => return Err(DatabaseError::type_error()),
+            }
+        } else if is_portable {
+            AccountType::Nomadic
+        } else {
+            AccountType::User
+        };
         let role = row.try_get("role")?;
         let last_login = row.try_get("last_login")?;
-        let user = Self { profile, is_portable, role, last_login };
+        let user = Self {
+            account_type,
+            profile,
+            role,
+            last_login,
+        };
         user.profile.check_consistency()?;
         Ok(user)
     }

@@ -1,5 +1,5 @@
 use mitra_config::DefaultRole;
-use mitra_models::accounts::types::Role;
+use mitra_models::accounts::types::{AccountType, Role};
 use mitra_validators::errors::ValidationError;
 
 pub const ALLOWED_ROLES: [&str; 3] = ["admin", "user", "read_only_user"];
@@ -27,5 +27,14 @@ pub fn from_default_role(value: &DefaultRole) -> Role {
     match value {
         DefaultRole::NormalUser => Role::NormalUser,
         DefaultRole::ReadOnlyUser => Role::ReadOnlyUser,
+    }
+}
+
+pub fn account_type_to_str(account_type: AccountType) -> &'static str {
+    match account_type {
+        AccountType::User => "user",
+        AccountType::Group => "group",
+        AccountType::Anonymous => "anonymous",
+        AccountType::Nomadic => "nomadic",
     }
 }

@@ -17,6 +17,7 @@ use crate::{
 };
 
 use super::{
+    helpers::create_anonymous_account,
     queries::{create_portable_user, create_user},
     types::{
         AutomatedAccountDetailed,
@@ -38,6 +39,18 @@ pub async fn create_test_user(
         ..Default::default()
     };
     create_user(db_client, user_data).await.unwrap()
+}
+
+pub async fn create_test_automated_account(
+    db_client: &mut impl DatabaseClient,
+) -> AutomatedAccountDetailed {
+    let rsa_secret_key = generate_weak_rsa_key().unwrap();
+    let ed25519_secret_key = generate_weak_ed25519_key();
+    create_anonymous_account(
+        db_client,
+        rsa_secret_key,
+        ed25519_secret_key,
+    ).await.unwrap()
 }
 
 pub async fn create_test_portable_user(

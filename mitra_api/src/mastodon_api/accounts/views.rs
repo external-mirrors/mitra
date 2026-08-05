@@ -64,7 +64,7 @@ use mitra_activitypub::{
     },
     queues::FetcherJobData,
 };
-use mitra_adapters::roles::from_default_role;
+use mitra_adapters::accounts::from_default_role;
 use mitra_config::{
     AuthenticationMethod,
     Config,
