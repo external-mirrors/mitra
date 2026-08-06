@@ -479,6 +479,17 @@ impl AutomatedAccountDetailed {
     }
 }
 
+impl TryFrom<&Row> for AutomatedAccountDetailed {
+    type Error = DatabaseError;
+
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        let automated_account = row.try_get("automated_account")?;
+        let profile = row.try_get("actor_profile")?;
+        let account = AutomatedAccountDetailed::new(automated_account, profile)?;
+        Ok(account)
+    }
+}
+
 pub struct AutomatedAccountData {
     pub username: String,
     pub bio: Option<String>,
@@ -540,7 +551,7 @@ impl TryFrom<&Row> for BoxedManagedAccount {
             row.try_get("user_account")?;
         let maybe_automated_account: Option<AutomatedAccount> =
             row.try_get("automated_account")?;
-        let account: Box<dyn ManagedAccount + Send> = if let Some(user_account) = maybe_user_account {
+        let account: Self = if let Some(user_account) = maybe_user_account {
             let account = User::new(user_account, profile)?;
             Box::new(account)
         } else if let Some(automated_account) = maybe_automated_account {

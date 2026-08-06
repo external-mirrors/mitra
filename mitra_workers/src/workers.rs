@@ -22,6 +22,7 @@ pub enum PeriodicTask {
     PruneUnusedAttachments,
     PruneActivityPubObjects,
     PruneActivityPubCollectionItems,
+    DeleteOrphanedGroups,
     MediaCleanupQueueExecutor,
     RefreshMaterializedViews,
     ImporterQueueExecutor,
@@ -47,6 +48,7 @@ impl PeriodicTask {
             Self::PruneUnusedAttachments => 3600,
             Self::PruneActivityPubObjects => 3600,
             Self::PruneActivityPubCollectionItems => 3600,
+            Self::DeleteOrphanedGroups => 60,
             Self::MediaCleanupQueueExecutor => 10,
             Self::RefreshMaterializedViews => 600,
             Self::ImporterQueueExecutor => 60,
@@ -118,6 +120,10 @@ pub async fn run_worker(
                 PeriodicTask::PruneActivityPubCollectionItems => {
                     prune_activitypub_collection_items(&config, &db_pool).await
                 },
+                PeriodicTask::DeleteOrphanedGroups => {
+                    delete_orphaned_groups(&config, &db_pool).await
+                        .map_err(Into::into)
+                },
                 PeriodicTask::MediaCleanupQueueExecutor => {
                     media_cleanup_queue_executor(&config, &db_pool).await
                 },
@@ -166,6 +172,7 @@ fn start_main_worker(
             PeriodicTask::PruneUnusedAttachments,
             PeriodicTask::PruneActivityPubObjects,
             PeriodicTask::PruneActivityPubCollectionItems,
+            PeriodicTask::DeleteOrphanedGroups,
             PeriodicTask::MediaCleanupQueueExecutor,
             PeriodicTask::RefreshMaterializedViews,
             PeriodicTask::ImporterQueueExecutor,

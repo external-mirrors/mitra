@@ -613,9 +613,7 @@ pub async fn get_group_account_by_id(
         &[&account_id, &AutomatedAccountType::Group],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("account"))?;
-    let db_account: AutomatedAccount = row.try_get("automated_account")?;
-    let db_profile: DbActorProfile = row.try_get("actor_profile")?;
-    let account = AutomatedAccountDetailed::new(db_account, db_profile)?;
+    let account = AutomatedAccountDetailed::try_from(&row)?;
     Ok(account)
 }
 

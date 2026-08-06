@@ -2,9 +2,12 @@ use std::time::Instant;
 
 use anyhow::Error;
 
-use mitra_activitypub::queues::{
-    process_queued_incoming_activities,
-    process_queued_outgoing_activities,
+use mitra_activitypub::{
+    adapters::users::delete_account,
+    queues::{
+        process_queued_incoming_activities,
+        process_queued_outgoing_activities,
+    },
 };
 use mitra_adapters::{
     media::delete_orphaned_media,
@@ -28,11 +31,13 @@ use mitra_models::{
         db_client_await,
         get_database_client,
         DatabaseConnectionPool,
+        DatabaseError,
     },
     emojis::queries::{
         delete_emoji,
         find_unused_remote_emojis,
     },
+    groups::queries::get_orphaned_local_groups,
     media::types::DeletionQueue,
     posts::{
         queries::{delete_post, find_extraneous_posts},
@@ -213,6 +218,19 @@ pub async fn prune_activitypub_collection_items(
         delete_collection_items(db_client, created_before).await?;
     if deleted_count > 0 {
         log::info!("deleted {deleted_count} collection items");
+    };
+    Ok(())
+}
+
+pub async fn delete_orphaned_groups(
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), DatabaseError> {
+    let db_client = &mut **get_database_client(db_pool).await?;
+    let groups = get_orphaned_local_groups(db_client).await?;
+    for group in groups {
+        delete_account(config, db_client, &group).await?;
+        log::info!("deleted orphaned group {}", group.profile);
     };
     Ok(())
 }

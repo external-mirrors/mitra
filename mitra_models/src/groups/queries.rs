@@ -147,6 +147,34 @@ pub async fn get_group_timeline(
     Ok(posts)
 }
 
+pub async fn get_orphaned_local_groups(
+    db_client: &impl DatabaseClient,
+) -> Result<Vec<AutomatedAccountDetailed>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT automated_account, actor_profile
+        FROM automated_account
+        JOIN actor_profile USING (id)
+        WHERE
+            automated_account.account_type = $1
+            AND NOT EXISTS (
+                SELECT 1 FROM relationship
+                WHERE
+                    relationship.target_id = automated_account.id
+                    AND relationship.relationship_type = $2
+            )
+        ",
+        &[
+            &AutomatedAccountType::Group,
+            &RelationshipType::GroupAdmin,
+        ],
+    ).await?;
+    let groups = rows.iter()
+        .map(AutomatedAccountDetailed::try_from)
+        .collect::<Result<_, _>>()?;
+    Ok(groups)
+}
+
 #[cfg(test)]
 mod tests {
     use apx_core::crypto::{
@@ -163,7 +191,7 @@ mod tests {
             types::{PostCreateData, PostContext},
         },
         profiles::{
-            queries::create_profile,
+            queries::{create_profile, delete_profile},
             test_utils::create_test_remote_profile,
             types::ProfileCreateData,
         },
@@ -278,5 +306,20 @@ mod tests {
         ).await.unwrap();
         assert_eq!(posts.len(), 1);
         assert_eq!(posts[0].id, post.id);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_orphaned_local_groups() {
+        let db_client = &mut create_test_database().await;
+        let user = create_test_user(db_client, "user").await;
+        let group_data = GroupCreateData::for_test("group");
+        let group = create_group(db_client, user.id, group_data).await.unwrap();
+        let orphaned = get_orphaned_local_groups(db_client).await.unwrap();
+        assert_eq!(orphaned.len(), 0);
+        delete_profile(db_client, user.id).await.unwrap();
+        let orphaned = get_orphaned_local_groups(db_client).await.unwrap();
+        assert_eq!(orphaned.len(), 1);
+        assert_eq!(orphaned[0].id, group.id);
     }
 }
