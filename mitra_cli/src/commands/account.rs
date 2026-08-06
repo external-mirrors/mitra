@@ -48,6 +48,8 @@ use mitra_models::{
 use mitra_utils::passwords::hash_password;
 use mitra_validators::accounts::validate_local_username;
 
+use super::profile::DeleteUser;
+
 /// Create new account
 #[derive(Parser)]
 pub struct CreateAccount {
@@ -279,6 +281,7 @@ pub enum AccountCommand {
     Password(SetPassword),
     Role(SetRole),
     Logout(RevokeOauthTokens),
+    Delete(DeleteUser),
 }
 
 impl AccountCommand {
@@ -293,6 +296,7 @@ impl AccountCommand {
             Self::Password(command) => command.execute(db_pool).await,
             Self::Role(command) => command.execute(db_pool).await,
             Self::Logout(command) => command.execute(db_pool).await,
+            Self::Delete(command) => command.execute(config, db_pool).await,
         }
     }
 }
