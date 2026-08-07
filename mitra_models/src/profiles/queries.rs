@@ -27,6 +27,7 @@ use crate::{
 
 use super::types::{
     get_identity_key,
+    ActorType,
     Aliases,
     DbActorProfile,
     ExtraFields,
@@ -430,6 +431,7 @@ pub enum ProfileOrder {
     Username,
 }
 
+// Profile directory query
 pub async fn get_profiles_paginated(
     db_client: &impl DatabaseClient,
     only_local: bool,
@@ -440,9 +442,14 @@ pub async fn get_profiles_paginated(
     let mut join = "".to_owned();
     let mut condition = "".to_owned();
     let mut order_by = "".to_owned();
+    // Always exclude system accounts
+    condition += &format!(
+        "WHERE NOT (automated_account_id IS NOT NULL AND actor_type = {})",
+        i16::from(ActorType::Automated),
+    );
     if only_local {
         // Only those who have an account
-        condition += "WHERE (user_id IS NOT NULL OR automated_account_id IS NOT NULL OR portable_user_id IS NOT NULL)";
+        condition += " AND (user_id IS NOT NULL OR automated_account_id IS NOT NULL OR portable_user_id IS NOT NULL)";
     };
     match order {
         ProfileOrder::Active => {

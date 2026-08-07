@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Delete orphaned local groups after their owner is deleted.
 - Show automated accounts in `account list` command output.
 - Add "type" column to `account list` command output.
+- Hide system accounts from profile directory.
 
 ### Deprecated
 
