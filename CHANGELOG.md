@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fixed "local object" error during processing of a post addressed to a local group.
 - Fixed incorrect validation of titles with multibyte characters.
+- Count characters instead of bytes when validating strings for varchar columns.
 
 ## [5.8.0] - 2026-07-31
 

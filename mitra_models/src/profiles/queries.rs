@@ -1236,6 +1236,33 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    async fn test_create_profile_username_length() {
+        let db_client = &mut create_test_database().await;
+        // Postgresql varchar length is measured in characters
+        let username = "文".repeat(100);
+        assert_eq!(username.len(), 300);
+        assert_eq!(username.chars().count(), 100);
+        let profile_data = ProfileCreateData {
+            username: username.clone(),
+            ..Default::default()
+        };
+        let profile = create_profile(db_client, profile_data).await.unwrap();
+        assert_eq!(profile.username, username);
+
+        let username = "文".repeat(101);
+        let profile_data = ProfileCreateData {
+            username: username.clone(),
+            ..Default::default()
+        };
+        let result = create_profile(db_client, profile_data).await;
+        assert_eq!(
+            result.err().unwrap().to_string(),
+            "db error: ERROR: value too long for type character varying(100)",
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
     async fn test_update_profile() {
         let db_client = &mut create_test_database().await;
         let profile = create_test_local_profile(db_client, "test").await;

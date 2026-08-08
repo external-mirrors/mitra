@@ -10,19 +10,19 @@ use super::{
     emojis::{
         parse_emoji_shortcode,
         validate_emoji_name,
-        EMOJI_NAME_SIZE_MAX,
+        EMOJI_NAME_LENGTH_MAX,
     },
     errors::ValidationError,
 };
 
-const REACTION_CONTENT_SIZE_MAX: usize = EMOJI_NAME_SIZE_MAX + 2; // database column limit
+const REACTION_CONTENT_LENGTH_MAX: usize = EMOJI_NAME_LENGTH_MAX + 2; // database column limit
 
 pub fn validate_reaction_data(
     reaction_data: &ReactionData,
 ) -> Result<(), ValidationError> {
     #[expect(clippy::collapsible_else_if)]
     if let Some(ref content) = reaction_data.content {
-        if content.len() > REACTION_CONTENT_SIZE_MAX {
+        if content.chars().count() > REACTION_CONTENT_LENGTH_MAX {
             return Err(ValidationError("reaction content is too long"));
         };
         if !is_single_character(content) {

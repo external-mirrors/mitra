@@ -6,7 +6,7 @@ const HASHTAG_NAME_RE: &str = r"^\w+$";
 const HASHTAG_LENGTH_MAX: usize = 100;
 
 pub fn validate_hashtag(tag_name: &str) -> Result<(), ValidationError> {
-    if tag_name.len() > HASHTAG_LENGTH_MAX {
+    if tag_name.chars().count() > HASHTAG_LENGTH_MAX {
         return Err(ValidationError("tag name is too long"));
     };
     let hashtag_name_re = Regex::new(HASHTAG_NAME_RE)

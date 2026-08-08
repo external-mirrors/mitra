@@ -7,7 +7,7 @@ use super::errors::ValidationError;
 // https://github.com/mastodon/mastodon/blob/v4.3.7/app/models/custom_emoji.rb#L30
 const EMOJI_LOCAL_NAME_RE: &str = r"^[a-zA-Z0-9_]{2,}$";
 const EMOJI_REMOTE_NAME_RE: &str = r"^[a-zA-Z0-9._+-]+$";
-pub (super) const EMOJI_NAME_SIZE_MAX: usize = 100; // database column limit
+pub (super) const EMOJI_NAME_LENGTH_MAX: usize = 100; // database column limit
 const EMOJI_CATEGORY_NAME_RE: &str = r"^[a-z]{2,}$";
 const EMOJI_CATEGORY_NAME_LENGTH_MAX: usize = 100;
 
@@ -39,7 +39,7 @@ pub fn validate_emoji_name(
     if !name_re.is_match(emoji_name) {
         return Err(ValidationError("invalid emoji name"));
     };
-    if emoji_name.len() > EMOJI_NAME_SIZE_MAX {
+    if emoji_name.chars().count() > EMOJI_NAME_LENGTH_MAX {
         return Err(ValidationError("emoji name is too long"));
     };
     Ok(())
@@ -66,7 +66,7 @@ pub fn validate_emoji_category_name(
     if !name_re.is_match(category_name) {
         return Err(ValidationError("invalid category name"));
     };
-    if category_name.len() > EMOJI_CATEGORY_NAME_LENGTH_MAX {
+    if category_name.chars().count() > EMOJI_CATEGORY_NAME_LENGTH_MAX {
         return Err(ValidationError("category name is too long"));
     };
     Ok(())

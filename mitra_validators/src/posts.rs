@@ -108,7 +108,7 @@ pub fn validate_content(
 }
 
 fn validate_url(url: &str) -> Result<(), ValidationError> {
-    if url.len() > URL_LENGTH_MAX {
+    if url.chars().count() > URL_LENGTH_MAX {
         return Err(ValidationError("post URL is too long"));
     };
     Ok(())

@@ -7,7 +7,7 @@ use apx_core::{
 
 use super::errors::ValidationError;
 
-const OBJECT_ID_SIZE_MAX: usize = 2000;
+const OBJECT_ID_LENGTH_MAX: usize = 2000; // database column limit
 
 // Object ID is an URI
 // https://www.w3.org/TR/activitypub/#obj-id
@@ -15,7 +15,7 @@ fn _validate_any_object_id(
     object_id: &str,
     allow_ap: bool,
 ) -> Result<(), ValidationError> {
-    if object_id.len() > OBJECT_ID_SIZE_MAX {
+    if object_id.chars().count() > OBJECT_ID_LENGTH_MAX {
         return Err(ValidationError("object ID is too long"));
     };
     let parsed_object_id = NonCanonicalUri::parse(object_id)

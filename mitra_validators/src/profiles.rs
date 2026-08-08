@@ -53,7 +53,7 @@ pub fn validate_username(username: &str) -> Result<(), ValidationError> {
     if username.is_empty() {
         return Err(ValidationError("username is empty"));
     };
-    if username.len() > USERNAME_LENGTH_MAX {
+    if username.chars().count() > USERNAME_LENGTH_MAX {
         return Err(ValidationError("username is too long"));
     };
     let username_regexp = Regex::new(USERNAME_RE)
@@ -65,7 +65,7 @@ pub fn validate_username(username: &str) -> Result<(), ValidationError> {
 }
 
 pub fn validate_hostname(hostname: &str) -> Result<(), ValidationError> {
-    if hostname.len() > HOSTNAME_LENGTH_MAX {
+    if hostname.chars().count() > HOSTNAME_LENGTH_MAX {
         return Err(ValidationError("hostname is too long"));
     };
     let normalized_hostname = encode_hostname(hostname)
@@ -185,10 +185,10 @@ pub fn validate_extra_field(field: &ExtraField) -> Result<(), ValidationError> {
     if field.name.trim().is_empty() {
         return Err(ValidationError("field name is empty"));
     };
-    if field.name.len() > FIELD_NAME_LENGTH_MAX {
+    if field.name.chars().count() > FIELD_NAME_LENGTH_MAX {
         return Err(ValidationError("field name is too long"));
     };
-    if field.value.len() > FIELD_VALUE_LENGTH_MAX {
+    if field.value.chars().count() > FIELD_VALUE_LENGTH_MAX {
         return Err(ValidationError("field value is too long"));
     };
     if field.value != clean_extra_field_value(&field.value) {

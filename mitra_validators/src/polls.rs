@@ -14,7 +14,7 @@ pub fn clean_poll_option_name(name: &str) -> String {
 }
 
 fn validate_poll_option_name(option_name: &str) -> Result<(), ValidationError> {
-    if option_name.len() > POLL_OPTION_NAME_LENGTH_MAX {
+    if option_name.chars().count() > POLL_OPTION_NAME_LENGTH_MAX {
         return Err(ValidationError("poll option name is too long"));
     };
     if option_name != clean_poll_option_name(option_name) {
