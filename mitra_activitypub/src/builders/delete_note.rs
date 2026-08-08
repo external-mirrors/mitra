@@ -125,14 +125,16 @@ mod tests {
         constants::AP_PUBLIC,
         core::url::http_uri::HttpUri,
     };
+    use serde_json::json;
+    use uuid::uuid;
     use mitra_models::{
         posts::types::RelatedPosts,
         profiles::types::DbActorProfile,
     };
     use super::*;
 
-    const INSTANCE_URI: &str = "https://example.com";
-    const INSTANCE_HOSTNAME: &str = "example.com";
+    const INSTANCE_URI: &str = "https://social.example";
+    const INSTANCE_HOSTNAME: &str = "social.example";
 
     #[test]
     fn test_build_delete_note() {
@@ -141,6 +143,7 @@ mod tests {
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let author = DbActorProfile::local_for_test("author");
         let post = PostDetailed {
+            id: uuid!("c9386582-c7c3-4e90-8dde-4ab4b1943d96"),
             author,
             related_posts: Some(RelatedPosts::default()),
             ..Default::default()
@@ -151,21 +154,31 @@ mod tests {
             &media_server,
             &post,
         );
-
-        assert_eq!(
-            activity.id,
-            format!("{}/activities/delete/{}", INSTANCE_URI, post.id),
-        );
-        assert_eq!(
-            activity.object.id,
-            format!("{}/objects/{}", INSTANCE_URI, post.id),
-        );
-        assert_eq!(activity.object.object_type, "Tombstone");
-        assert_eq!(activity.object.attributed_to, activity.actor);
-        assert_eq!(activity.to, vec![AP_PUBLIC]);
-        assert_eq!(
-            activity.cc,
-            vec![format!("{INSTANCE_URI}/users/author/followers")],
-        );
+        let activity_value = serde_json::to_value(activity).unwrap();
+        let expected_value = json!({
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+                "https://w3id.org/security/v1",
+                "https://w3id.org/security/data-integrity/v2",
+                {
+                    "Hashtag": "as:Hashtag",
+                    "sensitive": "as:sensitive",
+                    "toot": "http://joinmastodon.org/ns#",
+                    "Emoji": "toot:Emoji"
+                },
+            ],
+            "id": "https://social.example/activities/delete/c9386582-c7c3-4e90-8dde-4ab4b1943d96",
+            "type": "Delete",
+            "actor": "https://social.example/users/author",
+            "object": {
+                "id": "https://social.example/objects/c9386582-c7c3-4e90-8dde-4ab4b1943d96",
+                "type": "Tombstone",
+                "attributedTo": "https://social.example/users/author",
+                "formerType": "Note",
+            },
+            "to": [AP_PUBLIC],
+            "cc": ["https://social.example/users/author/followers"],
+        });
+        assert_eq!(activity_value, expected_value);
     }
 }
