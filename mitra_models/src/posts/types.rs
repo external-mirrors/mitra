@@ -204,8 +204,9 @@ pub struct PostActions {
     pub reposted: bool,
     pub bookmarked: bool,
     pub voted_for: Vec<String>,
-    pub hidden: bool,
+    pub hidden: bool, // post from a muted user
     pub conversation_tracking_status: Option<TrackingStatus>,
+    pub can_moderate_conversation: bool,
 }
 
 #[derive(Clone, Default)]

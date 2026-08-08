@@ -265,6 +265,37 @@ pub(crate) async fn find_tracking_statuses_by_user(
     Ok(statuses)
 }
 
+pub async fn find_moderated_conversations_by_user(
+    db_client: &impl DatabaseClient,
+    account_id: Uuid,
+    posts_ids: &[Uuid],
+) -> Result<Vec<Uuid>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT post.id
+        FROM post
+        WHERE
+            post.id = ANY($3)
+            AND EXISTS(
+                SELECT 1 FROM relationship
+                WHERE
+                    relationship.source_id = $1
+                    AND relationship.target_id = post.group_id
+                    AND relationship.relationship_type = $2
+            )
+        ",
+        &[
+            &account_id,
+            &RelationshipType::GroupAdmin,
+            &posts_ids,
+        ],
+    ).await?;
+    let moderated = rows.iter()
+        .map(|row| row.try_get("id"))
+        .collect::<Result<_, _>>()?;
+    Ok(moderated)
+}
+
 #[cfg(test)]
 mod tests {
     use serial_test::serial;

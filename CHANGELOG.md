@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `emoji list` command.
 - Added `tracking` field to `Status.conversation` object.
 - Added API endpoint for moderating group conversations.
+- Added `can_moderate` field to `Status.conversation` object.
 
 ### Changed
 

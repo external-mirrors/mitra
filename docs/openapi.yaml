@@ -4483,6 +4483,10 @@ components:
             - normal
             - follow
           nullable: true
+        can_moderate:
+          description: Can this user moderate the conversation?
+          type: boolean
+          nullable: true
     Status:
       type: object
       properties:

@@ -117,6 +117,7 @@ pub struct StatusConversation {
 
     // For authenticated users
     tracking: Option<&'static str>,
+    can_moderate: Option<bool>,
 }
 
 // https://docs.joinmastodon.org/entities/Status/
@@ -269,6 +270,8 @@ impl Status {
                 root_id: conversation.root_id,
                 tracking: post.actions.as_ref()
                     .map(|actions| tracking_status_to_str(actions.conversation_tracking_status)),
+                can_moderate: post.actions.as_ref()
+                    .map(|actions| actions.can_moderate_conversation),
             };
             Some(conversation)
         } else {
