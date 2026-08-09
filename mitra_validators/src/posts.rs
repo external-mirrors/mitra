@@ -54,7 +54,10 @@ fn content_allowed_classes() -> Vec<(&'static str, Vec<&'static str>)> {
 }
 
 // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-name
-pub fn clean_title(title: &str) -> String {
+// NOTE: this function is not idempotent because truncation may result
+// in a partial HTML entity at the end of the string
+pub fn clean_remote_title(title: &str) -> String {
+    // Clean HTML because the title will be inserted into content
     let title = clean_html_all(title).trim().to_owned();
     if title.chars().count() <= TITLE_LENGTH_MAX {
         return title;
@@ -275,23 +278,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_clean_title() {
+    fn test_clean_remote_title() {
         let title = "test";
-        let cleaned = clean_title(title);
+        let cleaned = clean_remote_title(title);
         assert_eq!(cleaned, title);
     }
 
     #[test]
-    fn test_clean_title_html_chars() {
+    fn test_clean_remote_title_html_chars() {
         let title = r#"test > "abc" <a>link</a>"#;
-        let cleaned = clean_title(title);
+        let cleaned = clean_remote_title(title);
         assert_eq!(cleaned, r#"test &gt; "abc" link"#);
     }
 
     #[test]
-    fn test_clean_title_truncate() {
+    fn test_clean_remote_title_truncate() {
         let title = "x".repeat(400);
-        let cleaned = clean_title(&title);
+        let cleaned = clean_remote_title(&title);
         assert_eq!(cleaned.chars().count(), TITLE_LENGTH_MAX);
         assert_eq!(
             cleaned,
@@ -300,9 +303,9 @@ mod tests {
     }
 
     #[test]
-    fn test_clean_title_truncate_multibyte() {
+    fn test_clean_remote_title_truncate_multibyte() {
         let title = "文".repeat(400);
-        let cleaned = clean_title(&title);
+        let cleaned = clean_remote_title(&title);
         assert_eq!(cleaned.chars().count(), TITLE_LENGTH_MAX);
         assert_eq!(
             cleaned,

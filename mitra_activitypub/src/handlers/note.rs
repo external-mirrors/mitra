@@ -64,7 +64,7 @@ use mitra_validators::{
     polls::{clean_poll_option_name, validate_poll_data},
     posts::{
         clean_remote_content,
-        clean_title,
+        clean_remote_title,
         validate_content,
         validate_post_create_data,
         validate_post_mentions,
@@ -383,7 +383,7 @@ pub(super) fn get_object_content(
             // NOTE: Mastodon uses 'summary' for content warnings
             // NOTE: 'summary' may contain HTML
             .or(object.summary.as_ref())
-            .map(|title| clean_title(title))
+            .map(|title| clean_remote_title(title))
             .filter(|title| !title.is_empty())
     } else {
         None
