@@ -56,7 +56,7 @@ fn content_allowed_classes() -> Vec<(&'static str, Vec<&'static str>)> {
 // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-name
 pub fn clean_title(title: &str) -> String {
     let title = clean_html_all(title).trim().to_owned();
-    if title.len() <= TITLE_LENGTH_MAX {
+    if title.chars().count() <= TITLE_LENGTH_MAX {
         return title;
     };
     let title_truncated: String = title.chars()
@@ -66,7 +66,7 @@ pub fn clean_title(title: &str) -> String {
 }
 
 fn validate_title(title: &str) -> Result<(), ValidationError> {
-    if title.len() > TITLE_LENGTH_MAX {
+    if title.chars().count() > TITLE_LENGTH_MAX {
         return Err(ValidationError("title is too long"));
     };
     Ok(())
@@ -292,10 +292,21 @@ mod tests {
     fn test_clean_title_truncate() {
         let title = "x".repeat(400);
         let cleaned = clean_title(&title);
-        assert_eq!(cleaned.len(), TITLE_LENGTH_MAX);
+        assert_eq!(cleaned.chars().count(), TITLE_LENGTH_MAX);
         assert_eq!(
             cleaned,
             format!("{}...", "x".repeat(297)),
+        );
+    }
+
+    #[test]
+    fn test_clean_title_truncate_multibyte() {
+        let title = "文".repeat(400);
+        let cleaned = clean_title(&title);
+        assert_eq!(cleaned.chars().count(), TITLE_LENGTH_MAX);
+        assert_eq!(
+            cleaned,
+            format!("{}...", "文".repeat(297)),
         );
     }
 

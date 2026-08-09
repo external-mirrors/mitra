@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Fixed "local object" error during processing of a post addressed to a local group.
+- Fixed incorrect validation of titles with multibyte characters.
 
 ## [5.8.0] - 2026-07-31
 
