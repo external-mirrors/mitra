@@ -3350,7 +3350,6 @@ components:
         display_name:
           description: The profile’s display name (plain text).
           type: string
-          nullable: true
         note:
           description: The profile’s bio or description (HTML).
           type: string

@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add "type" column to `account list` command output.
 - Hide system accounts from profile directory.
 - Delete post instead of its announcement when receiving `Announce(Delete)` activity.
+- Set `Status.display_name` to an empty string if display name is not known.
 
 ### Deprecated
 
