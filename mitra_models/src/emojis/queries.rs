@@ -218,17 +218,18 @@ pub async fn get_local_emojis_by_names(
     Ok(emojis)
 }
 
-pub async fn get_local_emojis(
+pub async fn get_emojis(
     db_client: &impl DatabaseClient,
+    hostname: Option<&str>,
 ) -> Result<Vec<CustomEmoji>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT emoji
         FROM emoji
-        WHERE hostname IS NULL
+        WHERE hostname IS NOT DISTINCT FROM $1
         ORDER BY emoji_name
         ",
-        &[],
+        &[&hostname],
     ).await?;
     let emojis = rows.iter()
         .map(|row| row.try_get("emoji"))
@@ -472,5 +473,21 @@ mod tests {
         delete_emoji(db_client, emoji.id).await.unwrap();
         let profile = get_profile_by_id(db_client, profile.id).await.unwrap();
         assert_eq!(profile.emojis.into_inner().len(), 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_emojis() {
+        let db_client = &mut create_test_database().await;
+        let image = MediaInfo::png_for_test();
+        let (emoji, _) = create_or_update_local_emoji(
+            db_client,
+            "test",
+            image,
+            None,
+        ).await.unwrap();
+        let emojis = get_emojis(db_client, None).await.unwrap();
+        assert_eq!(emojis.len(), 1);
+        assert_eq!(emojis[0].id, emoji.id);
     }
 }

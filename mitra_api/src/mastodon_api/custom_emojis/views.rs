@@ -9,7 +9,7 @@ use actix_web::{
 use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
-    emojis::queries::get_local_emojis,
+    emojis::queries::get_emojis,
 };
 
 use crate::http::get_request_base_url;
@@ -19,7 +19,7 @@ use crate::mastodon_api::{
 };
 use super::types::CustomEmoji;
 
-/// https://docs.joinmastodon.org/methods/custom_emojis/
+// https://docs.joinmastodon.org/methods/custom_emojis/
 #[get("")]
 async fn custom_emoji_list(
     config: web::Data<Config>,
@@ -29,7 +29,8 @@ async fn custom_emoji_list(
     let db_client = &**get_database_client(&db_pool).await?;
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let emojis: Vec<CustomEmoji> = get_local_emojis(db_client).await?
+    // Only local emojis
+    let emojis: Vec<CustomEmoji> = get_emojis(db_client, None).await?
         .into_iter()
         .map(|db_emoji| CustomEmoji::from_db(&media_server, db_emoji))
         .collect();
