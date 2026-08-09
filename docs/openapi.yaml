@@ -4458,6 +4458,13 @@ components:
           description: The ID of the conversation's root post.
           type: string
           format: uuid
+        tracking:
+          description: The conversation tracking status (only for authenticated users).
+          type: string
+          enum:
+            - normal
+            - follow
+          nullable: true
     Status:
       type: object
       properties:
@@ -4595,12 +4602,6 @@ components:
           description: Have you bookmarked this post?
           type: boolean
           example: false
-        conversation_tracking:
-          description: The conversation tracking status.
-          type: string
-          enum:
-            - normal
-            - follow
         hidden:
           description: Is this post hidden? A linked (quoted) post can be hidden if its author is muted.
           type: boolean

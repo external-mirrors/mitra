@@ -112,8 +112,11 @@ fn tracking_status_to_str(tracking_mode: Option<TrackingStatus>) -> &'static str
 
 #[derive(Serialize)]
 pub struct StatusConversation {
-    pub id: Uuid,
-    pub root_id: Uuid,
+    id: Uuid,
+    root_id: Uuid,
+
+    // For authenticated users
+    tracking: Option<&'static str>,
 }
 
 // https://docs.joinmastodon.org/entities/Status/
@@ -146,7 +149,7 @@ pub struct Status {
     tags: Vec<Tag>,
     emojis: Vec<CustomEmoji>,
 
-    // Authorized user attributes
+    // Authenticated user attributes
     pub favourited: bool,
     pub reblogged: bool,
     bookmarked: bool,
@@ -160,9 +163,9 @@ pub struct Status {
     pub ipfs_cid: Option<String>,
     links: Vec<Status>,
     group: Option<Account>,
-    pub conversation: Option<StatusConversation>,
+    conversation: Option<StatusConversation>,
 
-    // Custom fields: authorized user
+    // Custom fields: authenticated user
     conversation_tracking: Option<&'static str>,
 }
 
@@ -260,12 +263,17 @@ impl Status {
             )
         });
         let visibility = visibility_to_str(post.visibility);
-        let conversation = post.conversation.as_ref().map(|conversation| {
-            StatusConversation {
+        let maybe_conversation = if let Some(conversation) = post.conversation {
+            let conversation = StatusConversation {
                 id: conversation.id,
                 root_id: conversation.root_id,
-            }
-        });
+                tracking: post.actions.as_ref()
+                    .map(|actions| tracking_status_to_str(actions.conversation_tracking_status)),
+            };
+            Some(conversation)
+        } else {
+            None
+        };
         let mut emoji_reactions = vec![];
         let mut favourites_count = 0;
         for reaction in post.reactions {
@@ -341,7 +349,7 @@ impl Status {
             ipfs_cid: post.ipfs_cid,
             links: links,
             group: maybe_group,
-            conversation,
+            conversation: maybe_conversation,
         }
     }
 }

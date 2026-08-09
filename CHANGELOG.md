@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Send `moderation_warning` notification when post is deleted by admin.
 - Send `moderation_warning` notification when post is deleted by group moderator.
 - Added `emoji list` command.
+- Added `tracking` field to `Status.conversation` object.
 
 ### Changed
 
@@ -31,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Deprecated
 
 - Deprecated `load-replies` command.
+- Deprecated `Status.conversation_tracking` field.
 
 ### Fixed
 
