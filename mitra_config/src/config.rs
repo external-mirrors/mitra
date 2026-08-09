@@ -42,6 +42,7 @@ const fn default_web_client_rewrite_index() -> bool { true }
 const fn default_media_proxy_enabled() -> bool { true }
 
 const fn default_instance_staff_public() -> bool { true }
+const fn default_profile_access_limited() -> bool { false }
 
 #[derive(Clone, Deserialize)]
 pub struct Config {
@@ -100,6 +101,8 @@ pub struct Config {
     pub instance_staff_public: bool,
     #[serde(default)]
     pub instance_timeline_public: bool,
+    #[serde(default = "default_profile_access_limited")]
+    pub profile_access_limited: bool,
 
     #[serde(default)]
     pub registration: RegistrationConfig,

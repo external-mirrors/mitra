@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `invoice`, `monero`, `post`, `prune` and `user` command groups.
 - Added `status` alias for `instance-report` command.
 - Added `/api/v1/groups/{group_id}/followers` API endpoint.
+- Added configuration option for limiting access to public content.
 
 ### Changed
 

@@ -657,12 +657,21 @@ async fn get_relationships_view(
 // https://docs.joinmastodon.org/methods/accounts/#lookup
 #[get("/lookup")]
 async fn lookup_acct(
+    maybe_auth: Option<BearerAuth>,
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     query_params: web::Query<LookupAcctQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
+    match maybe_auth {
+        Some(auth) => {
+            get_current_user(db_client, auth.token()).await?;
+        },
+        None if config.profile_access_limited =>
+            return Err(MastodonError::PermissionError),
+        None => (),
+    };
     let local_hostname = config.instance().webfinger_hostname();
     let address =  if query_params.acct.contains('@') {
         query_params.acct.clone()
@@ -701,6 +710,8 @@ async fn search_by_acct(
                 auth.token(),
             ).await?;
         },
+        None if config.profile_access_limited =>
+            return Err(MastodonError::PermissionError),
         None => {
             if query_params.resolve {
                 // Webfinger queries from unauthenticated users
@@ -780,12 +791,21 @@ async fn generate_identicon_view(
 
 #[get("/{account_id}")]
 async fn get_account(
+    maybe_auth: Option<BearerAuth>,
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     account_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
+    match maybe_auth {
+        Some(auth) => {
+            get_current_user(db_client, auth.token()).await?;
+        },
+        None if config.profile_access_limited =>
+            return Err(MastodonError::PermissionError),
+        None => (),
+    };
     let profile = get_profile_by_id(db_client, *account_id).await?;
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());
@@ -973,6 +993,8 @@ async fn get_account_statuses(
     let db_client = &**get_database_client(&db_pool).await?;
     let maybe_current_user = match auth {
         Some(auth) => Some(get_current_user(db_client, auth.token()).await?),
+        None if config.profile_access_limited =>
+            return Err(MastodonError::PermissionError),
         None => None,
     };
     let profile = get_profile_by_id(db_client, *account_id).await?;

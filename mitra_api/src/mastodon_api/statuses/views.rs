@@ -669,6 +669,8 @@ async fn get_context(
     let db_client = &**get_database_client(&db_pool).await?;
     let maybe_current_user = match auth {
         Some(auth) => Some(get_current_user(db_client, auth.token()).await?),
+        None if config.profile_access_limited =>
+            return Err(MastodonError::PermissionError),
         None => None,
     };
     let posts = get_thread(
@@ -715,6 +717,8 @@ async fn get_thread_view(
     let db_client = &**get_database_client(&db_pool).await?;
     let maybe_current_user = match auth {
         Some(auth) => Some(get_current_user(db_client, auth.token()).await?),
+        None if config.profile_access_limited =>
+            return Err(MastodonError::PermissionError),
         None => None,
     };
     let posts = get_thread(
