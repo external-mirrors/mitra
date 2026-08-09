@@ -87,6 +87,7 @@ pub fn clean_local_content(
     content_trimmed.to_string()
 }
 
+// NOTE: this function is not idempotent on some inputs
 pub fn clean_remote_content(content: &str) -> String {
     clean_html(content, content_allowed_classes())
 }
@@ -348,6 +349,14 @@ mod tests {
         let content = "test ";
         let cleaned = clean_local_content(content);
         assert_eq!(cleaned, "test");
+    }
+
+    #[test]
+    fn test_clean_remote_content_idempotency() {
+        let content = "<h4><hh4><h3>";
+        let cleaned_1 = clean_remote_content(content);
+        let cleaned_2 = clean_remote_content(&cleaned_1);
+        assert_ne!(cleaned_1, cleaned_2);
     }
 
     #[test]
