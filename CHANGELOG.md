@@ -24,6 +24,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Hide system accounts from profile directory.
 - Delete post instead of its announcement when receiving `Announce(Delete)` activity.
 - Set `Status.display_name` to an empty string if display name is not known.
+- Show `create-system-account` command in CLI help.
+- Add "account type" argument to `create-system-account` command.
 
 ### Deprecated
 

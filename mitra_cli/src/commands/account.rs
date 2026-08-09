@@ -11,6 +11,7 @@ use apx_sdk::core::{
 use clap::{
     Parser,
     Subcommand,
+    ValueEnum,
 };
 
 use mitra_activitypub::adapters::users::create_or_update_local_actor;
@@ -93,9 +94,16 @@ impl CreateAccount {
     }
 }
 
+#[derive(Clone, ValueEnum)]
+enum SystemAccountType {
+    Anonymous,
+}
+
 /// Create system account
 #[derive(Parser)]
-pub struct CreateSystemAccount;
+pub struct CreateSystemAccount {
+    account_type: SystemAccountType,
+}
 
 impl CreateSystemAccount {
     pub async fn execute(
@@ -105,11 +113,15 @@ impl CreateSystemAccount {
     ) -> Result<(), Error> {
         let db_client = &mut **get_database_client(db_pool).await?;
         let instance = config.instance();
-        create_anonymous_account(
-            db_client,
-            instance.rsa_secret_key,
-            instance.ed25519_secret_key,
-        ).await?;
+        match self.account_type {
+            SystemAccountType::Anonymous => {
+                create_anonymous_account(
+                    db_client,
+                    instance.rsa_secret_key,
+                    instance.ed25519_secret_key,
+                ).await?;
+            },
+        };
         println!("account created");
         Ok(())
     }

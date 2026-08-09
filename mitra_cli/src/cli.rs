@@ -106,7 +106,6 @@ pub enum Command {
     ListInviteCodes(ListInviteCodes),
     #[command(visible_alias = "create-user")]
     CreateAccount(CreateAccount),
-    #[command(hide = true)]
     CreateSystemAccount(CreateSystemAccount),
     #[command(visible_alias = "list-users")]
     ListAccounts(ListAccounts),

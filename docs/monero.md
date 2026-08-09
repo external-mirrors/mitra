@@ -53,7 +53,13 @@ blockchains:
     lightwallet_api_url: 'http://127.0.0.1:18443'
 ```
 
-This monitoring method supports anonymous payments. A notification is generated when a payment is sent to the primary wallet address.
+This monitoring method supports anonymous payments. To enable this feature, create a special anonymous account:
+
+```shell
+mitra create-system-account anonymous
+```
+
+When anonymous payments are enabled, a notification is generated when a payment is sent to the primary wallet address.
 
 ## Sign-in with Monero wallet
 
