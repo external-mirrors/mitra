@@ -7,6 +7,7 @@ pub mod filter_rules;
 pub mod groups;
 pub mod invoices;
 pub mod media;
+pub mod moderation_actions;
 pub mod oauth;
 pub mod polls;
 pub mod posts;

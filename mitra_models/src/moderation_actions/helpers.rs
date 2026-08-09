@@ -17,6 +17,7 @@ pub async fn on_local_post_deleted(
     db_client: &impl DatabaseClient,
     moderator_id: Uuid,
     author_id: Uuid,
+    reason: Option<String>,
 ) -> Result<(), DatabaseError> {
     // Author must be a local actor
     let action = create_moderation_action(
@@ -24,7 +25,7 @@ pub async fn on_local_post_deleted(
         moderator_id,
         author_id,
         ModerationActionType::PostDeleted,
-        None, // no reason
+        reason,
     ).await?;
     create_moderation_warning_notification(
         db_client,

@@ -46,6 +46,7 @@ async fn delete_post_view(
             db_client,
             current_user.id,
             post.author.id,
+            None,
         ).await?;
     } else {
         let deletion_queue = delete_post(db_client, post.id).await?;

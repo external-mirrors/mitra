@@ -8,6 +8,7 @@ use mitra_models::{
         DatabaseConnectionPool,
         DatabaseError,
     },
+    moderation_actions::helpers::on_local_post_deleted,
     posts::queries::delete_post,
     profiles::queries::{
         delete_profile,
@@ -18,7 +19,10 @@ use mitra_models::{
         types::RelationshipType,
     },
 };
-use mitra_validators::errors::ValidationError;
+use mitra_validators::{
+    errors::ValidationError,
+    moderation_actions::validate_action_reason,
+};
 
 use crate::{
     authority::Authority,
@@ -38,6 +42,7 @@ struct Delete {
     actor: String,
     #[serde(deserialize_with = "deserialize_into_object_id")]
     object: String,
+    summary: Option<String>,
 }
 
 enum PermissionType {
@@ -105,10 +110,21 @@ pub async fn handle_delete(
             None
         }
     };
-    maybe_permission
+    let permission = maybe_permission
         .ok_or(ValidationError("actor doesn't have permission to delete object"))?;
     let deletion_queue = delete_post(db_client, post.id).await?;
     deletion_queue.into_job(db_client).await?;
+    if post.is_local() && matches!(permission, PermissionType::GroupModerator) {
+        // Deleted by moderator
+        let maybe_reason = delete.summary
+            .filter(|summary| validate_action_reason(summary).is_ok());
+        on_local_post_deleted(
+            db_client,
+            actor_profile.id,
+            post.author.id,
+            maybe_reason,
+        ).await?;
+    };
     sync_conversation(
         db_client,
         &ap_client.instance,

@@ -266,6 +266,7 @@ The `Remove` activity is used to notify subscribers about expired subscriptions.
 | Poll options (number of `anyOf`/`oneOf` in a `Question`)      | 20          | Poll will be removed from the post |
 | Profile display name                                          | 200 chars   | Display name will be truncated     |
 | Profile bio                                                   | 10000 chars | Text will be truncated             |
+| Moderation action description                                 | 1000 chars  | Description will be ignored        |
 
 ## Mitra Web client
 

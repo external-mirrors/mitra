@@ -3511,7 +3511,7 @@ components:
           enum:
             - delete_statuses
         text:
-          description: Message from the moderator to the target account.
+          description: Message from the moderator to the target account (plain text).
           type: string
         created_at:
           type: string
