@@ -16,8 +16,7 @@ use mitra_utils::id::generate_ulid;
 use crate::{
     authority::Authority,
     contexts::{build_default_context, Context},
-    deliverer::Recipient,
-    forwarder::get_activity_recipients,
+    forwarder::Deliverable,
     identifiers::{
         local_activity_id_canonical,
         local_actor_id_canonical,
@@ -74,6 +73,11 @@ fn build_group_announce(
     }
 }
 
+impl Deliverable for GroupAnnounce {
+    fn to(&self) -> &[NonCanonicalUri] { &self.to }
+    fn cc(&self) -> &[NonCanonicalUri] { &self.cc }
+}
+
 pub async fn prepare_group_announce(
     db_client: &impl DatabaseClient,
     instance: &Instance,
@@ -86,21 +90,7 @@ pub async fn prepare_group_announce(
         &sender.profile,
         group_activity,
     );
-    let audience: Vec<_> = group_announce
-        .to
-        .iter()
-        .chain(&group_announce.cc)
-        .map(|id| id.clone().into_canonical())
-        .collect();
-    let recipients = get_activity_recipients(
-        db_client,
-        &audience,
-    ).await?;
-    let recipients = recipients
-        .into_iter()
-        .filter_map(|profile| profile.actor_json)
-        .flat_map(|actor_data| Recipient::for_inbox(&actor_data))
-        .collect();
+    let recipients = group_announce.get_recipients(db_client).await?;
     Ok(OutgoingActivityJobData::new(
         &authority,
         sender,

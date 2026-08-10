@@ -67,7 +67,7 @@ use mitra_activitypub::{
         verify_permissions,
         verify_public_keys,
     },
-    forwarder::get_activity_recipients,
+    forwarder::get_activity_audience_actors,
     handlers::activity::{
         get_activity_audience,
         handle_activity_c2s,
@@ -824,7 +824,7 @@ pub async fn activity_view(
             &request,
             &request_full_uri,
         ).await?;
-        let recipients = get_activity_recipients(
+        let recipients = get_activity_audience_actors(
             db_client_await!(&db_pool),
             &audience,
         ).await?;

@@ -28,7 +28,7 @@ use mitra_activitypub::{
         like::build_like,
     },
     deliverer::{Recipient, Sender},
-    forwarder::get_activity_recipients,
+    forwarder::get_activity_audience_actors,
     handlers::activity::get_activity_audience,
     identifiers::canonicalize_id,
     importers::{
@@ -456,7 +456,7 @@ impl SendActivity {
             ).await?
         } else {
             let audience = get_activity_audience(&activity, None)?;
-            let recipients = get_activity_recipients(
+            let recipients = get_activity_audience_actors(
                 db_client_await!(db_pool),
                 &audience,
             ).await?;

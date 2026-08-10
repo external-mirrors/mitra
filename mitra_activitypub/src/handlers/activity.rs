@@ -30,7 +30,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     forwarder::{
-        get_activity_recipients,
+        get_activity_audience_actors,
         EndpointType,
     },
     identifiers::canonicalize_id,
@@ -241,7 +241,7 @@ pub async fn handle_activity(
             &activity_clone,
         ).await?;
         // Remote recipients
-        let recipients = get_activity_recipients(
+        let recipients = get_activity_audience_actors(
             db_client,
             &audience,
         ).await?;
