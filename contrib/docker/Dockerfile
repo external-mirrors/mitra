@@ -25,6 +25,7 @@ RUN export version=$(mitra --version | cut -d ' ' -f 2) && \
 RUN tar --strip-components=1 -xvf /tmp/mitra-web.tar.gz mitra-web
 RUN npm install --no-save
 RUN npx allow-scripts
+ENV VITE_BACKEND_URL=
 RUN npm run build
 
 FROM base AS prod
