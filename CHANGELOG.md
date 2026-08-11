@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [5.9.0] - 2026-08-11
+
 ### Added
 
 - Add description to OAuth authorization code page.
