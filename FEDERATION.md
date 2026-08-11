@@ -48,7 +48,7 @@ It also supports the following standards:
 - [FEP-044f: Consent-respecting quote posts](https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md)
   - "Consent-respecting" quotes are processed in the same way as regular quotes.
 - [FEP-5219: Groups and permissions](https://codeberg.org/fediverse/fep/src/branch/main/fep/5219/fep-5219.md)
-  - Groups publish the `affiliations` collection.
+  - Groups publish and read the `affiliations` collection.
 - [FEP-0806: Simple client-side encryption](https://codeberg.org/silverpill/feps/src/branch/main/0806/fep-0806.md)
   - Can relay `EncryptedActivity` activities.
 

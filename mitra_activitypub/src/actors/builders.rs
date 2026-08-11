@@ -35,6 +35,7 @@ use crate::{
     identifiers::{
         local_actor_id,
         local_actor_id_canonical,
+        local_administrators_collection_path,
         local_affiliations_collection_path,
         local_instance_actor_id,
         LocalActorCollection,
@@ -155,6 +156,8 @@ pub struct Actor {
     featured: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     affiliations: Option<NonCanonicalUri>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    attributed_to: Option<NonCanonicalUri>,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
     assertion_method: Vec<Multikey>,
@@ -244,11 +247,16 @@ pub fn build_local_actor(
     let actor_id = id_builder.build_string_unchecked(&actor_data.id);
     // TODO: add to actor data?
     let following = LocalActorCollection::Following.of(&actor_data.id);
-    let maybe_affiliations = account
-        .profile()
-        .is_group()
-        .then_some(local_affiliations_collection_path(account.id()))
-        .map(|path| authority.build_id_from_path(path));
+    let (maybe_affiliations, maybe_administrators) = if account.profile().is_group() {
+        let affiliations_path = local_affiliations_collection_path(account.id());
+        let administrators_path = local_administrators_collection_path(account.id());
+        (
+            Some(authority.build_id_from_path(affiliations_path)),
+            Some(authority.build_id_from_path(administrators_path)),
+        )
+    } else {
+        (None, None)
+    };
 
     let public_key_pem =
         PublicKeyPem::new_local(&actor_id, account.rsa_secret_key())?;
@@ -350,6 +358,7 @@ pub fn build_local_actor(
             .as_ref()
             .map(|uri| id_builder.build_string_unchecked(uri)),
         affiliations: maybe_affiliations,
+        attributed_to: maybe_administrators,
         assertion_method: verification_methods,
         public_key: public_key_pem,
         implements: vec![],
@@ -396,6 +405,7 @@ pub fn build_instance_actor(
         subscribers: None,
         featured: None,
         affiliations: None,
+        attributed_to: None,
         assertion_method: verification_methods,
         public_key: public_key_pem,
         implements: Application::new().implements,
@@ -539,6 +549,13 @@ mod tests {
             actor.affiliations.unwrap().to_string(),
             format!(
                 "https://server.example/ap/actors/{}/affiliations",
+                account.id,
+            ),
+        );
+        assert_eq!(
+            actor.attributed_to.unwrap().to_string(),
+            format!(
+                "https://server.example/ap/actors/{}/administrators",
                 account.id,
             ),
         );

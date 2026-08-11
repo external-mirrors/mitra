@@ -78,10 +78,13 @@ use mitra_activitypub::{
         expect_compatible_actor_id,
         local_actor_id,
         local_actor_id_canonical,
+        local_administrators_collection_path,
         local_affiliations_collection_path,
         local_conversation_collection,
         local_object_id,
         local_object_replies,
+        profile_actor_id,
+        IdBuilder,
         LocalActorCollection,
     },
     importers::{
@@ -138,6 +141,7 @@ use mitra_models::{
         queries::get_remote_profile_by_actor_id,
         types::PaymentOption,
     },
+    relationships::types::RelationshipType,
 };
 use mitra_services::media::{MediaServer, MediaStorage};
 use mitra_utils::files::APPLICATION_OCTET_STREAM;
@@ -583,9 +587,48 @@ async fn affiliations_view(
     Ok(response)
 }
 
+#[get("/actors/{account_id}/administrators")]
+async fn administrators_view(
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    account_id: web::Path<Uuid>,
+) -> Result<HttpResponse, HttpError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let group = get_group_account_by_id(db_client, *account_id).await?;
+    let related_profiles = get_affiliated_profiles(db_client, group.id).await?;
+    let authority = Authority::from(&config.instance());
+    let administrators = related_profiles
+        .into_iter()
+        .filter(|related| related.relationship_type == RelationshipType::GroupAdmin)
+        .map(|related| {
+            let canonical_actor_id = profile_actor_id(&authority, &related.profile);
+            let actor_id = IdBuilder::for_profile(&authority, &related.profile)
+                .build_unchecked(&canonical_actor_id);
+            serde_json::to_value(actor_id)
+                .expect("string should be serializable")
+        })
+        .collect();
+    let id_builder = authority.id_builder();
+    let actor_id = id_builder.build(&local_actor_id_canonical(
+        authority.root(),
+        group.id,
+        &group.profile.username,
+    ));
+    let collection_id = authority
+        .build_id_from_path(local_administrators_collection_path(group.id));
+    let collection = OrderedCollection
+        ::new_with_items(collection_id.to_string(), administrators)
+        .with_attributed_to(&actor_id.to_string());
+    let response = HttpResponse::Ok()
+        .content_type(AP_MEDIA_TYPE)
+        .json(collection);
+    Ok(response)
+}
+
 pub fn activitypub_scope() -> Scope {
     web::scope("/ap")
         .service(affiliations_view)
+        .service(administrators_view)
 }
 
 #[get("")]
