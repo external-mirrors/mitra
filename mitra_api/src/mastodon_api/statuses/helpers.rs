@@ -125,7 +125,8 @@ pub async fn parse_content(
                 .map_err(|_| ValidationError("invalid markdown"))?;
             (content_html, Some(content.to_owned()))
         },
-        _ => return Err(ValidationError("unsupported content type").into()),
+        // Some Pleroma clients use text/plain by default
+        _ => return Err(ValidationError("unsupported post format").into()),
     };
     let mut output = parse_microsyntaxes(
         db_client,
