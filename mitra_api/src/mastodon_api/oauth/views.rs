@@ -179,6 +179,7 @@ async fn token_view(
         };
         Some(oauth_app)
     } else {
+        log::warn!("client ID is not provided");
         None
     };
     let user = match request_data.grant_type.as_str() {
