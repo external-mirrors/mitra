@@ -42,7 +42,10 @@ use mitra_services::{
     monero::caip122::verify_monero_caip122_signature,
 };
 use mitra_utils::passwords::verify_password;
-use mitra_validators::errors::ValidationError;
+use mitra_validators::{
+    errors::ValidationError,
+    oauth::clean_scopes,
+};
 
 use crate::{
     http::{
@@ -110,6 +113,11 @@ async fn authorize_view(
     if oauth_app.redirect_uri != query_params.redirect_uri {
         return Err(ValidationError("invalid redirect_uri parameter").into());
     };
+    let (supported_scopes, unsupported_scopes) =
+        clean_scopes(&query_params.scope.replace('+', " "));
+    if !unsupported_scopes.is_empty() {
+        log::warn!("unsupported scopes: {:?}", unsupported_scopes);
+    };
 
     let authorization_code = generate_oauth_token();
     let created_at = Utc::now();
@@ -119,10 +127,11 @@ async fn authorize_view(
         &authorization_code,
         user.id,
         oauth_app.id,
-        &query_params.scope.replace('+', " "),
+        &supported_scopes.join(" "),
         created_at,
         expires_at,
     ).await?;
+    log::info!("created authorization code with scopes: {:?}", supported_scopes);
 
     let response = if oauth_app.redirect_uri == "urn:ietf:wg:oauth:2.0:oob" {
         let (page, nonce) = render_authorization_code_page(authorization_code);
@@ -181,6 +190,11 @@ async fn token_view(
     } else {
         log::warn!("client ID is not provided");
         None
+    };
+    let scopes = request_data.scope.unwrap_or_default();
+    let (supported_scopes, unsupported_scopes) = clean_scopes(&scopes);
+    if !unsupported_scopes.is_empty() {
+        log::warn!("unsupported scopes: {:?}", unsupported_scopes);
     };
     let user = match request_data.grant_type.as_str() {
         "authorization_code" => {
@@ -266,6 +280,9 @@ async fn token_view(
         _ => {
             return Err(ValidationError("unsupported grant type").into());
         },
+    };
+    if request_data.grant_type != "authorization_code" {
+        log::info!("requested token with scopes: {:?}", supported_scopes);
     };
     let access_token = generate_oauth_token();
     let created_at = Utc::now();

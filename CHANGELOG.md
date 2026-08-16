@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Validate item ID when updating marker.
 - Changed default value for `exclude_replies` parameter to `false`.
 - Write warning to log if client ID is not provided with OAuth token request.
+- Write warning to log if unsupported OAuth scopes are requested.
 
 ### Fixed
 

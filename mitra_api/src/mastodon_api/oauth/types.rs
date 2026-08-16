@@ -29,6 +29,9 @@ pub struct TokenRequest {
     pub client_id: Option<Uuid>,
     pub client_secret: Option<String>,
 
+    // May be provided when grant type is "client_credentials"
+    pub scope: Option<String>,
+
     // Required only with "password" grant type
     pub username: Option<String>,
     pub password: Option<String>,
@@ -48,6 +51,9 @@ pub struct TokenRequestMultipartForm {
     client_id: Option<Text<Uuid>>,
     client_secret: Option<Text<String>>,
 
+    // May be provided when grant type is "client_credentials"
+    scope: Option<Text<String>>,
+
     // Required only with "password" grant type
     username: Option<Text<String>>,
     password: Option<Text<String>>,
@@ -61,6 +67,7 @@ impl From<TokenRequestMultipartForm> for TokenRequest {
             redirect_uri: form.redirect_uri.map(|value| value.into_inner()),
             client_id: form.client_id.map(|value| value.into_inner()),
             client_secret: form.client_secret.map(|value| value.into_inner()),
+            scope: form.scope.map(|value| value.into_inner()),
             username: form.username.map(|value| value.into_inner()),
             password: form.password.map(|value| value.into_inner()),
             message: None,
