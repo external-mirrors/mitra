@@ -1744,6 +1744,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotificationPolicy'
+  /api/v1/pleroma/notifications/read:
+    post:
+      summary: Mark notifications as read.
+      security:
+        - tokenAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                max_id:
+                  description: Read all notifications up to this ID.
+                  type: integer
+      responses:
+        200:
+          description: Successful operation.
   /api/v1/polls/{poll_id}/votes:
     post:
       summary: Vote on a poll attached to a post.
@@ -4302,6 +4319,13 @@ components:
           description: The timestamp of the notification.
           type: string
           format: date-time
+        pleroma:
+          type: object
+          properties:
+            is_seen:
+              description: Has the user read the notification?
+              type: boolean
+              example: false
     NotificationPolicy:
       type: object
       properties:

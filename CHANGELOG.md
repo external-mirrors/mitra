@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `/api/v1/pleroma/notifications/read` API endpoint.
+- Added `pleroma.is_seen` field to `Notification` API entity.
+
 ### Changed
 
 - Require authentication when accessing `/api/v1/groups/{group_id}/members`.

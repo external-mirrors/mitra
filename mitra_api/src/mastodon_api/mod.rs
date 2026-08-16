@@ -160,6 +160,7 @@ pub fn mastodon_api_scope(
         .service(mutes::views::mute_api_scope())
         .service(notifications::views::notification_api_v1_scope())
         .service(notifications::views::notification_api_v2_scope())
+        .service(notifications::views::notification_api_pleroma_v1_scope())
         .service(polls::views::poll_api_scope())
         .service(preferences::views::preferences_api_scope())
         .service(reactions::views::reaction_api_scope())

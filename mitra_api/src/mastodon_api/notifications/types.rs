@@ -71,6 +71,11 @@ pub struct EmojiReaction {
     emoji: Option<CustomEmoji>,
 }
 
+#[derive(Serialize)]
+pub struct PleromaNotification {
+    pub is_seen: bool,
+}
+
 // https://docs.joinmastodon.org/entities/Notification/
 #[derive(Serialize)]
 pub struct Notification {
@@ -78,22 +83,23 @@ pub struct Notification {
 
     #[serde(rename = "type")]
     event_type: String,
-    subtype: Option<String>,
 
     account: Account,
     status: Option<Status>,
     moderation_warning: Option<AccountWarning>,
 
-    // Additional fields
-    reaction: Option<EmojiReaction>,
+    #[serde(serialize_with = "serialize_datetime")]
+    created_at: DateTime<Utc>,
+
     // Pleroma compatibility
     emoji: Option<String>,
     emoji_url: Option<String>,
+    pub pleroma: PleromaNotification,
 
+    // Custom fields
+    subtype: Option<String>,
+    reaction: Option<EmojiReaction>,
     payment_amount: Option<i64>,
-
-    #[serde(serialize_with = "serialize_datetime")]
-    created_at: DateTime<Utc>,
 }
 
 impl Notification {
@@ -101,6 +107,7 @@ impl Notification {
         authority: &Authority,
         media_server: &ClientMediaServer,
         notification: DbNotificationDetailed,
+        maybe_marker: Option<i32>,
     ) -> Self {
         let account = Account::from_profile(
             authority,
@@ -162,6 +169,11 @@ impl Notification {
             emoji_url: maybe_emoji_url,
             payment_amount: notification.payment_amount,
             created_at: notification.created_at,
+            pleroma: PleromaNotification {
+                is_seen: maybe_marker
+                    .map(|marker| notification.id <= marker)
+                    .unwrap_or(false),
+            },
         }
     }
 }
@@ -206,4 +218,9 @@ impl NotificationPolicy {
             },
         }
     }
+}
+
+#[derive(Deserialize)]
+pub struct ReadNotificationsForm {
+    pub max_id: i32,
 }
