@@ -127,7 +127,7 @@ async fn authorize_view(
         &authorization_code,
         user.id,
         oauth_app.id,
-        &supported_scopes.join(" "),
+        &supported_scopes,
         created_at,
         expires_at,
     ).await?;
@@ -196,7 +196,7 @@ async fn token_view(
     if !unsupported_scopes.is_empty() {
         log::warn!("unsupported scopes: {:?}", unsupported_scopes);
     };
-    let user = match request_data.grant_type.as_str() {
+    let (user, scopes) = match request_data.grant_type.as_str() {
         "authorization_code" => {
             // https://www.rfc-editor.org/rfc/rfc6749#section-4.1.3
             let authorization_code = request_data.code.as_ref()
@@ -226,7 +226,7 @@ async fn token_view(
             if !password_correct {
                 return Err(ValidationError("incorrect password").into());
             };
-            user
+            (user, supported_scopes)
         },
         "eip4361" => {
             let message = request_data.message.as_ref()
@@ -246,10 +246,11 @@ async fn token_view(
             ).await? {
                 return Err(ValidationError("nonce can't be reused").into());
             };
-            get_user_by_login_address(
+            let user = get_user_by_login_address(
                 db_client,
                 &session_data.account_id,
-            ).await?
+            ).await?;
+            (user, supported_scopes)
         },
         "caip122_monero" => {
             let message = request_data.message.as_ref()
@@ -272,18 +273,17 @@ async fn token_view(
             ).await? {
                 return Err(ValidationError("nonce can't be reused").into());
             };
-            get_user_by_login_address(
+            let user = get_user_by_login_address(
                 db_client,
                 &session_data.account_id,
-            ).await?
+            ).await?;
+            (user, supported_scopes)
         },
         _ => {
             return Err(ValidationError("unsupported grant type").into());
         },
     };
-    if request_data.grant_type != "authorization_code" {
-        log::info!("requested token with scopes: {:?}", supported_scopes);
-    };
+    log::info!("requested token with scopes: {:?}", scopes);
     let access_token = generate_oauth_token();
     let created_at = Utc::now();
     let expires_in = config.authentication_token_lifetime;
@@ -292,6 +292,7 @@ async fn token_view(
         db_client,
         user.id,
         maybe_oauth_app.as_ref().map(|app| app.id),
+        &scopes,
         &access_token,
         created_at,
         expires_at,
@@ -303,6 +304,7 @@ async fn token_view(
     );
     let token_data = TokenResponse::new(
         access_token,
+        scopes,
         created_at.timestamp(),
         expires_in,
     );

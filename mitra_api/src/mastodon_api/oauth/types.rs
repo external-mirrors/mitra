@@ -90,13 +90,14 @@ pub struct TokenResponse {
 impl TokenResponse {
     pub fn new(
         access_token: String,
+        scopes: Vec<String>,
         created_at: i64,
         expires_in: u32,
     ) -> Self {
         Self {
             access_token,
             token_type: "Bearer".to_string(),
-            scope: "read write follow".to_string(),
+            scope: scopes.join(" "),
             created_at,
             expires_in,
         }

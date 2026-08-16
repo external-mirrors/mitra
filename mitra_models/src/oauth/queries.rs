@@ -68,7 +68,7 @@ pub async fn create_oauth_authorization(
     authorization_code: &str,
     user_id: Uuid,
     application_id: i32,
-    scopes: &str,
+    scopes: &[String],
     created_at: DateTime<Utc>,
     expires_at: DateTime<Utc>,
 ) -> Result<(), DatabaseError> {
@@ -100,10 +100,13 @@ pub async fn get_user_by_authorization_code(
     db_client: &impl DatabaseClient,
     client_id: Uuid,
     authorization_code: &str,
-) -> Result<User, DatabaseError> {
+) -> Result<(User, Vec<String>), DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
-        SELECT user_account, actor_profile
+        SELECT
+            user_account,
+            actor_profile,
+            oauth_authorization.scopes
         FROM oauth_authorization
         JOIN oauth_application
             ON oauth_authorization.application_id = oauth_application.id
@@ -123,13 +126,15 @@ pub async fn get_user_by_authorization_code(
     let db_user: DbUser = row.try_get("user_account")?;
     let db_profile: DbActorProfile = row.try_get("actor_profile")?;
     let user = User::new(db_user, db_profile)?;
-    Ok(user)
+    let scopes: Vec<String> = row.try_get("scopes")?;
+    Ok((user, scopes))
 }
 
 pub async fn save_oauth_token(
     db_client: &impl DatabaseClient,
     owner_id: Uuid,
     maybe_app_id: Option<i32>,
+    scopes: &[String],
     token: &str,
     created_at: DateTime<Utc>,
     expires_at: DateTime<Utc>,
@@ -140,16 +145,18 @@ pub async fn save_oauth_token(
         INSERT INTO oauth_token (
             owner_id,
             application_id,
+            scopes,
             token_digest,
             created_at,
             expires_at
         )
-        VALUES ($1, $2, $3, $4, $5)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING oauth_token.id
         ",
         &[
             &owner_id,
             &maybe_app_id,
+            &scopes,
             &token_digest,
             &created_at,
             &expires_at,
@@ -308,16 +315,17 @@ mod tests {
             "code",
             user.id,
             app.id,
-            "read write",
+            &["read".to_owned(), "write".to_owned()],
             Utc::now(),
             Utc::now() + TimeDelta::days(7),
         ).await.unwrap();
-        let user_found = get_user_by_authorization_code(
+        let (user_found, scopes) = get_user_by_authorization_code(
             db_client,
             app.client_id,
             "code",
         ).await.unwrap();
         assert_eq!(user_found.id, user.id);
+        assert_eq!(scopes, vec!["read", "write"]);
     }
 
     #[tokio::test]
@@ -336,6 +344,7 @@ mod tests {
             db_client,
             user.id,
             Some(app.id),
+            &["read".to_owned(), "write".to_owned()],
             token,
             Utc::now(),
             Utc::now() + TimeDelta::days(7),
@@ -349,6 +358,7 @@ mod tests {
         assert_eq!(tokens.len(), 1);
         assert_eq!(tokens[0].id, token_id);
         assert_eq!(tokens[0].client_name.as_ref().unwrap(), app_name);
+        assert_eq!(tokens[0].scopes, vec!["read", "write"]);
 
         delete_oauth_token(
             db_client,
@@ -378,6 +388,7 @@ mod tests {
             db_client,
             user.id,
             Some(app.id),
+            &["read".to_owned()],
             token,
             Utc::now(),
             Utc::now() + TimeDelta::days(7),

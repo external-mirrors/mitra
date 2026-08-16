@@ -29,6 +29,7 @@ pub struct OauthAppData {
 pub struct OauthToken {
     pub id: i32,
     pub client_name: Option<String>,
+    pub scopes: Vec<String>,
     pub created_at: DateTime<Utc>,
     pub expires_at: DateTime<Utc>,
 }
@@ -40,6 +41,7 @@ impl TryFrom<Row> for OauthToken {
         let token_info = Self {
             id: row.try_get("id")?,
             client_name: row.try_get("app_name")?,
+            scopes: row.try_get("scopes")?,
             created_at: row.try_get("created_at")?,
             expires_at: row.try_get("expires_at")?,
         };
