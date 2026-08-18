@@ -6,6 +6,7 @@ pub mod errors;
 pub mod filter_rules;
 pub mod groups;
 pub mod invoices;
+pub mod markers;
 pub mod media;
 pub mod moderation_actions;
 pub mod oauth;

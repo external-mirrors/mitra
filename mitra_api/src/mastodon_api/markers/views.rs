@@ -17,7 +17,10 @@ use mitra_models::{
     },
     markers::types::Timeline,
 };
-use mitra_validators::errors::ValidationError;
+use mitra_validators::{
+    errors::ValidationError,
+    markers::validate_marker_data,
+};
 
 use crate::{
     http::{JsonOrForm, MultiQuery},
@@ -88,6 +91,7 @@ async fn update_marker_view(
     } else {
         return Err(ValidationError("marker data is missing").into());
     };
+    validate_marker_data(timeline, last_read_id)?;
     let db_marker = create_or_update_marker(
         db_client,
         current_user.id,
