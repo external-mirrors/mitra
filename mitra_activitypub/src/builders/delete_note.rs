@@ -148,6 +148,8 @@ struct DeleteGroupNote {
     id: NonCanonicalUri,
     actor: NonCanonicalUri,
     object: NonCanonicalUri,
+    // Lemmy requires deletion reason
+    summary: String,
 
     audience: NonCanonicalUri,
     to: Vec<NonCanonicalUri>,
@@ -208,6 +210,7 @@ fn build_delete_group_note(
         id: moderator_id_builder.build(&activity_id),
         actor: moderator_id_builder.build(&moderator_id),
         object: post_id_builder.build_unchecked(&post_id),
+        summary: "".to_owned(),
         audience: group_id_builder.build_unchecked(&group_id),
         to: primary_audience,
         cc: secondary_audience,
@@ -338,6 +341,7 @@ mod tests {
             "type": "Delete",
             "actor": "https://social.example/users/moderator",
             "object": "https://social.example/objects/c9386582-c7c3-4e90-8dde-4ab4b1943d96",
+            "summary": "",
             "audience": "https://social.example/users/group",
             "to": [
                 AP_PUBLIC,
