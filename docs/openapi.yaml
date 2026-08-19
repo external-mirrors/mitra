@@ -513,7 +513,7 @@ paths:
           required: false
           schema:
             type: boolean
-            default: true
+            default: false
         - name: exclude_reblogs
           in: query
           description: Exclude reposts from results.

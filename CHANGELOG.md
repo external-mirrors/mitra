@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Require authentication when accessing `/api/v1/groups/{group_id}/members`.
 - Changed error message for unsupported post content type.
 - Validate item ID when updating marker.
+- Changed default value for `exclude_replies` parameter to `false`.
 
 ## [5.9.0] - 2026-08-11
 

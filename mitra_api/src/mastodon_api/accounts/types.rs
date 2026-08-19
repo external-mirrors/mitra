@@ -781,7 +781,7 @@ fn default_status_page_size() -> PageSize { PageSize::new(20) }
 
 const fn default_only_media() -> bool { false }
 
-const fn default_exclude_replies() -> bool { true }
+const fn default_exclude_replies() -> bool { false }
 
 const fn default_exclude_reblogs() -> bool { false }
 
