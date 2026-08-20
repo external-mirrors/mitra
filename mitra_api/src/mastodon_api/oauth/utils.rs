@@ -61,6 +61,24 @@ pub fn generate_oauth_token() -> String {
     encode_token(value)
 }
 
+fn is_subscope(scope_1: &str, scope_2: &str) -> bool {
+    let scope_2_seq: Vec<_> = scope_2.split(":").collect();
+    let scope_1_seq: Vec<_> = scope_1.split(":").take(scope_2_seq.len()).collect();
+    scope_2_seq == scope_1_seq
+}
+
+pub fn verify_scopes(
+    token_scopes: &[String],
+    app_scopes: &[String],
+) -> bool {
+    for token_scope in token_scopes {
+        if !app_scopes.iter().any(|app_scope| is_subscope(token_scope, app_scope)) {
+            return false;
+        };
+    };
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -70,5 +88,24 @@ mod tests {
         let value = [87, 31, 60, 176, 41, 131, 140, 213, 30, 64, 78, 169, 144, 138, 61, 62, 127, 26, 140, 96];
         let token = encode_token(value);
         assert_eq!(token, "Vx88sCmDjNUeQE6pkIo9Pn8ajGA");
+    }
+
+    #[test]
+    fn test_is_subscope() {
+        assert_eq!(is_subscope("read", "read"), true);
+        assert_eq!(is_subscope("read", "write"), false);
+        assert_eq!(is_subscope("admin:read:accounts", "admin"), true);
+        assert_eq!(is_subscope("admin:read:accounts", "admin:read"), true);
+        assert_eq!(is_subscope("admin:read", "admin:read:accounts"), false);
+    }
+
+    #[test]
+    fn test_verify_scopes() {
+        let app_scopes = vec!["read".to_owned(), "write".to_owned()];
+
+        let token_scopes_1 = vec!["read".to_owned()];
+        assert_eq!(verify_scopes(&token_scopes_1, &app_scopes), true);
+        let token_scopes_2 = vec!["admin".to_owned()];
+        assert_eq!(verify_scopes(&token_scopes_2, &app_scopes), false);
     }
 }

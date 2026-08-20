@@ -72,6 +72,7 @@ use super::utils::{
     generate_oauth_token,
     render_authorization_page,
     render_authorization_code_page,
+    verify_scopes,
     AUTHORIZATION_CODE_LIFETIME,
 };
 
@@ -284,6 +285,11 @@ async fn token_view(
         },
     };
     log::info!("requested token with scopes: {:?}", scopes);
+    if let Some(ref oauth_app) = maybe_oauth_app {
+        if !verify_scopes(&scopes, &oauth_app.scopes) {
+            log::warn!("requested token scopes are not a subset of app scopes");
+        };
+    };
     let access_token = generate_oauth_token();
     let created_at = Utc::now();
     let expires_in = config.authentication_token_lifetime;

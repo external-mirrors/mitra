@@ -237,6 +237,7 @@ pub async fn get_oauth_tokens(
         "
         SELECT
             oauth_token.id,
+            oauth_token.scopes,
             oauth_token.created_at,
             oauth_token.expires_at,
             oauth_application.app_name
