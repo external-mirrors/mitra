@@ -6,6 +6,7 @@ use crate::{
         types::Role,
     },
     database::{DatabaseClient, DatabaseError},
+    conversations::helpers::is_conversation_muted,
     relationships::{
         queries::has_relationship,
         types::RelationshipType,
@@ -129,6 +130,13 @@ pub async fn create_mention_notification(
         recipient_id,
         sender_id,
         RelationshipType::Mute
+    ).await? {
+        return Ok(());
+    };
+    if is_conversation_muted(
+        db_client,
+        recipient_id,
+        post_id,
     ).await? {
         return Ok(());
     };

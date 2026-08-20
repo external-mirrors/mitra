@@ -48,6 +48,7 @@ pub const POST_CONTENT_TYPE_MARKDOWN: &str = "text/markdown";
 
 const TRACKING_STATUS_NORMAL: &str = "normal";
 const TRACKING_STATUS_FOLLOW: &str = "follow";
+const TRACKING_STATUS_MUTE: &str = "mute";
 
 /// https://docs.joinmastodon.org/entities/Quote/
 #[derive(Serialize)]
@@ -107,6 +108,7 @@ fn tracking_status_to_str(tracking_mode: Option<TrackingStatus>) -> &'static str
     match tracking_mode {
         None => TRACKING_STATUS_NORMAL,
         Some(TrackingStatus::Follow) => TRACKING_STATUS_FOLLOW,
+        Some(TrackingStatus::Mute) => TRACKING_STATUS_MUTE,
     }
 }
 
@@ -600,6 +602,7 @@ impl ConversationTrackingForm {
         let maybe_tracking_status = match self.status.as_str() {
             TRACKING_STATUS_NORMAL => None,
             TRACKING_STATUS_FOLLOW => Some(TrackingStatus::Follow),
+            TRACKING_STATUS_MUTE => Some(TrackingStatus::Mute),
             _ => return Err(ValidationError("invalid tracking status")),
         };
         Ok(maybe_tracking_status)

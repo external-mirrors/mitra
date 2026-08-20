@@ -2672,6 +2672,7 @@ paths:
                   enum:
                     - normal
                     - follow
+                    - mute
                   example: follow
       responses:
         200:
@@ -4506,6 +4507,7 @@ components:
           enum:
             - normal
             - follow
+            - mute
           nullable: true
         can_moderate:
           description: Can this user moderate the conversation?
