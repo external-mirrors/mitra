@@ -6,6 +6,7 @@ pub mod id;
 pub mod identicons;
 pub mod languages;
 pub mod markdown;
+pub mod oauth;
 pub mod passwords;
 pub mod random;
 pub mod sysinfo;

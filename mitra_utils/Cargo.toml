@@ -18,8 +18,12 @@ eth-blockies = "1.1.0"
 chrono = { version = "0.4.34", default-features = false, features = ["std", "clock"] }
 # Used for parsing markdown
 comrak = { version = "0.40.0", default-features = false, features = ["bon"] }
+# Used to parse URI query parameters
+form_urlencoded = "1.2.2"
 # Used for extracting text from HTML
 html2text = "0.17.0"
+# Used for working with URIs
+iri-string = "0.7.14"
 # ISO 639 language codes
 isolang = { version = "2.4.0", default-features = false }
 # Used to determine file extension

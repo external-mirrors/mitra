@@ -41,7 +41,10 @@ use mitra_services::{
     ethereum::eip4361::verify_eip4361_signature,
     monero::caip122::verify_monero_caip122_signature,
 };
-use mitra_utils::passwords::verify_password;
+use mitra_utils::{
+    oauth::append_to_redirect_uri,
+    passwords::verify_password,
+};
 use mitra_validators::{
     errors::ValidationError,
     oauth::clean_scopes,
@@ -144,13 +147,17 @@ async fn authorize_view(
             .body(page)
     } else {
         // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2
-        let mut redirect_uri = format!(
-            "{}?code={}",
-            oauth_app.redirect_uri,
-            authorization_code,
-        );
+        let mut redirect_uri = append_to_redirect_uri(
+            &oauth_app.redirect_uri,
+            "code",
+            &authorization_code,
+        ).map_err(MastodonError::from_internal)?;
         if let Some(ref state) = query_params.state {
-            redirect_uri += &format!("&state={}", state);
+            redirect_uri = append_to_redirect_uri(
+                &redirect_uri,
+                "state",
+                state,
+            ).map_err(MastodonError::from_internal)?;
         };
         HttpResponse::Found()
             .append_header((http_header::LOCATION, redirect_uri))

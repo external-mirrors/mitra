@@ -21,10 +21,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write warning to log if unsupported OAuth scopes are requested.
 - Return scopes that were requested by the user in `/oauth/token` response.
 - Write warning to log if requested token scopes are not a subset of app scopes.
+- Don't allow OAuth redirect URIs that contain a fragment.
 
 ### Fixed
 
 - Add `summary` property to group moderator's `Delete` activity.
+- Preserve existing query parameters when appending OAuth authorization code to redirect URI.
 
 ## [5.9.0] - 2026-08-11
 
