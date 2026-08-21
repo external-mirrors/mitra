@@ -24,6 +24,7 @@ use mitra_models::{
 use mitra_services::media::MediaServer;
 
 use crate::{
+    adapters::users::get_actor_data,
     authority::Authority,
     contexts::{build_default_context, Context},
     deliverer::Recipient,
@@ -35,6 +36,7 @@ use crate::{
         local_object_id_unified,
         local_object_replies,
         local_tag_collection,
+        IdBuilder,
         LocalActorCollection,
     },
     vocabulary::{
@@ -348,9 +350,18 @@ pub fn build_note(
     };
     let replies_collection_id = local_object_replies(&object_id);
     let group_audience = if let Some(ref group) = post.group {
-        let actor_id = compatible_profile_actor_id(authority, group);
+        let group_id_builder = IdBuilder::for_profile(authority, group);
+        let group_data = get_actor_data(authority.root(), group);
+        let actor_id = group_id_builder.build_string_unchecked(&group_data.id);
         if !primary_audience.contains(&actor_id) {
             primary_audience.push(actor_id.clone());
+        };
+        if let Some(group_followers) = group_data.followers {
+            let group_followers = group_id_builder
+                .build_string_unchecked(&group_followers);
+            primary_audience.push(group_followers);
+        } else {
+            log::warn!("group followers are not known");
         };
         Some(actor_id)
     } else {
@@ -417,6 +428,8 @@ pub async fn get_note_recipients(
         primary_audience.push(in_reply_to_author);
     };
     if let Some(ref group) = post.group {
+        // Group followers may be not known
+        // so activity is delivered only to the group actor
         primary_audience.push(group.clone());
     };
     primary_audience.extend(post.mentions.clone());
@@ -937,6 +950,7 @@ mod tests {
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public",
                 "https://social.example/group",
+                "https://social.example/group/followers",
             ],
             "cc": [
                 "https://server.example/users/test/followers",

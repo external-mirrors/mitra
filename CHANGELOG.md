@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Return scopes that were requested by the user in `/oauth/token` response.
 - Write warning to log if requested token scopes are not a subset of app scopes.
 - Don't allow OAuth redirect URIs that contain a fragment.
+- Add group's followers to the primary audience of `Note` if it belongs to a group.
 
 ### Fixed
 
