@@ -50,6 +50,11 @@ use crate::commands::{
         RepairInvoice,
         GetPaymentAddress,
     },
+    media::{
+        DeleteOrphanedFiles,
+        ListLocalFiles,
+        MediaCommand,
+    },
     monero::{
         ListActiveAddresses,
         CreateMoneroSignature,
@@ -67,10 +72,7 @@ use crate::commands::{
         CheckUris,
         DeleteEmptyProfiles,
         DeleteExtraneousPosts,
-        DeleteOrphanedFiles,
         DeleteUnusedAttachments,
-        ListLocalFiles,
-        MediaCommand,
         PruneReposts,
     },
 };
