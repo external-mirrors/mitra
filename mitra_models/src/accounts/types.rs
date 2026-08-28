@@ -46,7 +46,7 @@ use crate::{
 #[expect(dead_code)]
 #[derive(FromSql)]
 #[postgres(name = "user_invite_code")]
-pub struct DbInviteCode {
+pub struct InviteCode {
     pub code: String,
     used: bool,
     pub note: Option<String>,

@@ -36,9 +36,9 @@ use super::types::{
     BoxedManagedAccount,
     ClientConfig,
     DbClientConfig,
-    DbInviteCode,
     DbPortableUser,
     DbUser,
+    InviteCode,
     PortableUser,
     PortableUserData,
     Role,
@@ -65,7 +65,7 @@ pub async fn create_invite_code(
 
 pub async fn get_invite_codes(
     db_client: &impl DatabaseClient,
-) -> Result<Vec<DbInviteCode>, DatabaseError> {
+) -> Result<Vec<InviteCode>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT user_invite_code
