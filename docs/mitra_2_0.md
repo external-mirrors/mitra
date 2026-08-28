@@ -22,7 +22,7 @@ See [annotated example of config.yaml file](../config.example.yaml) for more inf
 
 ## HTTP API
 
-- `X-Forwarded-Proto` header must be present when Mitra runs behind a reverse proxy. Instance operators who use Nginx should add `proxy_set_header X-Forwarded-Proto $scheme;` directive to a relevant `location` block. See [example of nginx config file](../contrib/mitra.nginx). Caddy sets `X-Forwarded-Proto` header by default, so no action is needed.
+- `X-Forwarded-Proto` header must be present when Mitra runs behind a reverse proxy. Instance operators who use Nginx should add `proxy_set_header X-Forwarded-Proto $scheme;` directive to a relevant `location` block. See [example of nginx config file](../contrib/nginx/mitra.conf). Caddy sets `X-Forwarded-Proto` header by default, so no action is needed.
 - Enabled redirection from `/feeds/{username}` to `/feeds/users/{username}`. Old Atom feed paths are considered deprecated and will be removed in the future.
 
 ## Federation
