@@ -59,6 +59,7 @@ mod tests {
             account_type: AccountType::User,
             profile,
             role: Some(DbRole::NormalUser),
+            authentication_methods: vec![],
             last_login: None,
         };
         let admin_account = AdminAccount::from_db(

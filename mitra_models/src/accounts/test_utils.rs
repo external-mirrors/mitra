@@ -112,6 +112,7 @@ impl Default for User {
             password_digest: None,
             login_address_ethereum: None,
             login_address_monero: None,
+            authentication_methods: vec![],
             rsa_secret_key: generate_weak_rsa_key().unwrap(),
             ed25519_secret_key: generate_weak_ed25519_key(),
             role: Role::default(),

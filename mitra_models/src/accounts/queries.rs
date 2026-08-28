@@ -778,9 +778,9 @@ pub async fn get_accounts_for_admin(
         "
         SELECT
             actor_profile,
+            user_account,
             automated_account.account_type AS automated_account_type,
             portable_user_account.id IS NOT NULL as is_portable,
-            user_account.user_role AS role,
             max(oauth_token.created_at) AS last_login
         FROM actor_profile
         LEFT JOIN user_account USING (id)
@@ -823,7 +823,11 @@ mod tests {
                 create_test_user,
                 create_test_nomadic_account,
             },
-            types::{AccountType, Role},
+            types::{
+                AccountType,
+                AuthenticationMethod,
+                Role,
+            },
         },
         database::test_utils::create_test_database,
         posts::types::Visibility,
@@ -859,6 +863,8 @@ mod tests {
         assert_eq!(user.profile.webfinger_hostname(), WebfingerHostname::Local);
         assert_eq!(user.profile.acct.as_ref().unwrap(), "myname");
         assert!(user.profile.has_user_account());
+        assert_eq!(user.password_digest.is_some(), true);
+        assert_eq!(user.authentication_methods, vec![AuthenticationMethod::Password]);
         assert_eq!(user.role, Role::NormalUser);
         assert_eq!(user.client_config, ClientConfig::default());
         assert_eq!(user.shared_client_config, SharedClientConfig::default());
@@ -1077,5 +1083,6 @@ mod tests {
         assert_eq!(account.account_type, AccountType::User);
         assert_eq!(account.profile.id, account_1.id);
         assert_eq!(account.role, Some(Role::NormalUser));
+        assert_eq!(account.authentication_methods, vec![AuthenticationMethod::Password]);
     }
 }

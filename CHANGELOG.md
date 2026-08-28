@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `ap outbox` command.
 - Added support for `text/plain` post format.
 - Added `fts create` command.
+- Show user's preferred authentication methods in `account list` command output.
 
 ### Changed
 

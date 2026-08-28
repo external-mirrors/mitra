@@ -40,6 +40,7 @@ use mitra_models::{
             set_user_role,
         },
         types::{
+            AuthenticationMethod,
             UserCreateData,
         },
     },
@@ -139,17 +140,26 @@ impl ListAccounts {
         let db_client = &**get_database_client(db_pool).await?;
         let accounts = get_accounts_for_admin(db_client).await?;
         println!(
-            "{0: <40} | {1: <35} | {2: <10} | {3: <15} | {4: <35} | {5: <35}",
-            "ID", "username", "type", "role", "created", "last login",
+            "{0: <40} | {1: <35} | {2: <10} | {3: <15} | {4: <35} | {5: <20} | {6: <35}",
+            "ID", "username", "type", "role", "created", "auth", "last login",
         );
         for account in accounts {
             println!(
-                "{0: <40} | {1: <35} | {2: <10} | {3: <15} | {4: <35} | {5: <35}",
+                "{0: <40} | {1: <35} | {2: <10} | {3: <15} | {4: <35} | {5: <20} | {6: <35}",
                 account.profile.id.to_string(),
                 account.profile.username,
                 account_type_to_str(account.account_type),
                 account.role.map(role_to_str).unwrap_or("-"),
                 account.profile.created_at.to_string(),
+                account.authentication_methods
+                    .iter()
+                    .map(|method| match method {
+                        AuthenticationMethod::Password => "password",
+                        AuthenticationMethod::Ethereum => "ethereum",
+                        AuthenticationMethod::Monero => "monero",
+                    })
+                    .collect::<Vec<_>>()
+                    .join(","),
                 account.last_login.map(|dt| dt.to_string()).unwrap_or_default(),
             );
         };
