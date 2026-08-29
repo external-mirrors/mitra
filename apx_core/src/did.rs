@@ -24,6 +24,7 @@ const DID_RE: &str = r"^did:(?P<method>[[:alpha:]]+):(?P<identifier>[A-Za-z0-9._
 pub(crate) const DID_URL_RE: &str = r"^(?P<did>did:[[:alpha:]]+:[A-Za-z0-9._:-]+)(?P<resource>.*)$";
 
 /// Decentralized identifier
+#[derive(Clone, Debug, PartialEq)]
 pub struct OpaqueDid {
     method: String,
     identifier: String,
@@ -49,6 +50,11 @@ impl OpaqueDid {
     /// Returns the method-specific identifier
     pub fn identifier(&self) -> &str {
         &self.identifier
+    }
+
+    // https://codeberg.org/fediverse/fep/src/commit/7377aa17eafff117358afed50131dab54efd89e6/fep/ef61/fep-ef61.md#authentication-and-authorization
+    pub(crate) fn origin(&self) -> Origin {
+        Origin::new_did(&self.to_string())
     }
 }
 
@@ -93,11 +99,6 @@ impl Did {
         }
     }
 
-    // https://codeberg.org/fediverse/fep/src/commit/7377aa17eafff117358afed50131dab54efd89e6/fep/ef61/fep-ef61.md#authentication-and-authorization
-    pub(crate) fn origin(&self) -> Origin {
-        Origin::new_did(&self.to_string())
-    }
-
     pub fn as_did_key(&self) -> Option<&DidKey> {
         match self {
             Did::Key(did_key) => Some(did_key),
@@ -111,6 +112,14 @@ impl Did {
         match self {
             Did::Pkh(did_pkh) => Some(did_pkh),
             _ => None,
+        }
+    }
+
+    /// Creates an `OpaqueDid` from this DID
+    pub fn to_opaque_did(&self) -> OpaqueDid {
+        OpaqueDid {
+            method: self.method().to_string(),
+            identifier: self.identifier(),
         }
     }
 }

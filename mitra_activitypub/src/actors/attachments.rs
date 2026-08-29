@@ -78,12 +78,12 @@ pub fn parse_identity_proof_fep_c390(
         // can't have more than one verification method
         VerificationMethod::DidUrl(did_url) => did_url.did().clone(),
     };
-    if signer != statement.subject {
+    if signer != statement.subject.to_opaque_did() {
         return Err(ValidationError("subject mismatch"));
     };
     let identity_proof_type = match signature_data.proof_type {
         ProofType::JcsBlake2Ed25519Signature => {
-            let did_key = signer.as_did_key()
+            let did_key = statement.subject.as_did_key()
                 .ok_or(ValidationError("unexpected DID type"))?;
             verify_blake2_ed25519_json_signature(
                 did_key,
@@ -93,7 +93,7 @@ pub fn parse_identity_proof_fep_c390(
             IdentityProofType::FepC390JcsBlake2Ed25519Proof
         },
         ProofType::JcsEip191Signature => {
-            let did_pkh = signer.as_did_pkh()
+            let did_pkh = statement.subject.as_did_pkh()
                 .ok_or(ValidationError("unexpected DID type"))?;
             verify_eip191_json_signature(
                 did_pkh,
@@ -104,7 +104,7 @@ pub fn parse_identity_proof_fep_c390(
         },
         #[expect(deprecated)]
         ProofType::JcsEddsaSignature => {
-            let did_key = signer.as_did_key()
+            let did_key = statement.subject.as_did_key()
                 .ok_or(ValidationError("unexpected DID type"))?;
             let ed25519_key = did_key.try_ed25519_key()
                 .map_err(|_| ValidationError("invalid public key"))?;
@@ -117,7 +117,7 @@ pub fn parse_identity_proof_fep_c390(
             IdentityProofType::FepC390LegacyJcsEddsaProof
         },
         ProofType::EddsaJcsSignature => {
-            let did_key = signer.as_did_key()
+            let did_key = statement.subject.as_did_key()
                 .ok_or(ValidationError("unexpected DID type"))?;
             let ed25519_key = did_key.try_ed25519_key()
                 .map_err(|_| ValidationError("invalid public key"))?;
@@ -132,7 +132,7 @@ pub fn parse_identity_proof_fep_c390(
         _ => return Err(ValidationError("unsupported signature type")),
     };
     let proof = IdentityProof {
-        issuer: signer,
+        issuer: statement.subject,
         proof_type: identity_proof_type,
         value: attachment.clone(),
     };

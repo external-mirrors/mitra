@@ -6,14 +6,14 @@ use iri_string::types::UriRelativeString;
 use regex::Regex;
 
 use super::{
-    did::{Did, DID_URL_RE},
+    did::{OpaqueDid, DID_URL_RE},
     url::common::Origin,
 };
 
 /// DID URL
 #[derive(Debug, PartialEq)]
 pub struct DidUrl {
-    did: Did,
+    did: OpaqueDid,
     resource: UriRelativeString,
 }
 
@@ -23,7 +23,7 @@ impl DidUrl {
         let url_re = Regex::new(DID_URL_RE)
             .expect("regexp should be valid");
         let captures = url_re.captures(url).ok_or("invalid DID URL")?;
-        let did = Did::from_str(&captures["did"])
+        let did = OpaqueDid::parse(&captures["did"])
             .map_err(|_| "invalid DID")?;
         let resource = UriRelativeString::from_str(&captures["resource"])
             .map_err(|_| "invalid DID URL")?;
@@ -32,7 +32,7 @@ impl DidUrl {
     }
 
     /// Returns DID component of this URL
-    pub fn did(&self) -> &Did {
+    pub fn did(&self) -> &OpaqueDid {
         &self.did
     }
 

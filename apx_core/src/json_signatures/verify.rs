@@ -257,7 +257,7 @@ mod tests {
     use crate::json_signatures::create::sign_object_rsa;
 
     #[cfg(feature = "eip191")]
-    use crate::did::Did;
+    use crate::did::OpaqueDid;
 
     #[test]
     fn test_verification_method_parse() {
@@ -297,8 +297,9 @@ mod tests {
             signature_data.proof_type,
             ProofType::JcsEip191Signature,
         );
-        let expected_did = Did::Pkh(DidPkh::from_ethereum_address(
-            "0xb9c5714089478a327f09197987f16f9e5d936e8a"));
+        let expected_did =
+            OpaqueDid::parse("did:pkh:eip155:1:0xb9c5714089478a327f09197987f16f9e5d936e8a")
+                .unwrap();
         let did_url = match signature_data.verification_method {
             VerificationMethod::DidUrl(did_url) => did_url,
             _ => panic!("unexpected verification method"),

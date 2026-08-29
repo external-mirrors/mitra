@@ -12,11 +12,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `origin()` method to `NonCanonicalUri` type.
 - Added `gateways()` method to `ApUri` type.
 - Added `OpaqueDid` type.
+- Added `to_opaque_did()` method to `Did` type.
 
 ### Changed
 
 - Renamed `MultibaseError::UnknownBase` to `UnexpectedBase`.
 - Changed return error type in `PublicKey::from_multikey` and `PublicKey::from_pem` methods to `KeySerializationError`.
+- Allowed all DID methods in DID URLs and 'ap' URIs.
 
 ### Deprecated
 

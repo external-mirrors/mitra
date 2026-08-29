@@ -15,7 +15,7 @@ use iri_string::{
 use regex::Regex;
 
 use crate::{
-    did::Did,
+    did::OpaqueDid,
     url::common::{url_decode, Origin},
 };
 
@@ -48,7 +48,7 @@ fn remove_query(uri: UriRelativeString) -> UriRelativeString {
 /// FEP-ef61 'ap' URI
 #[derive(Clone, Debug, PartialEq)]
 pub struct ApUri {
-    authority: Did,
+    authority: OpaqueDid,
     location: UriRelativeString,
 }
 
@@ -61,15 +61,8 @@ impl ApUri {
             .expect("regexp should be valid");
         let captures = uri_re.captures(value).ok_or("invalid 'ap' URI")?;
         let did_str = url_decode(&captures["did"]);
-        let authority = Did::from_str(&did_str)
+        let authority = OpaqueDid::parse(&did_str)
             .map_err(|_| "invalid 'ap' URI authority")?;
-        // Authority should be an Ed25519 key
-        if authority.as_did_key()
-            .and_then(|did_key| did_key.try_ed25519_key().ok())
-            .is_none()
-        {
-            return Err("invalid 'ap' URI authority");
-        };
         // Parse relative URI
         let location = UriRelativeString::from_str(&captures["path"])
             .map_err(|_| "invalid 'ap' URI")?;
@@ -85,7 +78,7 @@ impl ApUri {
         AP_URI_SCHEME
     }
 
-    pub fn authority(&self) -> &Did {
+    pub fn authority(&self) -> &OpaqueDid {
         &self.authority
     }
 
@@ -189,6 +182,20 @@ mod tests {
         assert_eq!(ap_uri.base(), "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
         assert_eq!(ap_uri.relative_uri(), "/objects/123");
         assert_eq!(ap_uri.to_string(), url);
+    }
+
+    #[test]
+    fn test_parse_did_key_p256() {
+        let url = "ap://did:key:zDnaerx9CtbPJ1q36T5Ln5wYt3MQYeGRG5ehnPAmxcf5mDZpv/objects/123";
+        let ap_uri = ApUri::parse(url).unwrap();
+        assert_eq!(ap_uri.authority().to_string(), "did:key:zDnaerx9CtbPJ1q36T5Ln5wYt3MQYeGRG5ehnPAmxcf5mDZpv");
+    }
+
+    #[test]
+    fn test_parse_did_web() {
+        let url = "ap://did:web:w3c-ccg.github.io:user:alice/objects/123";
+        let ap_uri = ApUri::parse(url).unwrap();
+        assert_eq!(ap_uri.authority().to_string(), "did:web:w3c-ccg.github.io:user:alice");
     }
 
     #[test]
