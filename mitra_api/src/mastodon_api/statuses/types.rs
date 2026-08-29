@@ -48,6 +48,7 @@ pub const POST_CONTENT_TYPE_MARKDOWN: &str = "text/markdown";
 
 const TRACKING_STATUS_NORMAL: &str = "normal";
 const TRACKING_STATUS_FOLLOW: &str = "follow";
+const TRACKING_STATUS_MUTE: &str = "mute";
 
 /// https://docs.joinmastodon.org/entities/Quote/
 #[derive(Serialize)]
@@ -107,13 +108,18 @@ fn tracking_status_to_str(tracking_mode: Option<TrackingStatus>) -> &'static str
     match tracking_mode {
         None => TRACKING_STATUS_NORMAL,
         Some(TrackingStatus::Follow) => TRACKING_STATUS_FOLLOW,
+        Some(TrackingStatus::Mute) => TRACKING_STATUS_MUTE,
     }
 }
 
 #[derive(Serialize)]
 pub struct StatusConversation {
-    pub id: Uuid,
-    pub root_id: Uuid,
+    id: Uuid,
+    root_id: Uuid,
+
+    // For authenticated users
+    tracking: Option<&'static str>,
+    can_moderate: Option<bool>,
 }
 
 // https://docs.joinmastodon.org/entities/Status/
@@ -146,7 +152,7 @@ pub struct Status {
     tags: Vec<Tag>,
     emojis: Vec<CustomEmoji>,
 
-    // Authorized user attributes
+    // Authenticated user attributes
     pub favourited: bool,
     pub reblogged: bool,
     bookmarked: bool,
@@ -160,9 +166,9 @@ pub struct Status {
     pub ipfs_cid: Option<String>,
     links: Vec<Status>,
     group: Option<Account>,
-    pub conversation: Option<StatusConversation>,
+    conversation: Option<StatusConversation>,
 
-    // Custom fields: authorized user
+    // Custom fields: authenticated user
     conversation_tracking: Option<&'static str>,
 }
 
@@ -172,6 +178,7 @@ pub fn visibility_to_str(visibility: Visibility) -> &'static str {
         Visibility::Direct => "direct",
         Visibility::Followers => "private",
         Visibility::Subscribers => "subscribers",
+        Visibility::Group => "group",
         Visibility::Conversation => "conversation",
     }
 }
@@ -260,12 +267,19 @@ impl Status {
             )
         });
         let visibility = visibility_to_str(post.visibility);
-        let conversation = post.conversation.as_ref().map(|conversation| {
-            StatusConversation {
+        let maybe_conversation = if let Some(conversation) = post.conversation {
+            let conversation = StatusConversation {
                 id: conversation.id,
                 root_id: conversation.root_id,
-            }
-        });
+                tracking: post.actions.as_ref()
+                    .map(|actions| tracking_status_to_str(actions.conversation_tracking_status)),
+                can_moderate: post.actions.as_ref()
+                    .map(|actions| actions.can_moderate_conversation),
+            };
+            Some(conversation)
+        } else {
+            None
+        };
         let mut emoji_reactions = vec![];
         let mut favourites_count = 0;
         for reaction in post.reactions {
@@ -341,7 +355,7 @@ impl Status {
             ipfs_cid: post.ipfs_cid,
             links: links,
             group: maybe_group,
-            conversation,
+            conversation: maybe_conversation,
         }
     }
 }
@@ -359,6 +373,7 @@ pub fn visibility_from_str(value: &str) -> Result<Visibility, ValidationError> {
         "direct" => Visibility::Direct,
         "private" => Visibility::Followers,
         "subscribers" => Visibility::Subscribers,
+        "group" => Visibility::Group,
         "conversation" => Visibility::Conversation,
         _ => return Err(ValidationError("invalid visibility parameter")),
     };
@@ -589,6 +604,7 @@ impl ConversationTrackingForm {
         let maybe_tracking_status = match self.status.as_str() {
             TRACKING_STATUS_NORMAL => None,
             TRACKING_STATUS_FOLLOW => Some(TrackingStatus::Follow),
+            TRACKING_STATUS_MUTE => Some(TrackingStatus::Mute),
             _ => return Err(ValidationError("invalid tracking status")),
         };
         Ok(maybe_tracking_status)

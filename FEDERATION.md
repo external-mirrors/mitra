@@ -48,7 +48,7 @@ It also supports the following standards:
 - [FEP-044f: Consent-respecting quote posts](https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md)
   - "Consent-respecting" quotes are processed in the same way as regular quotes.
 - [FEP-5219: Groups and permissions](https://codeberg.org/fediverse/fep/src/branch/main/fep/5219/fep-5219.md)
-  - Groups publish the `affiliations` collection.
+  - Groups publish and read the `affiliations` collection.
 - [FEP-0806: Simple client-side encryption](https://codeberg.org/silverpill/feps/src/branch/main/0806/fep-0806.md)
   - Can relay `EncryptedActivity` activities.
 
@@ -266,6 +266,7 @@ The `Remove` activity is used to notify subscribers about expired subscriptions.
 | Poll options (number of `anyOf`/`oneOf` in a `Question`)      | 20          | Poll will be removed from the post |
 | Profile display name                                          | 200 chars   | Display name will be truncated     |
 | Profile bio                                                   | 10000 chars | Text will be truncated             |
+| Moderation action description                                 | 1000 chars  | Description will be ignored        |
 
 ## Mitra Web client
 

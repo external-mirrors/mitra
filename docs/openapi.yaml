@@ -513,7 +513,7 @@ paths:
           required: false
           schema:
             type: boolean
-            default: true
+            default: false
         - name: exclude_reblogs
           in: query
           description: Exclude reposts from results.
@@ -1744,6 +1744,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotificationPolicy'
+  /api/v1/pleroma/notifications/read:
+    post:
+      summary: Mark notifications as read.
+      security:
+        - tokenAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                max_id:
+                  description: Read all notifications up to this ID.
+                  type: integer
+      responses:
+        200:
+          description: Successful operation.
   /api/v1/polls/{poll_id}/votes:
     post:
       summary: Vote on a poll attached to a post.
@@ -2154,6 +2171,7 @@ paths:
                         - `public` - visible to everyone
                         - `private` - visible to followers
                         - `subscribers` - visible to paid subscribers
+                        - `group` - visible only to group members
                         - `conversation` - visible to people chosen by the conversation owner (the author of the top-level post)
                         - `direct` - visible to mentioned users
 
@@ -2391,6 +2409,24 @@ paths:
                   $ref: '#/components/schemas/Status'
         404:
           description: Post not found
+    delete:
+      summary: Remove given post from the thread
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/status_id'
+      responses:
+        204:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                example: {}
+        403:
+          description: The current user doesn't have a permission to delete the post.
+        404:
+          description: The post doesn't exist.
   /api/v1/statuses/{status_id}/favourite:
     post:
       summary: Add post to your favourites list
@@ -2637,6 +2673,7 @@ paths:
                   enum:
                     - normal
                     - follow
+                    - mute
                   example: follow
       responses:
         200:
@@ -3225,6 +3262,21 @@ paths:
                 $ref: '#/components/schemas/Status'
         404:
           description: Post or custom emoji does not exist.
+  /api/v2/admin/accounts:
+    get:
+      summary: View local accounts.
+      security:
+        - tokenAuth: []
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: Account list
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminAccount'
   /api/v1/admin/accounts/{account_id}:
     delete:
       summary: Delete user.
@@ -3335,7 +3387,6 @@ components:
         display_name:
           description: The profile’s display name (plain text).
           type: string
-          nullable: true
         note:
           description: The profile’s bio or description (HTML).
           type: string
@@ -3483,6 +3534,51 @@ components:
               description: Client configurations.
               type: object
               example: {"mitra-web":{"theme":"dark"}}
+    AccountWarning:
+      type: object
+      properties:
+        id:
+          description: The ID of the moderation warning.
+          type: string
+          format: uuid
+        action:
+          description: Action taken against the user.
+          type: string
+          enum:
+            - delete_statuses
+        text:
+          description: Message from the moderator to the target account (plain text).
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    AdminAccount:
+      type: object
+      properties:
+        id:
+          description: The ID of the user in the database.
+          type: string
+          format: uuid
+        role:
+          allOf:
+            - $ref: '#/components/schemas/Role'
+            - description: The current role of the user.
+              nullable: true
+        account:
+          $ref: '#/components/schemas/Account'
+        account_type:
+          description: The type of the local account
+          type: string
+          enum:
+            - user
+            - group
+            - anonymous
+            - nomadic
+        last_login_at:
+          description: When the most recent OAuth token was issued.
+          type: string
+          format: date-time
+          nullable: true
     Affiliation:
       type: object
       properties:
@@ -3493,6 +3589,7 @@ components:
           type: string
           enum:
             - admin
+            - member
     Aliases:
       type: object
       properties:
@@ -4183,6 +4280,7 @@ components:
             - payment_anonymous
             - move
             - admin.sign_up
+            - moderation_warning
           example: favourite
         subtype:
           description: The subtype of the event.
@@ -4194,6 +4292,8 @@ components:
           $ref: '#/components/schemas/Account'
         status:
           $ref: '#/components/schemas/Status'
+        moderation_warning:
+          $ref: '#/components/schemas/AccountWarning'
         reaction:
           description: Emoji reaction.
           type: object
@@ -4222,6 +4322,13 @@ components:
           description: The timestamp of the notification.
           type: string
           format: date-time
+        pleroma:
+          type: object
+          properties:
+            is_seen:
+              description: Has the user read the notification?
+              type: boolean
+              example: false
     NotificationPolicy:
       type: object
       properties:
@@ -4396,6 +4503,18 @@ components:
           description: The ID of the conversation's root post.
           type: string
           format: uuid
+        tracking:
+          description: The conversation tracking status (only for authenticated users).
+          type: string
+          enum:
+            - normal
+            - follow
+            - mute
+          nullable: true
+        can_moderate:
+          description: Can this user moderate the conversation?
+          type: boolean
+          nullable: true
     Status:
       type: object
       properties:
@@ -4533,12 +4652,6 @@ components:
           description: Have you bookmarked this post?
           type: boolean
           example: false
-        conversation_tracking:
-          description: The conversation tracking status.
-          type: string
-          enum:
-            - normal
-            - follow
         hidden:
           description: Is this post hidden? A linked (quoted) post can be hidden if its author is muted.
           type: boolean
@@ -4627,6 +4740,7 @@ components:
         - private
         - subscribers
         - conversation
+        - group
         - direct
     DefaultVisibility:
       type: string

@@ -27,6 +27,7 @@ use crate::{
 
 use super::types::{
     get_identity_key,
+    ActorType,
     Aliases,
     DbActorProfile,
     ExtraFields,
@@ -430,6 +431,7 @@ pub enum ProfileOrder {
     Username,
 }
 
+// Profile directory query
 pub async fn get_profiles_paginated(
     db_client: &impl DatabaseClient,
     only_local: bool,
@@ -440,9 +442,14 @@ pub async fn get_profiles_paginated(
     let mut join = "".to_owned();
     let mut condition = "".to_owned();
     let mut order_by = "".to_owned();
+    // Always exclude system accounts
+    condition += &format!(
+        "WHERE NOT (automated_account_id IS NOT NULL AND actor_type = {})",
+        i16::from(ActorType::Automated),
+    );
     if only_local {
         // Only those who have an account
-        condition += "WHERE (user_id IS NOT NULL OR automated_account_id IS NOT NULL OR portable_user_id IS NOT NULL)";
+        condition += " AND (user_id IS NOT NULL OR automated_account_id IS NOT NULL OR portable_user_id IS NOT NULL)";
     };
     match order {
         ProfileOrder::Active => {
@@ -1225,6 +1232,33 @@ mod tests {
             get_profile_by_id(db_client, profile_1.id).await.unwrap();
         assert_eq!(profile_1_updated.webfinger_hostname, None);
         assert_eq!(profile_1_updated.acct, None);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_profile_username_length() {
+        let db_client = &mut create_test_database().await;
+        // Postgresql varchar length is measured in characters
+        let username = "文".repeat(100);
+        assert_eq!(username.len(), 300);
+        assert_eq!(username.chars().count(), 100);
+        let profile_data = ProfileCreateData {
+            username: username.clone(),
+            ..Default::default()
+        };
+        let profile = create_profile(db_client, profile_data).await.unwrap();
+        assert_eq!(profile.username, username);
+
+        let username = "文".repeat(101);
+        let profile_data = ProfileCreateData {
+            username: username.clone(),
+            ..Default::default()
+        };
+        let result = create_profile(db_client, profile_data).await;
+        assert_eq!(
+            result.err().unwrap().to_string(),
+            "db error: ERROR: value too long for type character varying(100)",
+        );
     }
 
     #[tokio::test]

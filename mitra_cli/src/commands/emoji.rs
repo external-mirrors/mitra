@@ -20,6 +20,7 @@ use mitra_models::{
             create_or_update_local_emoji,
             delete_emoji,
             get_emoji_by_name_and_hostname,
+            get_emojis,
         },
     },
     media::types::{MediaInfo, PartialMediaInfo},
@@ -180,6 +181,43 @@ impl ImportEmoji {
     }
 }
 
+/// List custom emojis
+#[derive(Parser)]
+pub struct ListEmojis {
+    #[arg(long)]
+    hostname: Option<String>,
+}
+
+impl ListEmojis {
+    #[expect(clippy::print_literal)]
+    pub async fn execute(
+        self,
+        _config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
+        let emojis =
+            get_emojis(db_client, self.hostname.as_deref()).await?;
+        println!(
+            "{0: <25} | {1: <20} | {2}",
+            "name", "category", "filename",
+        );
+        for emoji in emojis {
+            let file_name = emoji
+                .image
+                .file_info()
+                .map(|info| &info.file_name);
+            println!(
+                "{0: <25} | {1: <20} | {2}",
+                emoji.emoji_name,
+                emoji.category.unwrap_or("-".to_owned()),
+                file_name.unwrap_or(&"-".to_owned()),
+            );
+        };
+        Ok(())
+    }
+}
+
 /// Delete custom emoji
 #[derive(Parser)]
 pub struct DeleteEmoji {
@@ -211,6 +249,7 @@ impl DeleteEmoji {
 pub enum EmojiCommand {
     Create(AddEmoji),
     Copy(ImportEmoji),
+    List(ListEmojis),
     Delete(DeleteEmoji),
 }
 
@@ -223,6 +262,7 @@ impl EmojiCommand {
         match self {
             Self::Create(command) => command.execute(config, db_pool).await,
             Self::Copy(command) => command.execute(config, db_pool).await,
+            Self::List(command) => command.execute(config, db_pool).await,
             Self::Delete(command) => command.execute(config, db_pool).await,
         }
     }

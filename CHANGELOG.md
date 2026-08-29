@@ -6,6 +6,73 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [5.10.0] - 2026-08-24
+
+### Added
+
+- Added `/api/v1/pleroma/notifications/read` API endpoint.
+- Added `pleroma.is_seen` field to `Notification` API entity.
+- Added ability to mute a conversation.
+- Added `media fetch` command.
+- Allow participation in remote private groups.
+
+### Changed
+
+- Require authentication when accessing `/api/v1/groups/{group_id}/members`.
+- Changed error message for unsupported post content type.
+- Validate item ID when updating marker.
+- Changed default value for `exclude_replies` parameter to `false`.
+- Write warning to log if client ID is not provided with OAuth token request.
+- Write warning to log if unsupported OAuth scopes are requested.
+- Return scopes that were requested by the user in `/oauth/token` response.
+- Write warning to log if requested token scopes are not a subset of app scopes.
+- Don't allow OAuth redirect URIs that contain a fragment.
+- Add group's followers to the primary audience of `Note` if it belongs to a group.
+
+### Fixed
+
+- Add `summary` property to group moderator's `Delete` activity.
+- Preserve existing query parameters when appending OAuth authorization code to redirect URI.
+
+## [5.9.0] - 2026-08-11
+
+### Added
+
+- Add description to OAuth authorization code page.
+- Added `delete` command to `account` command group.
+- Added `/api/v2/admin/accounts` Mastodon API endpoint.
+- Send `moderation_warning` notification when post is deleted by admin.
+- Send `moderation_warning` notification when post is deleted by group moderator.
+- Added `emoji list` command.
+- Added `tracking` field to `Status.conversation` object.
+- Added API endpoint for moderating group conversations.
+- Added `can_moderate` field to `Status.conversation` object.
+- Implemented FEP-1b12 "moderators" collection.
+
+### Changed
+
+- Include object ID in "local object" error message.
+- Use mitra-web background color on OAuth pages.
+- Delete orphaned local groups after their owner is deleted.
+- Show automated accounts in `account list` command output.
+- Add "type" column to `account list` command output.
+- Hide system accounts from profile directory.
+- Delete post instead of its announcement when receiving `Announce(Delete)` activity.
+- Set `Status.display_name` to an empty string if display name is not known.
+- Show `create-system-account` command in CLI help.
+- Add "account type" argument to `create-system-account` command.
+
+### Deprecated
+
+- Deprecated `load-replies` command.
+- Deprecated `Status.conversation_tracking` field.
+
+### Fixed
+
+- Fixed "local object" error during processing of a post addressed to a local group.
+- Fixed incorrect validation of titles with multibyte characters.
+- Count characters instead of bytes when validating strings for varchar columns.
+
 ## [5.8.0] - 2026-07-31
 
 ### Added

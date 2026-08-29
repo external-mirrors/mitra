@@ -38,7 +38,7 @@ use super::checks::{
     check_public_keys,
 };
 
-pub const ANONYMOUS: &str = "anonymous";
+pub(crate) const ANONYMOUS: &str = "anonymous";
 
 #[derive(Clone, Copy)]
 pub enum Origin {
@@ -881,6 +881,10 @@ impl DbActorProfile {
 
     pub fn is_group(&self) -> bool {
         self.actor_type == ActorType::Group
+    }
+
+    pub fn is_private_group(&self) -> bool {
+        self.is_group() && self.manually_approves_followers
     }
 
     pub fn is_anonymous(&self) -> bool {

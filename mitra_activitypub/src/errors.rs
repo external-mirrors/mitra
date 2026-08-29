@@ -10,8 +10,8 @@ use crate::authentication::AuthenticationError;
 
 #[derive(Debug, Error)]
 pub enum HandlerError {
-    #[error("local object")]
-    LocalObject,
+    #[error("local object: {0}")]
+    LocalObject(String),
 
     #[error(transparent)]
     FetchError(#[from] FetchError),

@@ -1,4 +1,7 @@
-use apx_sdk::core::url::canonical::CanonicalUri;
+use apx_sdk::core::url::canonical::{
+    CanonicalUri,
+    NonCanonicalUri,
+};
 
 use mitra_models::{
     activitypub::queries::expand_collections,
@@ -9,8 +12,10 @@ use mitra_models::{
     },
 };
 
+use crate::deliverer::Recipient;
+
 /// Returns remote recipients of the activity
-pub async fn get_activity_recipients(
+pub async fn get_activity_audience_actors(
     db_client: &impl DatabaseClient,
     audience: &[CanonicalUri],
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
@@ -25,9 +30,44 @@ pub async fn get_activity_recipients(
     Ok(recipients)
 }
 
+pub async fn get_activity_recipients(
+    db_client: &impl DatabaseClient,
+    audience: &[CanonicalUri],
+) -> Result<Vec<Recipient>, DatabaseError> {
+    let profiles = get_activity_audience_actors(
+        db_client,
+        audience,
+    ).await?;
+    let recipients = profiles
+        .into_iter()
+        .filter_map(|profile| profile.actor_json)
+        .flat_map(|actor_data| Recipient::for_inbox(&actor_data))
+        .collect();
+    Ok(recipients)
+}
+
 pub enum EndpointType {
     Inbox,
     Outbox,
+}
+
+#[expect(async_fn_in_trait)]
+pub trait Deliverable {
+    fn to(&self) -> &[NonCanonicalUri];
+    fn cc(&self) -> &[NonCanonicalUri];
+
+    async fn get_recipients(
+        &self,
+        db_client: &impl DatabaseClient,
+    ) -> Result<Vec<Recipient>, DatabaseError> {
+        let audience: Vec<_> = self
+            .to()
+            .iter()
+            .chain(self.cc())
+            .map(|id| id.clone().into_canonical())
+            .collect();
+        get_activity_recipients(db_client, &audience).await
+    }
 }
 
 #[cfg(test)]
@@ -41,7 +81,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_get_activity_recipients() {
+    async fn test_get_activity_audience_actors() {
         let db_client = &mut create_test_database().await;
         let actor_1 = "https://social.example/actors/1";
         let actor_2 = "https://social.example/actors/2";
@@ -68,7 +108,7 @@ mod tests {
             .into_iter()
             .map(|id| CanonicalUri::parse_canonical(id).unwrap())
             .collect();
-        let recipients = get_activity_recipients(
+        let recipients = get_activity_audience_actors(
             db_client,
             &audience,
         ).await.unwrap();

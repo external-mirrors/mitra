@@ -30,8 +30,9 @@ pub async fn get_group_by_id(
     Ok(profile)
 }
 
-const AFFILIATION_TYPES: [RelationshipType; 1] = [
+const AFFILIATION_TYPES: [RelationshipType; 2] = [
     RelationshipType::GroupAdmin,
+    RelationshipType::GroupMember,
 ];
 
 pub async fn get_affiliated_profiles(
@@ -88,6 +89,23 @@ pub async fn update_affiliations(
         ).await?;
     };
     transaction.commit().await?;
+    Ok(())
+}
+
+pub async fn join_private_group(
+    db_client: &impl DatabaseClient,
+    member_id: Uuid,
+    group_id: Uuid,
+) -> Result<(), DatabaseError> {
+    match create_relationship(
+        db_client,
+        member_id,
+        group_id,
+        RelationshipType::GroupMember,
+    ).await {
+        Ok(_) | Err(DatabaseError::AlreadyExists(_)) => (),
+        Err(other_error) => return Err(other_error),
+    };
     Ok(())
 }
 

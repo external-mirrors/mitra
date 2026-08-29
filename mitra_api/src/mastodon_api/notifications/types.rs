@@ -1,9 +1,14 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use mitra_activitypub::authority::Authority;
 use mitra_models::{
     accounts::types::User,
+    moderation_actions::types::{
+        ModerationAction,
+        ModerationActionType,
+    },
     notifications::types::{
         EventType,
         NotificationDetailed as DbNotificationDetailed,
@@ -32,33 +37,69 @@ pub struct NotificationQueryParams {
     pub limit: PageSize,
 }
 
+// https://docs.joinmastodon.org/entities/AccountWarning/
+#[derive(Serialize)]
+pub struct AccountWarning {
+    id: Uuid,
+    action: &'static str,
+    text: String,
+    status_ids: Option<Vec<Uuid>>,
+    target_account: Option<Account>, // not nullable in Mastodon
+    appeal: Option<()>,
+    created_at: DateTime<Utc>,
+}
+
+impl AccountWarning {
+    fn from_db(action: ModerationAction) -> Self {
+        Self {
+            id: action.id,
+            action: match action.action_type {
+                ModerationActionType::PostDeleted => "delete_statuses",
+            },
+            text: action.reason.unwrap_or_default(),
+            status_ids: None,
+            target_account: None,
+            appeal: None,
+            created_at: action.created_at,
+        }
+    }
+}
+
 #[derive(Serialize)]
 pub struct EmojiReaction {
     content: String,
     emoji: Option<CustomEmoji>,
 }
 
-// https://docs.joinmastodon.org/entities/notification/
+#[derive(Serialize)]
+pub struct PleromaNotification {
+    pub is_seen: bool,
+}
+
+// https://docs.joinmastodon.org/entities/Notification/
 #[derive(Serialize)]
 pub struct Notification {
     pub id: String,
 
     #[serde(rename = "type")]
     event_type: String,
-    subtype: Option<String>,
 
     account: Account,
     status: Option<Status>,
-
-    reaction: Option<EmojiReaction>,
-    // Pleroma compatibility
-    emoji: Option<String>,
-    emoji_url: Option<String>,
-
-    payment_amount: Option<i64>,
+    moderation_warning: Option<AccountWarning>,
 
     #[serde(serialize_with = "serialize_datetime")]
     created_at: DateTime<Utc>,
+
+    // Pleroma compatibility
+    emoji: Option<String>,
+    emoji_url: Option<String>,
+    pub pleroma: PleromaNotification,
+
+    // Custom fields
+    subtype: Option<String>,
+    reaction: Option<EmojiReaction>,
+    payment_amount: Option<i64>,
 }
 
 impl Notification {
@@ -66,6 +107,7 @@ impl Notification {
         authority: &Authority,
         media_server: &ClientMediaServer,
         notification: DbNotificationDetailed,
+        maybe_marker: Option<i32>,
     ) -> Self {
         let account = Account::from_profile(
             authority,
@@ -95,7 +137,10 @@ impl Notification {
             EventType::SubscriberLeaving => "subscriber_leaving",
             EventType::Move => "move",
             EventType::SignUp => "admin.sign_up",
+            EventType::ModerationWarning => "moderation_warning",
         };
+        let maybe_moderation_warning = notification.moderation_action
+            .map(AccountWarning::from_db);
         let maybe_reaction = if let Some(content) = notification.reaction_content {
             let maybe_custom_emoji = notification.reaction_emoji
                 .map(|emoji| CustomEmoji::from_db(media_server, emoji));
@@ -118,11 +163,17 @@ impl Notification {
             subtype: maybe_event_subtype,
             account,
             status,
+            moderation_warning: maybe_moderation_warning,
             reaction: maybe_reaction,
             emoji: maybe_emoji_content,
             emoji_url: maybe_emoji_url,
             payment_amount: notification.payment_amount,
             created_at: notification.created_at,
+            pleroma: PleromaNotification {
+                is_seen: maybe_marker
+                    .map(|marker| notification.id <= marker)
+                    .unwrap_or(false),
+            },
         }
     }
 }
@@ -167,4 +218,9 @@ impl NotificationPolicy {
             },
         }
     }
+}
+
+#[derive(Deserialize)]
+pub struct ReadNotificationsForm {
+    pub max_id: i32,
 }

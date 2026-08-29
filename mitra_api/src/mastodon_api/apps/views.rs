@@ -40,15 +40,19 @@ async fn create_app_view(
         Either::Right(form) => form.into_inner().into(),
     };
     let db_client = &**get_database_client(&db_pool).await?;
+    let (supported_scopes, unsupported_scopes) = clean_scopes(&app_form.scopes);
     let db_app_data = DbOauthAppData {
         app_name: app_form.client_name,
         website: app_form.website,
-        scopes: clean_scopes(&app_form.scopes),
+        scopes: supported_scopes,
         redirect_uri: app_form.redirect_uris,
         client_id: Uuid::new_v4(),
         client_secret: generate_oauth_token(),
     };
     validate_redirect_uri(&db_app_data.redirect_uri)?;
+    if !unsupported_scopes.is_empty() {
+        log::warn!("unsupported scopes: {:?}", unsupported_scopes);
+    };
     let db_app = create_oauth_app(db_client, db_app_data).await?;
     log::info!("registered app with scopes: {:?}", db_app.scopes);
     let app = OauthApp::from_db(db_app);

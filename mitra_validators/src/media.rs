@@ -8,14 +8,14 @@ const MEDIA_DESCRIPTION_LENGTH_MAX: usize = 3000;
 pub fn validate_media_url(url: &str) -> Result<(), ValidationError> {
     HttpUri::parse(url)
         .map_err(|_| ValidationError("invalid media URL"))?;
-    if url.len() > MEDIA_URL_LENGTH_MAX {
+    if url.chars().count() > MEDIA_URL_LENGTH_MAX {
         return Err(ValidationError("media URL is too long"));
     };
     Ok(())
 }
 
 pub fn validate_media_description(description: &str) -> Result<(), ValidationError> {
-    if description.len() > MEDIA_DESCRIPTION_LENGTH_MAX {
+    if description.chars().count() > MEDIA_DESCRIPTION_LENGTH_MAX {
         return Err(ValidationError("media description is too long"));
     };
     Ok(())

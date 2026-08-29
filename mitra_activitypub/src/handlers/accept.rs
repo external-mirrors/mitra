@@ -13,6 +13,7 @@ use mitra_models::{
         DatabaseConnectionPool,
         DatabaseError,
     },
+    groups::helpers::join_private_group,
     invoices::helpers::remote_invoice_opened,
     invoices::queries::get_invoice_by_id,
     profiles::queries::{
@@ -110,6 +111,13 @@ pub async fn handle_accept(
         db_client,
         follow_request.id,
     ).await?;
+    if actor_profile.is_private_group() {
+        join_private_group(
+            db_client,
+            follow_request.source_id,
+            follow_request.target_id,
+        ).await?;
+    };
     if actor_profile.has_portable_account() {
         let source = get_profile_by_id(db_client, follow_request.source_id).await?;
         add_follower(db_client, &source, &actor_profile).await?;

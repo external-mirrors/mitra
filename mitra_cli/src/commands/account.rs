@@ -11,12 +11,14 @@ use apx_sdk::core::{
 use clap::{
     Parser,
     Subcommand,
+    ValueEnum,
 };
 use uuid::Uuid;
 
 use mitra_activitypub::adapters::users::create_or_update_local_actor;
 use mitra_adapters::{
-    roles::{
+    accounts::{
+        account_type_to_str,
         from_default_role,
         role_from_str,
         role_to_str,
@@ -26,9 +28,11 @@ use mitra_adapters::{
 use mitra_config::Config;
 use mitra_models::{
     accounts::{
-        helpers::get_user_by_id_or_name,
+        helpers::{
+            create_anonymous_account,
+            get_user_by_id_or_name,
+        },
         queries::{
-            create_automated_account,
             create_invite_code,
             create_user,
             get_accounts_for_admin,
@@ -37,17 +41,16 @@ use mitra_models::{
             set_user_role,
         },
         types::{
-            AutomatedAccountData,
-            AutomatedAccountType,
             UserCreateData,
         },
     },
     database::{get_database_client, DatabaseConnectionPool},
     oauth::queries::delete_oauth_tokens,
-    profiles::types::ANONYMOUS,
 };
 use mitra_utils::passwords::hash_password;
 use mitra_validators::accounts::validate_local_username;
+
+use super::profile::DeleteUser;
 
 /// Create new account
 #[derive(Parser)]
@@ -98,9 +101,16 @@ impl CreateAccount {
     }
 }
 
+#[derive(Clone, ValueEnum)]
+enum SystemAccountType {
+    Anonymous,
+}
+
 /// Create system account
 #[derive(Parser)]
-pub struct CreateSystemAccount;
+pub struct CreateSystemAccount {
+    account_type: SystemAccountType,
+}
 
 impl CreateSystemAccount {
     pub async fn execute(
@@ -110,16 +120,15 @@ impl CreateSystemAccount {
     ) -> Result<(), Error> {
         let db_client = &mut **get_database_client(db_pool).await?;
         let instance = config.instance();
-        let account_data = AutomatedAccountData {
-            username: ANONYMOUS.to_owned(),
-            bio: None,
-            bio_source: None,
-            emojis: vec![],
-            account_type: AutomatedAccountType::Anonymous,
-            rsa_secret_key: instance.rsa_secret_key,
-            ed25519_secret_key: instance.ed25519_secret_key,
+        match self.account_type {
+            SystemAccountType::Anonymous => {
+                create_anonymous_account(
+                    db_client,
+                    instance.rsa_secret_key,
+                    instance.ed25519_secret_key,
+                ).await?;
+            },
         };
-        create_automated_account(db_client, account_data).await?;
         println!("account created");
         Ok(())
     }
@@ -137,19 +146,16 @@ impl ListAccounts {
         let db_client = &**get_database_client(db_pool).await?;
         let accounts = get_accounts_for_admin(db_client).await?;
         println!(
-            "{0: <40} | {1: <35} | {2: <20} | {3: <35} | {4: <35}",
-            "ID", "username", "role", "created", "last login",
+            "{0: <40} | {1: <35} | {2: <10} | {3: <15} | {4: <35} | {5: <35}",
+            "ID", "username", "type", "role", "created", "last login",
         );
         for account in accounts {
-            let role = match account.role {
-                Some(role) => role_to_str(role),
-                None => "user (portable)",
-            };
             println!(
-                "{0: <40} | {1: <35} | {2: <20} | {3: <35} | {4: <35}",
+                "{0: <40} | {1: <35} | {2: <10} | {3: <15} | {4: <35} | {5: <35}",
                 account.profile.id.to_string(),
                 account.profile.username,
-                role,
+                account_type_to_str(account.account_type),
+                account.role.map(role_to_str).unwrap_or("-"),
                 account.profile.created_at.to_string(),
                 account.last_login.map(|dt| dt.to_string()).unwrap_or_default(),
             );
@@ -286,6 +292,7 @@ pub enum AccountCommand {
     Password(SetPassword),
     Role(SetRole),
     Logout(RevokeOauthTokens),
+    Delete(DeleteUser),
 }
 
 impl AccountCommand {
@@ -300,6 +307,7 @@ impl AccountCommand {
             Self::Password(command) => command.execute(db_pool).await,
             Self::Role(command) => command.execute(db_pool).await,
             Self::Logout(command) => command.execute(db_pool).await,
+            Self::Delete(command) => command.execute(config, db_pool).await,
         }
     }
 }

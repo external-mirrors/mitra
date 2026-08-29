@@ -1,23 +1,17 @@
 use anyhow::Error;
 use apx_core::url::canonical::CanonicalUri;
-use clap::{
-    Parser,
-    Subcommand,
-};
+use clap::Parser;
 
 use mitra_activitypub::{
     builders::undo_announce::prepare_undo_announce,
 };
-use mitra_adapters::{
-    media::{delete_files, delete_orphaned_media},
-};
+use mitra_adapters::media::delete_orphaned_media;
 use mitra_config::Config;
 use mitra_models::{
     accounts::queries::get_user_by_id,
     activitypub::queries::get_object_ids,
     attachments::queries::delete_unused_attachments,
     database::{get_database_client, DatabaseConnectionPool},
-    media::queries::{find_orphaned_files, get_local_files},
     posts::queries::{
         delete_post,
         delete_repost,
@@ -31,7 +25,6 @@ use mitra_models::{
         get_profile_by_id,
     },
 };
-use mitra_services::media::MediaStorage;
 use mitra_utils::datetime::days_before_now;
 
 /// Delete old remote posts
@@ -107,59 +100,6 @@ impl DeleteEmptyProfiles {
     }
 }
 
-/// List files uploaded by local users
-#[derive(Parser)]
-pub struct ListLocalFiles;
-
-impl ListLocalFiles {
-    pub async fn execute(
-        self,
-        _config: &Config,
-        db_pool: &DatabaseConnectionPool,
-    ) -> Result<(), Error> {
-        let db_client = &**get_database_client(db_pool).await?;
-        let filenames = get_local_files(db_client).await?;
-        for file_name in filenames {
-            println!("{file_name}");
-        };
-        Ok(())
-    }
-}
-
-/// Find and delete orphaned files
-#[derive(Parser)]
-pub struct DeleteOrphanedFiles {
-    /// List found files, but don't delete them
-    #[arg(long)]
-    dry_run: bool,
-}
-
-impl DeleteOrphanedFiles {
-    pub async fn execute(
-        self,
-        config: &Config,
-        db_pool: &DatabaseConnectionPool,
-    ) -> Result<(), Error> {
-        let db_client = &**get_database_client(db_pool).await?;
-        let media_storage = MediaStorage::new(config);
-        let files = media_storage.list_files()?;
-        let orphaned = find_orphaned_files(db_client, files).await?;
-        if orphaned.is_empty() {
-            println!("no orphaned files found");
-            return Ok(());
-        };
-        if self.dry_run {
-            for file_name in orphaned {
-                println!("orphaned file: {file_name}");
-            };
-        } else {
-            delete_files(&media_storage, &orphaned);
-            println!("orphaned files deleted: {}", orphaned.len());
-        };
-        Ok(())
-    }
-}
-
 /// Delete old reposts made by local users
 #[derive(Parser)]
 pub struct PruneReposts {
@@ -211,25 +151,5 @@ impl CheckUris {
             };
         };
         Ok(())
-    }
-}
-
-/// Manage media
-#[derive(Subcommand)]
-pub enum MediaCommand {
-    Local(ListLocalFiles),
-    DeleteOrphaned(DeleteOrphanedFiles),
-}
-
-impl MediaCommand {
-    pub async fn execute(
-        self,
-        config: &Config,
-        db_pool: &DatabaseConnectionPool,
-    ) -> Result<(), Error> {
-        match self {
-            Self::Local(command) => command.execute(config, db_pool).await,
-            Self::DeleteOrphaned(command) => command.execute(config, db_pool).await,
-        }
     }
 }

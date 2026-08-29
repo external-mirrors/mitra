@@ -705,6 +705,14 @@ pub(crate) fn build_visibility_filter() -> String {
                         AND relationship_type = {relationship_subscription}
                     )
             )
+            OR post.visibility = {visibility_group} AND EXISTS (
+                SELECT 1
+                FROM relationship
+                WHERE
+                    source_id = $current_user_id
+                    AND target_id = post.group_id
+                    AND relationship_type = {relationship_member}
+            )
             OR post.visibility = {visibility_conversation} AND EXISTS (
                 SELECT 1
                 FROM conversation
@@ -725,6 +733,15 @@ pub(crate) fn build_visibility_filter() -> String {
                                     AND relationship_type = {relationship_subscription}
                                 )
                         )
+                        OR EXISTS (
+                            SELECT 1
+                            FROM relationship
+                            WHERE
+                                root.visibility = {visibility_group}
+                                AND source_id = $current_user_id
+                                AND target_id = root.group_id
+                                AND relationship_type = {relationship_member}
+                        )
                     )
             )
         )",
@@ -732,8 +749,10 @@ pub(crate) fn build_visibility_filter() -> String {
         visibility_followers=i16::from(Visibility::Followers),
         visibility_subscribers=i16::from(Visibility::Subscribers),
         visibility_conversation=i16::from(Visibility::Conversation),
+        visibility_group=i16::from(Visibility::Group),
         relationship_follow=i16::from(RelationshipType::Follow),
         relationship_subscription=i16::from(RelationshipType::Subscription),
+        relationship_member=i16::from(RelationshipType::GroupMember),
     )
 }
 
@@ -839,7 +858,17 @@ pub async fn get_home_timeline(
                 UNION ALL
                 -- posts where user is mentioned
                 SELECT 1 FROM post_mention
-                WHERE post_id = post.id AND profile_id = $current_user_id
+                WHERE
+                    post_id = post.id
+                    AND profile_id = $current_user_id
+                    -- exclude mentions from muted conversations
+                    AND NOT EXISTS (
+                        SELECT 1 FROM conversation_tracking
+                        WHERE
+                            conversation_tracking.conversation_id = post.conversation_id
+                            AND account_id = $current_user_id
+                            AND tracking_status = {tracking_status_mute}
+                    )
                 UNION ALL
                 -- posts from followed conversations
                 SELECT 1 FROM conversation_tracking
@@ -860,6 +889,7 @@ pub async fn get_home_timeline(
         relationship_subscription=i16::from(RelationshipType::Subscription),
         relationship_hide_reposts=i16::from(RelationshipType::HideReposts),
         relationship_hide_replies=i16::from(RelationshipType::HideReplies),
+        tracking_status_mute=i16::from(TrackingStatus::Mute),
         tracking_status_follow=i16::from(TrackingStatus::Follow),
         mute_filter=build_mute_filter(),
         visibility_filter=build_visibility_filter(),
@@ -2100,11 +2130,19 @@ mod tests {
     use crate::{
         accounts::test_utils::create_test_user,
         activitypub::constants::AP_PUBLIC,
+        conversations::{
+            queries::set_conversation_tracking_status,
+            types::TrackingStatus,
+        },
         custom_feeds::queries::{
             add_custom_feed_sources,
             create_custom_feed,
         },
         database::test_utils::create_test_database,
+        groups::{
+            helpers::join_private_group,
+            test_utils::create_test_remote_group,
+        },
         posts::{
             constants::PREINSTALLED_FTS_CONFIG,
             test_utils::{
@@ -2423,6 +2461,86 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    async fn test_home_timeline_muted_conversation() {
+        let db_client = &mut create_test_database().await;
+        let current_user = create_test_user(db_client, "test").await;
+        let user_1 = create_test_user(db_client, "user1").await;
+        let user_2 = create_test_user(db_client, "user2").await;
+        follow(db_client, current_user.id, user_1.id).await.unwrap();
+        // Post from followed user
+        let post_data = PostCreateData {
+            content: "test 1".to_string(),
+            ..Default::default()
+        };
+        let post = create_post(db_client, user_1.id, post_data).await.unwrap();
+        // Reply from current user
+        let reply_data_1 = PostCreateData {
+            context: PostContext::reply_to(&post),
+            content: "reply".to_string(),
+            mentions: vec![user_1.id],
+            ..Default::default()
+        };
+        let reply_1 = create_post(db_client, current_user.id, reply_data_1).await.unwrap();
+        // Reply from followed user
+        let reply_data_2 = PostCreateData {
+            context: PostContext::reply_to(&reply_1),
+            content: "reply".to_string(),
+            mentions: vec![current_user.id],
+            ..Default::default()
+        };
+        let reply_2 = create_post(db_client, user_1.id, reply_data_2).await.unwrap();
+        // Reply from 3rd user
+        let reply_data_3 = PostCreateData {
+            context: PostContext::reply_to(&reply_2),
+            content: "reply".to_string(),
+            mentions: vec![current_user.id, user_1.id],
+            ..Default::default()
+        };
+        let reply_3 = create_post(db_client, user_2.id, reply_data_3).await.unwrap();
+        // Reply from followed user
+        let reply_data_4 = PostCreateData {
+            context: PostContext::reply_to(&reply_3),
+            content: "reply".to_string(),
+            mentions: vec![current_user.id, user_2.id],
+            ..Default::default()
+        };
+        let reply_4 = create_post(db_client, user_1.id, reply_data_4).await.unwrap();
+
+        let timeline = get_home_timeline(
+            db_client,
+            current_user.id,
+            None,
+            20,
+        ).await.unwrap();
+        assert_eq!(timeline.len(), 5);
+        assert_eq!(timeline[0].id, reply_4.id);
+        assert_eq!(timeline[1].id, reply_3.id);
+        assert_eq!(timeline[2].id, reply_2.id);
+        assert_eq!(timeline[3].id, reply_1.id);
+        assert_eq!(timeline[4].id, post.id);
+
+        set_conversation_tracking_status(
+            db_client,
+            post.expect_conversation().id,
+            current_user.id,
+            Some(TrackingStatus::Mute),
+        ).await.unwrap();
+        let timeline = get_home_timeline(
+            db_client,
+            current_user.id,
+            None,
+            20,
+        ).await.unwrap();
+        assert_eq!(timeline.len(), 4);
+        // Reply from 3rd user is not shown
+        assert_eq!(timeline[0].id, reply_4.id);
+        assert_eq!(timeline[1].id, reply_2.id);
+        assert_eq!(timeline[2].id, reply_1.id);
+        assert_eq!(timeline[3].id, post.id);
+    }
+
+    #[tokio::test]
+    #[serial]
     async fn test_public_timeline() {
         let db_client = &mut create_test_database().await;
         let current_user = create_test_user(db_client, "test").await;
@@ -2703,6 +2821,64 @@ mod tests {
         ).await.unwrap();
         assert_eq!(timeline.len(), 1);
         assert_eq!(timeline.iter().any(|item| item.id == repost.id), true);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_profile_timeline_private_group_post() {
+        let db_client = &mut create_test_database().await;
+        let group = create_test_remote_group(
+            db_client,
+            "group",
+            "groups.example",
+            "https://groups.example/123",
+            true,
+        ).await;
+        assert!(group.is_private_group());
+        let author = create_test_user(db_client, "author").await;
+        join_private_group(db_client, author.id, group.id).await.unwrap();
+        let post_data = PostCreateData {
+            context: PostContext::Top {
+                group_id: Some(group.id),
+                object_id: None,
+                audience: Some("https://groups.example/123/followers".to_owned()),
+            },
+            visibility: Visibility::Group,
+            ..PostCreateData::for_test()
+        };
+        let post = create_post(db_client, author.id, post_data).await.unwrap();
+        let viewer = create_test_user(db_client, "viewer").await;
+        follow(db_client, viewer.id, author.id).await.unwrap();
+
+        // Viewer is not a member
+        let timeline = get_posts_by_author(
+            db_client,
+            author.id,
+            Some(viewer.id),
+            true, // include replies
+            true, // include reposts
+            false, // not only pinned
+            false, // not only media
+            None,
+            10,
+        ).await.unwrap();
+        assert_eq!(timeline.len(), 0);
+
+        // Viewer is a member
+        join_private_group(db_client, viewer.id, group.id).await.unwrap();
+        let timeline = get_posts_by_author(
+            db_client,
+            author.id,
+            Some(viewer.id),
+            true, // include replies
+            true, // include reposts
+            false, // not only pinned
+            false, // not only media
+            None,
+            10,
+        ).await.unwrap();
+        assert_eq!(timeline.len(), 1);
+        assert_eq!(timeline[0].id, post.id);
     }
 
     #[tokio::test]

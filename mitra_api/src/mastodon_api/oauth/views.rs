@@ -41,8 +41,14 @@ use mitra_services::{
     ethereum::eip4361::verify_eip4361_signature,
     monero::caip122::verify_monero_caip122_signature,
 };
-use mitra_utils::passwords::verify_password;
-use mitra_validators::errors::ValidationError;
+use mitra_utils::{
+    oauth::append_to_redirect_uri,
+    passwords::verify_password,
+};
+use mitra_validators::{
+    errors::ValidationError,
+    oauth::clean_scopes,
+};
 
 use crate::{
     http::{
@@ -69,6 +75,7 @@ use super::utils::{
     generate_oauth_token,
     render_authorization_page,
     render_authorization_code_page,
+    verify_scopes,
     AUTHORIZATION_CODE_LIFETIME,
 };
 
@@ -110,6 +117,11 @@ async fn authorize_view(
     if oauth_app.redirect_uri != query_params.redirect_uri {
         return Err(ValidationError("invalid redirect_uri parameter").into());
     };
+    let (supported_scopes, unsupported_scopes) =
+        clean_scopes(&query_params.scope.replace('+', " "));
+    if !unsupported_scopes.is_empty() {
+        log::warn!("unsupported scopes: {:?}", unsupported_scopes);
+    };
 
     let authorization_code = generate_oauth_token();
     let created_at = Utc::now();
@@ -119,10 +131,11 @@ async fn authorize_view(
         &authorization_code,
         user.id,
         oauth_app.id,
-        &query_params.scope.replace('+', " "),
+        &supported_scopes,
         created_at,
         expires_at,
     ).await?;
+    log::info!("created authorization code with scopes: {:?}", supported_scopes);
 
     let response = if oauth_app.redirect_uri == "urn:ietf:wg:oauth:2.0:oob" {
         let (page, nonce) = render_authorization_code_page(authorization_code);
@@ -134,13 +147,17 @@ async fn authorize_view(
             .body(page)
     } else {
         // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2
-        let mut redirect_uri = format!(
-            "{}?code={}",
-            oauth_app.redirect_uri,
-            authorization_code,
-        );
+        let mut redirect_uri = append_to_redirect_uri(
+            &oauth_app.redirect_uri,
+            "code",
+            &authorization_code,
+        ).map_err(MastodonError::from_internal)?;
         if let Some(ref state) = query_params.state {
-            redirect_uri += &format!("&state={}", state);
+            redirect_uri = append_to_redirect_uri(
+                &redirect_uri,
+                "state",
+                state,
+            ).map_err(MastodonError::from_internal)?;
         };
         HttpResponse::Found()
             .append_header((http_header::LOCATION, redirect_uri))
@@ -179,9 +196,15 @@ pub async fn token_view(
         };
         Some(oauth_app)
     } else {
+        log::warn!("client ID is not provided");
         None
     };
-    let user = match request_data.grant_type.as_str() {
+    let scopes = request_data.scope.unwrap_or_default();
+    let (supported_scopes, unsupported_scopes) = clean_scopes(&scopes);
+    if !unsupported_scopes.is_empty() {
+        log::warn!("unsupported scopes: {:?}", unsupported_scopes);
+    };
+    let (user, scopes) = match request_data.grant_type.as_str() {
         "authorization_code" => {
             // https://www.rfc-editor.org/rfc/rfc6749#section-4.1.3
             let authorization_code = request_data.code.as_ref()
@@ -211,7 +234,7 @@ pub async fn token_view(
             if !password_correct {
                 return Err(ValidationError("incorrect password").into());
             };
-            user
+            (user, supported_scopes)
         },
         "eip4361" => {
             let message = request_data.message.as_ref()
@@ -231,10 +254,11 @@ pub async fn token_view(
             ).await? {
                 return Err(ValidationError("nonce can't be reused").into());
             };
-            get_user_by_login_address(
+            let user = get_user_by_login_address(
                 db_client,
                 &session_data.account_id,
-            ).await?
+            ).await?;
+            (user, supported_scopes)
         },
         "caip122_monero" => {
             let message = request_data.message.as_ref()
@@ -257,14 +281,21 @@ pub async fn token_view(
             ).await? {
                 return Err(ValidationError("nonce can't be reused").into());
             };
-            get_user_by_login_address(
+            let user = get_user_by_login_address(
                 db_client,
                 &session_data.account_id,
-            ).await?
+            ).await?;
+            (user, supported_scopes)
         },
         _ => {
             return Err(ValidationError("unsupported grant type").into());
         },
+    };
+    log::info!("requested token with scopes: {:?}", scopes);
+    if let Some(ref oauth_app) = maybe_oauth_app {
+        if !verify_scopes(&scopes, &oauth_app.scopes) {
+            log::warn!("requested token scopes are not a subset of app scopes");
+        };
     };
     let access_token = generate_oauth_token();
     let created_at = Utc::now();
@@ -274,6 +305,7 @@ pub async fn token_view(
         db_client,
         user.id,
         maybe_oauth_app.as_ref().map(|app| app.id),
+        &scopes,
         &access_token,
         created_at,
         expires_at,
@@ -285,6 +317,7 @@ pub async fn token_view(
     );
     let token_data = TokenResponse::new(
         access_token,
+        scopes,
         created_at.timestamp(),
         expires_in,
     );

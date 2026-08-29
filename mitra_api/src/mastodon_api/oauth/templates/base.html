@@ -6,11 +6,15 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Authorization</title>
     <style nonce="{{ nonce }}">
-        html, body { height: 100%; }
+        html, body {
+            background-color: #f3f2ed;
+            height: 100%;
+        }
         .center {
             margin: auto;
             max-width: 100%;
             position: relative;
+            text-align: center;
             top: 40%;
             width: 300px;
         }
@@ -32,7 +36,8 @@
             <button type="submit">Submit</button>
         </form>
         {% else %}
-        {{ code }}
+        <div>Authorization code:</div>
+        <code>{{ code }}</code>
         {% endif %}
     </div>
 </body>

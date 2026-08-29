@@ -14,6 +14,7 @@ pub mod instances;
 pub mod invoices;
 pub mod markers;
 pub mod media;
+pub mod moderation_actions;
 pub mod notifications;
 pub mod oauth;
 pub mod payment_methods;

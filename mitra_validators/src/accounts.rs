@@ -21,7 +21,7 @@ pub fn validate_local_username(username: &str) -> Result<(), ValidationError> {
     if !username_regexp.is_match(username) {
         return Err(ValidationError("only letters, numbers, hyphens, and underscores are allowed in usernames"));
     };
-    if username.len() > USERNAME_LENGTH_MAX {
+    if username.chars().count() > USERNAME_LENGTH_MAX {
         return Err(ValidationError("username is too long"));
     };
     Ok(())

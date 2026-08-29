@@ -34,7 +34,6 @@ use crate::{
     actors::builders::local_actor_data,
     authority::Authority,
     builders::add_context_activity::sync_conversation,
-    deliverer::Recipient,
     filter::get_moderation_domain,
     forwarder::get_activity_recipients,
     identifiers::canonicalize_id,
@@ -250,11 +249,7 @@ pub async fn handle_like_c2s(
     let recipients = get_activity_recipients(
         db_client,
         &audience,
-    ).await?
-        .into_iter()
-        .filter_map(|profile| profile.actor_json)
-        .flat_map(|actor_data| Recipient::for_inbox(&actor_data))
-        .collect();
+    ).await?;
     let account = get_user_by_id(db_client, author.id).await?;
     let job_data = OutgoingActivityJobData::new(
         &authority,

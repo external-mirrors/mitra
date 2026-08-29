@@ -300,7 +300,7 @@ impl OutgoingActivityJobData {
         {
             use apx_sdk::{
                 core::{
-                    did::Did,
+                    did_key::DidKey,
                     url::canonical::CanonicalUri,
                 },
                 utils::CoreType,
@@ -319,10 +319,12 @@ impl OutgoingActivityJobData {
                 let CanonicalUri::Ap(ref ap_actor_id) = canonical_actor_id else {
                     unreachable!();
                 };
-                let Did::Key(did_key) = ap_actor_id.authority() else {
-                    unreachable!();
-                };
-                let authority_public_key = did_key.try_ed25519_key()
+                let authority_public_key = ap_actor_id
+                    .authority()
+                    .to_string()
+                    .parse::<DidKey>()
+                    .expect("did:key should be valid")
+                    .try_ed25519_key()
                     .expect("did:key should be valid");
                 Authority::public_key(authority_public_key)
             };

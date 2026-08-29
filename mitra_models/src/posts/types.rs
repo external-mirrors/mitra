@@ -90,6 +90,7 @@ pub enum Visibility {
     Followers,
     Subscribers,
     Conversation,
+    Group,
 }
 
 impl Visibility {
@@ -110,6 +111,10 @@ impl Visibility {
                 Self::Direct,
             ],
             Self::Subscribers => vec![
+                Self::Conversation,
+                Self::Direct,
+            ],
+            Self::Group => vec![
                 Self::Conversation,
                 Self::Direct,
             ],
@@ -137,6 +142,7 @@ impl From<Visibility> for i16 {
             Visibility::Followers => 3,
             Visibility::Subscribers => 4,
             Visibility::Conversation => 5,
+            Visibility::Group => 6,
         }
     }
 }
@@ -151,6 +157,7 @@ impl TryFrom<i16> for Visibility {
             3 => Self::Followers,
             4 => Self::Subscribers,
             5 => Self::Conversation,
+            6 => Self::Group,
             _ => return Err(DatabaseTypeError),
         };
         Ok(visibility)
@@ -204,8 +211,9 @@ pub struct PostActions {
     pub reposted: bool,
     pub bookmarked: bool,
     pub voted_for: Vec<String>,
-    pub hidden: bool,
+    pub hidden: bool, // post from a muted user
     pub conversation_tracking_status: Option<TrackingStatus>,
+    pub can_moderate_conversation: bool,
 }
 
 #[derive(Clone, Default)]
@@ -353,6 +361,9 @@ impl PostDetailed {
                 return Err(DatabaseTypeError);
             };
         } else if maybe_conversation.is_some() {
+            return Err(DatabaseTypeError);
+        };
+        if db_post.visibility == Visibility::Group && db_post.group_id.is_none() {
             return Err(DatabaseTypeError);
         };
         if db_post.group_id != maybe_group.as_ref().map(|group| group.id) {

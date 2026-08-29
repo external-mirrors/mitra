@@ -122,7 +122,7 @@ pub struct Role {
 }
 
 impl Role {
-    fn from_db(role: DbRole) -> Self {
+    pub fn from_db(role: DbRole) -> Self {
         let role_name = match role {
             DbRole::Guest => unimplemented!(),
             DbRole::NormalUser => "user",
@@ -176,7 +176,7 @@ pub struct Account {
     pub acct: String,
     actor_id: String, // not part of Mastodon API
     pub url: String,
-    pub display_name: Option<String>,
+    pub display_name: String,
     #[serde(serialize_with = "serialize_datetime")]
     pub created_at: DateTime<Utc>,
     pub note: String,
@@ -304,7 +304,7 @@ impl Account {
             acct: preferred_handle,
             actor_id: actor_id,
             url: profile_url,
-            display_name: profile.display_name,
+            display_name: profile.display_name.unwrap_or_default(),
             created_at: profile.created_at,
             note: profile.bio.unwrap_or_default(),
             avatar: avatar_url.clone(),
@@ -781,7 +781,7 @@ fn default_status_page_size() -> PageSize { PageSize::new(20) }
 
 const fn default_only_media() -> bool { false }
 
-const fn default_exclude_replies() -> bool { true }
+const fn default_exclude_replies() -> bool { false }
 
 const fn default_exclude_reblogs() -> bool { false }
 

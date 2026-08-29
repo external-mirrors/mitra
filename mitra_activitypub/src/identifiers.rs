@@ -159,6 +159,12 @@ pub fn local_affiliations_collection_path(
     IdPath(format!("/ap/actors/{internal_actor_id}/affiliations"))
 }
 
+pub fn local_administrators_collection_path(
+    internal_actor_id: Uuid,
+) -> IdPath {
+    IdPath(format!("/ap/actors/{internal_actor_id}/administrators"))
+}
+
 pub fn local_activity_id_canonical(
     authority_root: &AuthorityRoot,
     activity_type: &str,

@@ -60,12 +60,14 @@ impl TryFrom<&Row> for ConversationPreview {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TrackingStatus {
     Follow,
+    Mute,
 }
 
 impl From<TrackingStatus> for i16 {
     fn from(value: TrackingStatus) -> i16 {
         match value {
             TrackingStatus::Follow => 1,
+            TrackingStatus::Mute => 2,
         }
     }
 }
@@ -76,6 +78,7 @@ impl TryFrom<i16> for TrackingStatus {
     fn try_from(value: i16) -> Result<Self, Self::Error> {
         let tracking_status = match value {
             1 => Self::Follow,
+            2 => Self::Mute,
             _ => return Err(DatabaseTypeError),
         };
         Ok(tracking_status)

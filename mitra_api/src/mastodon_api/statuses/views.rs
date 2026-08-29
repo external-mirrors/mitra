@@ -17,7 +17,10 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use mitra_activitypub::{
-    adapters::posts::delete_local_post,
+    adapters::{
+        posts::{delete_local_post, delete_group_post},
+        users::get_actor_data,
+    },
     authority::Authority,
     builders::{
         announce::prepare_announce,
@@ -37,7 +40,10 @@ use mitra_activitypub::{
     },
     queues::FetcherJobData,
 };
-use mitra_adapters::posts::check_post_limits;
+use mitra_adapters::{
+    groups::can_delete_group_post,
+    posts::check_post_limits,
+};
 use mitra_config::Config;
 use mitra_models::{
     accounts::types::Permission,
@@ -158,6 +164,7 @@ async fn create_status(
         return Err(MastodonError::PermissionError);
     };
     let instance = config.instance();
+    let authority = Authority::from(&instance);
     let status_form = match status_form {
         Either::Left(json) => json.into_inner(),
         Either::Right(form) => form.into_inner(),
@@ -241,6 +248,13 @@ async fn create_status(
             },
             Visibility::Subscribers => {
                 Some(LocalActorCollection::Subscribers.of(&actor_id))
+            },
+            Visibility::Group => {
+                let group = maybe_group.as_ref()
+                    .ok_or(ValidationError("post does not belong to a group"))?;
+                let group_data = get_actor_data(authority.root(), group);
+                // WARNING: may be None
+                group_data.followers
             },
             Visibility::Conversation => None, // will be rejected by validator
             Visibility::Direct => None,
@@ -721,6 +735,35 @@ async fn get_thread_view(
         posts,
     ).await?;
     Ok(HttpResponse::Ok().json(statuses))
+}
+
+#[delete("/{status_id}/thread")]
+async fn delete_from_thread_view(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    post_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let post = get_post_by_id_for_view(
+        db_client,
+        Some(&current_user.profile),
+        *post_id,
+    ).await?;
+    let group = post.group.as_ref()
+        .ok_or(DatabaseError::NotFound("post"))?;
+    if !can_delete_group_post(db_client, &current_user.profile, group).await? {
+        return Err(MastodonError::PermissionError);
+    };
+    delete_group_post(
+        &config,
+        db_client,
+        &post,
+        &current_user,
+    ).await?;
+    let empty = serde_json::json!({});
+    Ok(HttpResponse::NoContent().json(empty))
 }
 
 #[post("/{status_id}/favourite")]
@@ -1396,6 +1439,7 @@ pub fn status_api_scope() -> Scope {
         .service(delete_status)
         .service(get_context)
         .service(get_thread_view)
+        .service(delete_from_thread_view)
         .service(favourite)
         .service(unfavourite)
         .service(get_favourited_by)

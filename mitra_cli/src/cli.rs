@@ -50,6 +50,11 @@ use crate::commands::{
         RepairInvoice,
         GetPaymentAddress,
     },
+    media::{
+        DeleteOrphanedFiles,
+        ListLocalFiles,
+        MediaCommand,
+    },
     monero::{
         ListActiveAddresses,
         CreateMoneroSignature,
@@ -67,10 +72,7 @@ use crate::commands::{
         CheckUris,
         DeleteEmptyProfiles,
         DeleteExtraneousPosts,
-        DeleteOrphanedFiles,
         DeleteUnusedAttachments,
-        ListLocalFiles,
-        MediaCommand,
         PruneReposts,
     },
 };
@@ -106,7 +108,6 @@ pub enum Command {
     ListInviteCodes(ListInviteCodes),
     #[command(visible_alias = "create-user")]
     CreateAccount(CreateAccount),
-    #[command(hide = true)]
     CreateSystemAccount(CreateSystemAccount),
     #[command(visible_alias = "list-users")]
     ListAccounts(ListAccounts),
@@ -114,7 +115,7 @@ pub enum Command {
     SetRole(SetRole),
     RevokeOauthTokens(RevokeOauthTokens),
     ImportObject(ImportObject),
-    #[command(visible_alias = "fetch-replies")]
+    #[command(hide = true, alias = "fetch-replies")]
     LoadReplies(LoadReplies),
     FetchObject(FetchObject),
     Webfinger(Webfinger),

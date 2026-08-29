@@ -14,6 +14,7 @@ use mitra_config::Config;
 use mitra_models::{
     accounts::types::Permission,
     database::{get_database_client, DatabaseConnectionPool},
+    moderation_actions::helpers::on_local_post_deleted,
     posts::queries::{delete_post, get_post_by_id},
 };
 
@@ -36,10 +37,17 @@ async fn delete_post_view(
     };
     let post = get_post_by_id(db_client, *post_id).await?;
     if post.is_local() {
+        // Federate as self-delete
         delete_local_post(
             &config,
             db_client,
             &post,
+        ).await?;
+        on_local_post_deleted(
+            db_client,
+            current_user.id,
+            post.author.id,
+            None,
         ).await?;
     } else {
         let deletion_queue = delete_post(db_client, post.id).await?;

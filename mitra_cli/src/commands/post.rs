@@ -326,6 +326,7 @@ impl DeletePost {
         let db_client = &mut **get_database_client(db_pool).await?;
         let post = get_post_by_id(db_client, self.id).await?;
         if post.author.is_local() {
+            // Federate as self-delete
             delete_local_post(
                 config,
                 db_client,

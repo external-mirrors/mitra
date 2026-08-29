@@ -73,6 +73,7 @@ pub async fn get_conversation(
     Ok(conversation)
 }
 
+// A similar subquery is used in `build_visibility_filter`
 pub async fn is_conversation_participant(
     db_client: &impl DatabaseClient,
     user_id: Uuid,
@@ -99,12 +100,23 @@ pub async fn is_conversation_participant(
                             AND relationship_type = {relationship_subscription}
                         )
                 )
+                OR EXISTS (
+                    SELECT 1
+                    FROM relationship
+                    WHERE
+                        root.visibility = {visibility_group}
+                        AND source_id = $1
+                        AND target_id = conversation.group_id
+                        AND relationship_type = {relationship_member}
+                )
             )
         ",
         visibility_followers=i16::from(Visibility::Followers),
         visibility_subscribers=i16::from(Visibility::Subscribers),
+        visibility_group=i16::from(Visibility::Group),
         relationship_follow=i16::from(RelationshipType::Follow),
         relationship_subscription=i16::from(RelationshipType::Subscription),
+        relationship_member=i16::from(RelationshipType::GroupMember),
     );
     let maybe_row = db_client.query_opt(
         &statement,
@@ -263,6 +275,37 @@ pub(crate) async fn find_tracking_statuses_by_user(
         })
         .collect::<Result<Vec<_>, DatabaseError>>()?;
     Ok(statuses)
+}
+
+pub async fn find_moderated_conversations_by_user(
+    db_client: &impl DatabaseClient,
+    account_id: Uuid,
+    posts_ids: &[Uuid],
+) -> Result<Vec<Uuid>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT post.id
+        FROM post
+        WHERE
+            post.id = ANY($3)
+            AND EXISTS(
+                SELECT 1 FROM relationship
+                WHERE
+                    relationship.source_id = $1
+                    AND relationship.target_id = post.group_id
+                    AND relationship.relationship_type = $2
+            )
+        ",
+        &[
+            &account_id,
+            &RelationshipType::GroupAdmin,
+            &posts_ids,
+        ],
+    ).await?;
+    let moderated = rows.iter()
+        .map(|row| row.try_get("id"))
+        .collect::<Result<_, _>>()?;
+    Ok(moderated)
 }
 
 #[cfg(test)]

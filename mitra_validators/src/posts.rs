@@ -54,9 +54,12 @@ fn content_allowed_classes() -> Vec<(&'static str, Vec<&'static str>)> {
 }
 
 // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-name
-pub fn clean_title(title: &str) -> String {
+// NOTE: this function is not idempotent because truncation may result
+// in a partial HTML entity at the end of the string
+pub fn clean_remote_title(title: &str) -> String {
+    // Clean HTML because the title will be inserted into content
     let title = clean_html_all(title).trim().to_owned();
-    if title.len() <= TITLE_LENGTH_MAX {
+    if title.chars().count() <= TITLE_LENGTH_MAX {
         return title;
     };
     let title_truncated: String = title.chars()
@@ -66,7 +69,7 @@ pub fn clean_title(title: &str) -> String {
 }
 
 fn validate_title(title: &str) -> Result<(), ValidationError> {
-    if title.len() > TITLE_LENGTH_MAX {
+    if title.chars().count() > TITLE_LENGTH_MAX {
         return Err(ValidationError("title is too long"));
     };
     Ok(())
@@ -84,6 +87,7 @@ pub fn clean_local_content(
     content_trimmed.to_string()
 }
 
+// NOTE: this function is not idempotent on some inputs
 pub fn clean_remote_content(content: &str) -> String {
     clean_html(content, content_allowed_classes())
 }
@@ -108,7 +112,7 @@ pub fn validate_content(
 }
 
 fn validate_url(url: &str) -> Result<(), ValidationError> {
-    if url.len() > URL_LENGTH_MAX {
+    if url.chars().count() > URL_LENGTH_MAX {
         return Err(ValidationError("post URL is too long"));
     };
     Ok(())
@@ -119,7 +123,10 @@ pub fn validate_post_create_data(
     origin: Origin,
 ) -> Result<(), ValidationError> {
     match post_data.context {
-        PostContext::Top { ref object_id, ref audience, .. } => {
+        PostContext::Top { group_id, ref object_id, ref audience } => {
+            if post_data.visibility == Visibility::Group && group_id.is_none() {
+                return Err(ValidationError("post doesn't belong to a group"));
+            };
             if post_data.visibility == Visibility::Conversation {
                 return Err(ValidationError("top-level post can't have conversation visibility"));
             };
@@ -130,10 +137,10 @@ pub fn validate_post_create_data(
                 validate_any_object_id(audience)?;
             };
         },
+        PostContext::Reply { .. } => (),
         PostContext::Repost { .. } => {
             panic!("incorrect context");
         },
-        _ => (),
     };
     if let Some(ref title) = post_data.title {
         validate_title(title)?;
@@ -275,27 +282,38 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_clean_title() {
+    fn test_clean_remote_title() {
         let title = "test";
-        let cleaned = clean_title(title);
+        let cleaned = clean_remote_title(title);
         assert_eq!(cleaned, title);
     }
 
     #[test]
-    fn test_clean_title_html_chars() {
+    fn test_clean_remote_title_html_chars() {
         let title = r#"test > "abc" <a>link</a>"#;
-        let cleaned = clean_title(title);
+        let cleaned = clean_remote_title(title);
         assert_eq!(cleaned, r#"test &gt; "abc" link"#);
     }
 
     #[test]
-    fn test_clean_title_truncate() {
+    fn test_clean_remote_title_truncate() {
         let title = "x".repeat(400);
-        let cleaned = clean_title(&title);
-        assert_eq!(cleaned.len(), TITLE_LENGTH_MAX);
+        let cleaned = clean_remote_title(&title);
+        assert_eq!(cleaned.chars().count(), TITLE_LENGTH_MAX);
         assert_eq!(
             cleaned,
             format!("{}...", "x".repeat(297)),
+        );
+    }
+
+    #[test]
+    fn test_clean_remote_title_truncate_multibyte() {
+        let title = "文".repeat(400);
+        let cleaned = clean_remote_title(&title);
+        assert_eq!(cleaned.chars().count(), TITLE_LENGTH_MAX);
+        assert_eq!(
+            cleaned,
+            format!("{}...", "文".repeat(297)),
         );
     }
 
@@ -334,6 +352,14 @@ mod tests {
         let content = "test ";
         let cleaned = clean_local_content(content);
         assert_eq!(cleaned, "test");
+    }
+
+    #[test]
+    fn test_clean_remote_content_idempotency() {
+        let content = "<h4><hh4><h3>";
+        let cleaned_1 = clean_remote_content(content);
+        let cleaned_2 = clean_remote_content(&cleaned_1);
+        assert_ne!(cleaned_1, cleaned_2);
     }
 
     #[test]

@@ -19,10 +19,58 @@ use crate::{
 use crate::did_pkh::DidPkh;
 
 // https://www.w3.org/TR/did-core/#did-syntax
-const DID_RE: &str = r"^did:(?P<method>[[:alpha:]]+):[A-Za-z0-9._:-]+$";
+const DID_RE: &str = r"^did:(?P<method>[[:alpha:]]+):(?P<identifier>[A-Za-z0-9._:-]+)$";
 // https://www.w3.org/TR/did-core/#did-url-syntax
 pub(crate) const DID_URL_RE: &str = r"^(?P<did>did:[[:alpha:]]+:[A-Za-z0-9._:-]+)(?P<resource>.*)$";
 
+/// Decentralized identifier
+#[derive(Clone, Debug, PartialEq)]
+pub struct OpaqueDid {
+    method: String,
+    identifier: String,
+}
+
+impl OpaqueDid {
+    /// Parses a DID string
+    pub fn parse(value: &str) -> Result<Self, DidParseError> {
+        let did_re = Regex::new(DID_RE).expect("regexp should be valid");
+        let caps = did_re.captures(value).ok_or(DidParseError)?;
+        let did = Self {
+            method: caps["method"].to_string(),
+            identifier: caps["identifier"].to_string(),
+        };
+        Ok(did)
+    }
+
+    /// Returns the method name
+    pub fn method(&self) -> &str {
+        &self.method
+    }
+
+    /// Returns the method-specific identifier
+    pub fn identifier(&self) -> &str {
+        &self.identifier
+    }
+
+    // https://codeberg.org/fediverse/fep/src/commit/7377aa17eafff117358afed50131dab54efd89e6/fep/ef61/fep-ef61.md#authentication-and-authorization
+    pub(crate) fn origin(&self) -> Origin {
+        Origin::new_did(&self.to_string())
+    }
+}
+
+impl fmt::Display for OpaqueDid {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "did:{}:{}",
+            self.method,
+            self.identifier,
+        )
+    }
+}
+
+
+/// Decentralized identifier with known structure (only did:key and did:pkh are supported)
 #[derive(Clone, Debug, PartialEq)]
 pub enum Did {
     Key(DidKey),
@@ -51,11 +99,6 @@ impl Did {
         }
     }
 
-    // https://codeberg.org/fediverse/fep/src/commit/7377aa17eafff117358afed50131dab54efd89e6/fep/ef61/fep-ef61.md#authentication-and-authorization
-    pub(crate) fn origin(&self) -> Origin {
-        Origin::new_did(&self.to_string())
-    }
-
     pub fn as_did_key(&self) -> Option<&DidKey> {
         match self {
             Did::Key(did_key) => Some(did_key),
@@ -69,6 +112,14 @@ impl Did {
         match self {
             Did::Pkh(did_pkh) => Some(did_pkh),
             _ => None,
+        }
+    }
+
+    /// Creates an `OpaqueDid` from this DID
+    pub fn to_opaque_did(&self) -> OpaqueDid {
+        OpaqueDid {
+            method: self.method().to_string(),
+            identifier: self.identifier(),
         }
     }
 }
@@ -127,6 +178,31 @@ impl Serialize for Did {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_opaque_did_key_string_conversion() {
+        let did_str = "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK";
+        let did = OpaqueDid::parse(did_str).unwrap();
+        assert_eq!(did.method(), "key");
+        assert_eq!(did.identifier(), "z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK");
+        assert_eq!(did.to_string(), did_str);
+    }
+
+    #[test]
+    fn test_opaque_did_web_string_conversion() {
+        let did_str = "did:web:example.com";
+        let did = OpaqueDid::parse(did_str).unwrap();
+        assert_eq!(did.method(), "web");
+        assert_eq!(did.identifier(), "example.com");
+        assert_eq!(did.to_string(), did_str);
+    }
+
+    #[test]
+    fn test_opaque_did_parse_http_url() {
+        let value = "https://social.example/resolver/did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK";
+        let result = OpaqueDid::parse(value);
+        assert!(result.is_err());
+    }
 
     #[test]
     fn test_did_key_string_conversion() {

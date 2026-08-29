@@ -116,7 +116,7 @@ CREATE TABLE oauth_authorization (
     code VARCHAR(100) UNIQUE NOT NULL,
     user_id UUID NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
     application_id INTEGER NOT NULL REFERENCES oauth_application (id) ON DELETE CASCADE,
-    scopes VARCHAR(200) NOT NULL,
+    scopes TEXT[] NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
@@ -125,6 +125,7 @@ CREATE TABLE oauth_token (
     id SERIAL PRIMARY KEY,
     owner_id UUID NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
     application_id INTEGER REFERENCES oauth_application (id) ON DELETE CASCADE,
+    scopes TEXT[] NOT NULL,
     token_digest BYTEA UNIQUE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL
@@ -402,6 +403,15 @@ CREATE TABLE subscription (
     CHECK (sender_id != recipient_id)
 );
 
+CREATE TABLE moderation_action (
+    id UUID PRIMARY KEY,
+    moderator_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
+    target_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
+    action_type SMALLINT NOT NULL,
+    reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE notification (
     id SERIAL PRIMARY KEY,
     sender_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
@@ -409,6 +419,7 @@ CREATE TABLE notification (
     post_id UUID REFERENCES post (id) ON DELETE CASCADE,
     reaction_id UUID REFERENCES post_reaction (id) ON DELETE CASCADE,
     invoice_id UUID REFERENCES invoice (id) ON DELETE CASCADE,
+    moderation_action_id UUID REFERENCES moderation_action (id) ON DELETE CASCADE,
     event_type SMALLINT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );

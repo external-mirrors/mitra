@@ -6,6 +6,7 @@ use crate::{
         types::Role,
     },
     database::{DatabaseClient, DatabaseError},
+    conversations::helpers::is_conversation_muted,
     relationships::{
         queries::has_relationship,
         types::RelationshipType,
@@ -35,6 +36,7 @@ pub async fn create_follow_notification(
         None,
         None,
         None,
+        None,
         EventType::Follow,
     ).await
 }
@@ -56,6 +58,7 @@ pub async fn create_follow_request_notification(
         db_client,
         sender_id,
         recipient_id,
+        None,
         None,
         None,
         None,
@@ -84,6 +87,7 @@ pub async fn create_reply_notification(
         Some(post_id),
         None,
         None,
+        None,
         EventType::Reply,
     ).await
 }
@@ -110,6 +114,7 @@ pub async fn create_reaction_notification(
         Some(post_id),
         Some(reaction_id),
         None,
+        None,
         EventType::Reaction,
     ).await
 }
@@ -128,11 +133,19 @@ pub async fn create_mention_notification(
     ).await? {
         return Ok(());
     };
+    if is_conversation_muted(
+        db_client,
+        recipient_id,
+        post_id,
+    ).await? {
+        return Ok(());
+    };
     create_notification(
         db_client,
         sender_id,
         recipient_id,
         Some(post_id),
+        None,
         None,
         None,
         EventType::Mention,
@@ -160,6 +173,7 @@ pub async fn create_repost_notification(
         Some(post_id),
         None,
         None,
+        None,
         EventType::Repost,
     ).await
 }
@@ -177,6 +191,7 @@ pub async fn create_subscriber_payment_notification(
         None,
         None,
         Some(invoice_id),
+        None,
         EventType::SubscriberPayment,
     ).await
 }
@@ -190,6 +205,7 @@ pub async fn create_subscriber_leaving_notification(
         db_client,
         sender_id,
         recipient_id,
+        None,
         None,
         None,
         None,
@@ -209,6 +225,7 @@ pub async fn create_subscription_expiration_notification(
         None,
         None,
         None,
+        None,
         EventType::SubscriptionExpiration,
     ).await
 }
@@ -222,6 +239,7 @@ pub async fn create_move_notification(
         db_client,
         sender_id,
         recipient_id,
+        None,
         None,
         None,
         None,
@@ -242,10 +260,29 @@ pub async fn create_signup_notifications(
             None,
             None,
             None,
+            None,
             EventType::SignUp,
         ).await?;
     };
     Ok(())
+}
+
+pub async fn create_moderation_warning_notification(
+    db_client: &impl DatabaseClient,
+    sender_id: Uuid,
+    recipient_id: Uuid,
+    moderation_action_id: Uuid,
+) -> Result<(), DatabaseError> {
+    create_notification(
+        db_client,
+        sender_id,
+        recipient_id,
+        None,
+        None,
+        None,
+        Some(moderation_action_id),
+        EventType::ModerationWarning,
+    ).await
 }
 
 #[cfg(test)]

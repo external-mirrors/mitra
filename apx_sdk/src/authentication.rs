@@ -1,9 +1,12 @@
 //! Verifying the authenticity of objects.
 
+use std::str::FromStr;
+
 use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
 use apx_core::{
+    did_key::DidKey,
     json_signatures::{
         proofs::ProofType,
         verify::{
@@ -78,8 +81,8 @@ pub fn verify_portable_object(
             let did = did_url.did();
             match signature_data.proof_type {
                 ProofType::EddsaJcsSignature => {
-                    let signer_key = did.as_did_key()
-                        .ok_or(AuthenticationError::InvalidVerificationMethod)?
+                    let signer_key = DidKey::from_str(&did.to_string())
+                        .map_err(|_| AuthenticationError::InvalidVerificationMethod)?
                         .try_ed25519_key()
                         .map_err(|_| AuthenticationError::InvalidVerificationMethod)?;
                     verify_eddsa_json_signature(
