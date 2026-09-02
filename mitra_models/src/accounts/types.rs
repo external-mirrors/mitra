@@ -539,7 +539,7 @@ impl ManagedAccount for AutomatedAccountDetailed {
 }
 
 // `Send` is required for using the box in async functions
-pub type BoxedManagedAccount = Box<dyn ManagedAccount + Send>;
+pub type BoxedManagedAccount = Box<dyn ManagedAccount + Send + Sync>;
 
 impl TryFrom<&Row> for BoxedManagedAccount {
 

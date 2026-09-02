@@ -64,4 +64,5 @@ pub const LOCK: &str = "Lock"; // Lemmy
 pub const MULTIKEY: &str = "Multikey";
 pub const PROPERTY_VALUE: &str = "PropertyValue";
 pub const QUOTATION: &str = "Quotation";
+pub const QUOTE_AUTHORIZATION: &str = "QuoteAuthorization";
 pub const VERIFIABLE_IDENTITY_STATEMENT: &str = "VerifiableIdentityStatement";

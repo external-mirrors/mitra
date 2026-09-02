@@ -1,4 +1,5 @@
 use apx_core::{
+    base64,
     caip2::ChainId,
     url::{
         canonical::{CanonicalUri, NonCanonicalUri},
@@ -105,12 +106,26 @@ pub fn local_actor_proposal_id(
     format!("{}/proposals/{}", actor_id, chain_id)
 }
 
+fn local_object_path(internal_id: Uuid) -> IdPath {
+    IdPath(format!("/objects/{}", internal_id))
+}
+
+pub fn local_object_id_canonical(
+    authority_root: &AuthorityRoot,
+    internal_id: Uuid,
+) -> CanonicalUri {
+    let path = local_object_path(internal_id);
+    let id = format!("{}{}", authority_root, path.0);
+    CanonicalUri::parse_canonical(&id).expect("URI should be valid")
+}
+
 pub fn local_object_id(instance_uri: &str, internal_object_id: Uuid) -> String {
     format!("{}/objects/{}", instance_uri, internal_object_id)
 }
 
 pub fn local_object_id_unified(authority: &Authority, internal_object_id: Uuid) -> String {
-    format!("{}/objects/{}", authority, internal_object_id)
+    let path = local_object_path(internal_object_id);
+    authority.build_id_from_path(path).to_string()
 }
 
 pub fn local_object_replies(object_id: &str) -> String {
@@ -163,6 +178,32 @@ pub fn local_administrators_collection_path(
     internal_actor_id: Uuid,
 ) -> IdPath {
     IdPath(format!("/ap/actors/{internal_actor_id}/administrators"))
+}
+
+pub fn local_quote_authorization_path(
+    target_object_id: &str,
+    target_actor_id: &str,
+    quoting_object_id: &str,
+) -> IdPath {
+    IdPath(format!(
+        "/ap/quote-authorizations/{}/{}/{}",
+        base64::encode_urlsafe_no_pad(target_object_id),
+        base64::encode_urlsafe_no_pad(target_actor_id),
+        base64::encode_urlsafe_no_pad(quoting_object_id),
+    ))
+}
+
+pub fn local_quote_authorization_id(
+    authority: &Authority,
+    target_object_id: &str,
+    target_actor_id: &str,
+    quoting_object_id: &str,
+) -> NonCanonicalUri {
+    authority.build_id_from_path(local_quote_authorization_path(
+        target_object_id,
+        target_actor_id,
+        quoting_object_id,
+    ))
 }
 
 pub fn local_activity_id_canonical(

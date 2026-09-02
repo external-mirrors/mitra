@@ -1,4 +1,5 @@
 pub mod accept_follow;
+pub mod accept_mastodon_quote;
 pub mod accept_offer;
 pub mod add_context_activity;
 pub mod add_note;
@@ -20,7 +21,6 @@ pub mod move_person;
 pub mod note;
 pub mod offer_agreement;
 pub mod proposal;
-pub mod quote;
 pub mod reject_follow;
 pub mod remove_note;
 pub mod remove_person;

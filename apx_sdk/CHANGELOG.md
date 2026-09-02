@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `deserialize_into_object_id_typed` function.
+- Added `decode_urlsafe_no_pad` function to `base64` module.
+
 ## [0.27.0] - 2026-08-29
 
 ### Added

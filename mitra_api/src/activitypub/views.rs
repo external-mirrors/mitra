@@ -22,13 +22,14 @@ use actix_web::{
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use apx_core::{
+    base64,
     caip2::ChainId,
     hashlink::Hashlink,
     http_digest::ContentDigest,
     http_types::{header_map_adapter, method_adapter, uri_adapter},
     url::{
         ap_uri::ApUri,
-        canonical::{CanonicalUri, NonCanonicalUri},
+        canonical::CanonicalUri,
         common::url_decode,
         http_uri::HttpUri,
     },
@@ -52,6 +53,7 @@ use mitra_activitypub::{
     authentication::verify_signed_request,
     authority::Authority,
     builders::{
+        accept_mastodon_quote::build_quote_authorization,
         affiliation::Affiliation,
         announce::build_announce,
         collection::OrderedCollection,
@@ -59,7 +61,6 @@ use mitra_activitypub::{
         emoji::build_emoji,
         note::build_note,
         proposal::build_proposal,
-        quote::build_quote_authorization,
     },
     c2s::authorization::{
         verify_activity_actor,
@@ -626,6 +627,35 @@ async fn administrators_view(
     Ok(response)
 }
 
+#[get("/quote-authorizations/{target}/{actor}/{object}")]
+pub async fn quote_authorization_view(
+    config: web::Data<Config>,
+    path: web::Path<(String, String, String)>,
+) -> Result<HttpResponse, HttpError> {
+    let (target_object, target_actor, interacting_object) = path.into_inner();
+    // Remote IDs are not normalized
+    let decode_uri = |value| {
+        base64::decode_urlsafe_no_pad(value)
+            .ok()
+            .and_then(|bytes| String::from_utf8(bytes).ok())
+            .ok_or(ValidationError("invalid quote authorization ID"))
+    };
+    let target_object = decode_uri(target_object)?;
+    let target_actor = decode_uri(target_actor)?;
+    let interacting_object = decode_uri(interacting_object)?;
+    let authority = Authority::from(&config.instance());
+    let authorization = build_quote_authorization(
+        &authority,
+        &target_object,
+        &target_actor,
+        &interacting_object,
+    );
+    let response = HttpResponse::Ok()
+        .content_type(AP_MEDIA_TYPE)
+        .json(authorization);
+    Ok(response)
+}
+
 pub fn activitypub_scope() -> Scope {
     web::scope("/ap")
         .service(affiliations_view)
@@ -707,48 +737,6 @@ pub async fn object_view(
         .content_type(AP_MEDIA_TYPE)
         .json(object);
     Ok(response)
-}
-
-#[get("/quote-authorizations/{object_id}/{actor}/{object}")]
-pub async fn quote_authorization_view(
-    config: web::Data<Config>,
-    connection_info: ConnectionInfo,
-    request: HttpRequest,
-    path: web::Path<(Uuid, String, String)>,
-) -> Result<HttpResponse, HttpError> {
-    let (object_id, actor, object) = path.into_inner();
-    let decode = |value| {
-        hex::decode(value)
-            .ok()
-            .and_then(|bytes| String::from_utf8(bytes).ok())
-            .ok_or(ValidationError("invalid quote authorization ID"))
-    };
-    let decode_uri = |value| {
-        let value = decode(value)?;
-        NonCanonicalUri::parse(&value)
-            .map_err(|_| ValidationError("invalid quote authorization ID"))
-    };
-    let actor = decode_uri(actor)?.to_string();
-    let object = decode_uri(object)?.to_string();
-    let authorization_id =
-        get_request_full_uri(&connection_info, request.uri()).to_string();
-    let interaction_target = local_object_id(
-        config.instance().uri_str(),
-        object_id,
-    );
-    let authorization = build_quote_authorization(
-        &authorization_id,
-        &actor,
-        &object,
-        &interaction_target,
-    );
-    Ok(HttpResponse::Ok()
-        .insert_header((
-            http_header::CACHE_CONTROL,
-            "public, max-age=31536000, immutable",
-        ))
-        .content_type(AP_MEDIA_TYPE)
-        .json(authorization))
 }
 
 #[get("/objects/{object_id}/replies")]

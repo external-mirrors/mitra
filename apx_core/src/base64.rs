@@ -15,3 +15,7 @@ pub fn encode<T: AsRef<[u8]>>(input: T) -> String {
 pub fn encode_urlsafe_no_pad<T: AsRef<[u8]>>(input: T) -> String {
     engine::general_purpose::URL_SAFE_NO_PAD.encode(input)
 }
+
+pub fn decode_urlsafe_no_pad<T: AsRef<[u8]>>(input: T) -> Result<Vec<u8>, DecodeError> {
+    engine::general_purpose::URL_SAFE_NO_PAD.decode(input)
+}

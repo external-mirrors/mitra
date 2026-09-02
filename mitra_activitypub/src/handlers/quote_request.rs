@@ -1,8 +1,8 @@
 use apx_sdk::{
     core::url::canonical::NonCanonicalUri,
-    deserialization::deserialize_into_object_id,
+    deserialization::deserialize_into_object_id_typed,
 };
-use serde::{Deserialize, Deserializer, de::Error as DeserializerError};
+use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use mitra_models::{
@@ -14,26 +14,21 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     authority::Authority,
-    builders::quote::prepare_accept_quote_request,
+    builders::accept_mastodon_quote::prepare_accept_quote_request,
     importers::{get_post_by_object_id, ApClient},
+    vocabulary::NOTE,
 };
 
 use super::{Descriptor, HandlerResult};
 
-fn deserialize_object_uri<'de, D>(
-    deserializer: D,
-) -> Result<NonCanonicalUri, D::Error>
-    where D: Deserializer<'de>
-{
-    let object_id = deserialize_into_object_id(deserializer)?;
-    NonCanonicalUri::parse(&object_id).map_err(DeserializerError::custom)
-}
-
+// https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md
 #[derive(Deserialize)]
 struct QuoteRequest {
     actor: NonCanonicalUri,
+    // quoted post
     object: NonCanonicalUri,
-    #[serde(deserialize_with = "deserialize_object_uri")]
+    // quote
+    #[serde(deserialize_with = "deserialize_into_object_id_typed")]
     instrument: NonCanonicalUri,
 }
 
@@ -57,23 +52,23 @@ pub async fn handle_quote_request(
     {
         return Err(ValidationError("unsupported quote target").into());
     };
-    let sender = get_managed_account_by_id(
+    let quoted_author = get_managed_account_by_id(
         db_client,
         quoted_post.author.id,
     ).await?;
     let source_id = request.actor.into_canonical().to_string();
     let source = get_remote_profile_by_actor_id(db_client, &source_id).await?;
-    let source_actor = source.actor_json.expect("actor data should be present");
     let request_instrument = request.instrument.to_string();
     prepare_accept_quote_request(
+        db_client,
         &ap_client.instance,
-        &sender,
-        &source_actor,
+        &quoted_author,
+        &source,
         quoted_post.id,
         &request_instrument,
         activity,
-    )?.save_and_enqueue(db_client).await?;
-    Ok(Some(Descriptor::object("Object")))
+    ).await?.save_and_enqueue(db_client).await?;
+    Ok(Some(Descriptor::object(NOTE)))
 }
 
 #[cfg(test)]
