@@ -15,6 +15,7 @@ pub const LIKE: &str = "Like";
 pub const LISTEN: &str = "Listen";
 pub const MOVE: &str = "Move";
 pub const OFFER: &str = "Offer";
+pub const QUOTE_REQUEST: &str = "QuoteRequest";
 pub const REJECT: &str = "Reject";
 pub const REMOVE: &str = "Remove";
 pub const UNDO: &str = "Undo";

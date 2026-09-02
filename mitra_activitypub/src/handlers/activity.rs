@@ -58,6 +58,7 @@ use super::{
     r#move::handle_move,
     note::normalize_audience,
     offer::handle_offer,
+    quote_request::handle_quote_request,
     reject::handle_reject,
     remove::handle_remove,
     undo::handle_undo,
@@ -215,6 +216,9 @@ pub async fn handle_activity(
         OFFER | OFFER_AGREEMENT => {
             // `config` required by `create_payment_address`
             handle_offer(config, ap_client, db_pool, activity).await?
+        },
+        QUOTE_REQUEST => {
+            handle_quote_request(ap_client, db_pool, activity).await?
         },
         REJECT => {
             handle_reject(ap_client, db_pool, activity).await?

@@ -9,6 +9,7 @@ use apx_sdk::{
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value as JsonValue};
 
 use mitra_adapters::profiles::profile_address;
 use mitra_models::{
@@ -50,7 +51,10 @@ use crate::{
     },
 };
 
-use super::emoji::{build_emoji, Emoji};
+use super::{
+    emoji::{build_emoji, Emoji},
+    quote::quote_authorization_id,
+};
 
 const LINK_REL_MISSKEY_QUOTE: &str = "https://misskey-hub.net/ns#_misskey_quote";
 
@@ -165,9 +169,14 @@ pub struct Note {
     audience: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    interaction_policy: Option<JsonValue>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     quote: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     quote_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    quote_authorization: Option<String>,
 
     published: DateTime<Utc>,
 
@@ -303,6 +312,14 @@ pub fn build_note(
     let maybe_quote_url = related_posts
         .linked.first()
         .map(|linked| compatible_post_object_id(authority, linked));
+    let maybe_quote_authorization = related_posts.linked.first()
+        .filter(|linked| linked.is_local() && linked.is_public())
+        .map(|linked| quote_authorization_id(
+            server_uri.as_str(),
+            linked.id,
+            &compatible_profile_actor_id(authority, &linked.author),
+            &object_id,
+        ));
 
     for emoji in &post.emojis {
         // TODO: FEP-EF61: portable or anonymous emojis?
@@ -394,8 +411,11 @@ pub fn build_note(
         to: primary_audience,
         cc: secondary_audience,
         audience: group_audience,
+        interaction_policy: (post.visibility == Visibility::Public)
+            .then(|| json!({"canQuote": {"automaticApproval": [AP_PUBLIC]}})),
         quote: maybe_quote_url.clone(),
         quote_url: maybe_quote_url,
+        quote_authorization: maybe_quote_authorization,
         published: post.created_at,
         updated: post.updated_at,
     }
@@ -626,6 +646,9 @@ mod tests {
             "published": "2023-02-24T23:36:38Z",
             "to": [AP_PUBLIC],
             "cc": ["https://server.example/users/author/followers"],
+            "interactionPolicy": {
+                "canQuote": {"automaticApproval": [AP_PUBLIC]},
+            },
         });
         assert_eq!(value, expected_value);
     }
@@ -957,6 +980,9 @@ mod tests {
             "cc": [
                 "https://server.example/users/test/followers",
             ],
+            "interactionPolicy": {
+                "canQuote": {"automaticApproval": [AP_PUBLIC]},
+            },
         });
         assert_eq!(value, expected_value);
     }
@@ -1033,6 +1059,9 @@ mod tests {
             "cc": [
                 "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/46d160ae-af12-484d-9f44-419f00fc1b31/followers",
             ],
+            "interactionPolicy": {
+                "canQuote": {"automaticApproval": [AP_PUBLIC]},
+            },
         });
         assert_eq!(value, expected_value);
     }
