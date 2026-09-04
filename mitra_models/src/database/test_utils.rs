@@ -6,7 +6,7 @@ use super::migrate::apply_migrations;
 
 const DEFAULT_CONNECTION_URL: &str = "postgres://mitra:mitra@127.0.0.1:55432/mitra-test";
 
-pub async fn create_test_database() -> Client {
+async fn create_test_database_empty() -> Config {
     let connection_url = std::env::var("TEST_DATABASE_URL")
         .unwrap_or(DEFAULT_CONNECTION_URL.to_string());
     let mut db_config: Config = connection_url.parse()
@@ -31,11 +31,33 @@ pub async fn create_test_database() -> Client {
     );
     db_client.execute(&create_db_statement, &[]).await.unwrap();
 
-    // Create new connection to database
+    // Prepare config for connecting to the created database
     db_config.dbname(&db_name);
+    db_config
+}
+
+pub async fn create_test_database() -> Client {
+    let db_config = create_test_database_empty().await;
     let mut db_client = create_database_client_from_config(&db_config, None).await
         .expect("should create database client");
     apply_migrations(&mut db_client).await
         .expect("failed to apply migrations");
     db_client
+}
+
+#[cfg(test)]
+mod tests {
+    use serial_test::serial;
+    use super::*;
+
+    #[tokio::test]
+    #[serial]
+    async fn test_schema() {
+        let db_config = create_test_database_empty().await;
+        let db_client = create_database_client_from_config(&db_config, None).await
+            .expect("should create database client");
+        const SCHEMA: &str = include_str!("../../migrations/schema.sql");
+        db_client.batch_execute(SCHEMA).await
+            .expect("failed to create tables");
+    }
 }

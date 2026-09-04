@@ -179,6 +179,20 @@ CREATE TABLE follow_request (
     CHECK (source_id != target_id)
 );
 
+CREATE TABLE emoji (
+    id UUID PRIMARY KEY,
+    emoji_name VARCHAR(100) NOT NULL,
+    hostname VARCHAR(100) REFERENCES instance (hostname) ON DELETE RESTRICT,
+    image JSONB NOT NULL,
+    category VARCHAR(100),
+    object_id VARCHAR(2000) UNIQUE,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    UNIQUE (emoji_name, hostname),
+    CHECK ((hostname IS NULL) = (object_id IS NULL))
+);
+
+CREATE UNIQUE INDEX emoji_name_hostname_null_idx ON emoji (emoji_name) WHERE hostname IS NULL;
+
 CREATE TABLE post (
     id UUID PRIMARY KEY,
     author_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
@@ -307,20 +321,6 @@ CREATE TABLE post_link (
     PRIMARY KEY (source_id, target_id),
     CHECK (source_id != target_id)
 );
-
-CREATE TABLE emoji (
-    id UUID PRIMARY KEY,
-    emoji_name VARCHAR(100) NOT NULL,
-    hostname VARCHAR(100) REFERENCES instance (hostname) ON DELETE RESTRICT,
-    image JSONB NOT NULL,
-    category VARCHAR(100),
-    object_id VARCHAR(2000) UNIQUE,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    UNIQUE (emoji_name, hostname),
-    CHECK ((hostname IS NULL) = (object_id IS NULL))
-);
-
-CREATE UNIQUE INDEX emoji_name_hostname_null_idx ON emoji (emoji_name) WHERE hostname IS NULL;
 
 CREATE TABLE post_emoji (
     post_id UUID NOT NULL REFERENCES post (id) ON DELETE CASCADE,
