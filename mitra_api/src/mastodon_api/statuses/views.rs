@@ -379,7 +379,7 @@ async fn create_status(
         &post,
     ).await?;
     let create_note_json = create_note.activity().clone();
-    create_note.save_and_enqueue(db_client).await?;
+    create_note.enqueue(db_client).await?;
     sync_conversation(
         db_client,
         &instance,
@@ -389,7 +389,6 @@ async fn create_status(
     ).await?;
 
     let base_url = get_request_base_url(connection_info);
-    let authority = Authority::from(&instance);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = Status::from_post(
         &authority,

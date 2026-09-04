@@ -81,12 +81,18 @@ pub async fn prepare_create_note(
         post,
     );
     let recipients = get_note_recipients(db_client, post).await?;
-    Ok(OutgoingActivityJobData::new(
+    let job_data = OutgoingActivityJobData::new(
         &authority,
         author,
         activity,
         recipients,
-    ))
+    );
+    job_data.add_activity_to_outbox(
+        &authority,
+        db_client,
+        author,
+    ).await?;
+    Ok(job_data)
 }
 
 #[cfg(test)]

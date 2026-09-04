@@ -1,7 +1,10 @@
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
-use apx_sdk::fetch::FetchError;
+use apx_sdk::{
+    core::url::canonical::CanonicalUri,
+    fetch::FetchError,
+};
 use chrono::{TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
@@ -40,6 +43,7 @@ use mitra_models::{
 };
 
 use crate::{
+    actors::builders::local_actor_data,
     authority::Authority,
     deliverer::{
         deliver_activity_worker,
@@ -285,7 +289,7 @@ impl OutgoingActivityJobData {
     async fn save_activity(
         &self,
         db_client: &impl DatabaseClient,
-    ) -> Result<(), DatabaseError> {
+    ) -> Result<CanonicalUri, DatabaseError> {
         // Activity ID should be present
         let activity_id = self.activity["id"].as_str()
             .ok_or(DatabaseTypeError)?;
@@ -295,6 +299,23 @@ impl OutgoingActivityJobData {
             db_client,
             &canonical_activity_id,
             &self.activity,
+        ).await?;
+        Ok(canonical_activity_id)
+    }
+
+    pub(super) async fn add_activity_to_outbox(
+        &self,
+        authority: &Authority,
+        db_client: &impl DatabaseClient,
+        account: &impl ManagedAccount,
+    ) -> Result<(), DatabaseError> {
+        let activity_id = self.save_activity(db_client).await?;
+        let actor_data = local_actor_data(authority.root(), account.profile());
+        add_object_to_collection(
+            db_client,
+            account.id(),
+            &actor_data.outbox,
+            &activity_id.to_string(),
         ).await?;
         Ok(())
     }
