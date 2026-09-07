@@ -67,23 +67,6 @@ impl CanonicalUri {
             Self::Ap(ap_uri) => ap_uri.origin(),
         }
     }
-
-    #[deprecated]
-    #[expect(clippy::question_mark)]
-    pub fn to_http_uri(&self, maybe_gateway: Option<&str>) -> Option<String> {
-        let http_uri = match self {
-            Self::Http(http_uri) => http_uri.to_string(),
-            Self::Ap(ap_uri) => {
-                if let Some(gateway) = maybe_gateway {
-                    with_gateway(ap_uri, gateway)
-                } else {
-                    // Not enough context
-                    return None;
-                }
-            },
-        };
-        Some(http_uri)
-    }
 }
 
 impl fmt::Display for CanonicalUri {
@@ -206,35 +189,6 @@ pub fn is_same_origin(id_1: &str, id_2: &str) -> Result<bool, CanonicalUriError>
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    #[expect(deprecated)]
-    fn test_http_uri_from_http_uri() {
-        let input = "https://social.example/users/test";
-        let canonical_uri = CanonicalUri::parse_canonical(input).unwrap();
-        let output = canonical_uri.to_http_uri(None).unwrap();
-        assert_eq!(output, input);
-    }
-
-    #[test]
-    #[expect(deprecated)]
-    fn test_http_uri_from_ap_uri() {
-        let input = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
-        let canonical_uri = CanonicalUri::parse_canonical(input).unwrap();
-        let gateway = "https://gateway.example";
-        let output = canonical_uri.to_http_uri(Some(gateway)).unwrap();
-        let expected_output = "https://gateway.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
-        assert_eq!(output, expected_output);
-    }
-
-    #[test]
-    #[expect(deprecated)]
-    fn test_http_uri_from_ap_uri_no_gateway() {
-        let input = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
-        let canonical_uri = CanonicalUri::parse_canonical(input).unwrap();
-        let maybe_output = canonical_uri.to_http_uri(None);
-        assert!(maybe_output.is_none());
-    }
 
     #[test]
     fn test_parse_uri_http() {

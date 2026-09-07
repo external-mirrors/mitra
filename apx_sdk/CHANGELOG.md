@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Removed `encode_multibase_base58btc` and `decode_multibase_base58btc` functions.
 - Removed `parse_url` function from `url::canonical` module.
+- Removed `CanonicalUri::to_http_uri` method.
 
 ## [0.27.0] - 2026-08-29
 
