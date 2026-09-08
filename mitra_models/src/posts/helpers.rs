@@ -39,6 +39,15 @@ pub async fn add_related_posts(
             .clone();
         Ok(post)
     };
+    // Reposts and links: must be public because
+    // they are exposed through `Status` entity
+    let require_public = |post: &PostDetailed| {
+        if !post.is_public() {
+            Err(DatabaseError::type_error())
+        } else {
+            Ok(())
+        }
+    };
     for post in posts {
         let mut related_posts = RelatedPosts::default();
         if let Some(in_reply_to_id) = post.in_reply_to_id {
@@ -47,10 +56,12 @@ pub async fn add_related_posts(
         };
         for linked_id in post.links.clone() {
             let linked = get_post(linked_id)?;
+            require_public(&linked)?;
             related_posts.linked.push(linked);
         };
         if let Some(repost_of_id) = post.repost_of_id {
             let mut repost_of = get_post(repost_of_id)?;
+            require_public(&repost_of)?;
             let mut repost_of_related_posts = RelatedPosts::default();
             if let Some(in_reply_to_id) = repost_of.in_reply_to_id {
                 let in_reply_to = get_post(in_reply_to_id)?;
@@ -58,6 +69,7 @@ pub async fn add_related_posts(
             };
             for linked_id in repost_of.links.clone() {
                 let linked = get_post(linked_id)?;
+                require_public(&linked)?;
                 repost_of_related_posts.linked.push(linked);
             };
             repost_of.related_posts = Some(repost_of_related_posts);
