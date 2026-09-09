@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Return database error if private related post is exposed via `Status` entity.
+- Allowed quotes (links) in non-public local posts.
 
 ## [5.10.0] - 2026-08-24
 

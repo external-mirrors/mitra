@@ -99,7 +99,6 @@ use mitra_services::{
 use mitra_validators::{
     errors::ValidationError,
     posts::{
-        validate_local_post_links,
         validate_post_create_data,
         validate_post_mentions,
         validate_post_update_data,
@@ -313,7 +312,6 @@ async fn create_status(
     };
     validate_post_create_data(&post_data, Local)?;
     validate_post_mentions(&post_data.mentions, post_data.visibility)?;
-    validate_local_post_links(&post_data.links, post_data.visibility)?;
     if let Some(ref in_reply_to) = maybe_in_reply_to {
         validate_reply(
             in_reply_to,
@@ -573,7 +571,6 @@ async fn edit_status(
     };
     validate_post_update_data(&post_data, Local)?;
     validate_post_mentions(&post_data.mentions, post.visibility)?;
-    validate_local_post_links(&post_data.links, post.visibility)?;
     if let Some(ref in_reply_to) = maybe_in_reply_to {
         validate_reply(
             in_reply_to,
