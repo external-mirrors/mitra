@@ -4,7 +4,7 @@ use uuid::Uuid;
 use mitra_config::Instance;
 use mitra_models::{
     accounts::types::User,
-    database::DatabaseError,
+    database::{DatabaseClient, DatabaseError},
     profiles::types::{DbActor, DbActorProfile},
 };
 
@@ -85,7 +85,8 @@ fn build_undo_follow(
     }
 }
 
-pub fn prepare_undo_follow(
+pub async fn prepare_undo_follow(
+    db_client: &impl DatabaseClient,
     instance: &Instance,
     sender: &User,
     target_actor: &DbActor,
@@ -102,12 +103,13 @@ pub fn prepare_undo_follow(
         follow_request_has_deprecated_ap_id,
     );
     let recipients = Recipient::for_inbox(target_actor);
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         sender,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 #[cfg(test)]

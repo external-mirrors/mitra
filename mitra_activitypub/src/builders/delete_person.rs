@@ -84,12 +84,13 @@ pub async fn prepare_delete_person(
     let authority = Authority::from(instance);
     let activity = build_delete_person(&authority, account.profile());
     let recipients = get_delete_person_recipients(db_client, account.id()).await?;
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         account,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 #[cfg(test)]

@@ -4,7 +4,7 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Instance;
 use mitra_models::{
     accounts::types::User,
-    database::DatabaseError,
+    database::{DatabaseClient, DatabaseError},
     polls::types::PollVote,
     profiles::types::{DbActor, DbActorProfile},
 };
@@ -87,7 +87,8 @@ fn build_create_question_vote(
     }
 }
 
-pub fn prepare_create_question_vote(
+pub async fn prepare_create_question_vote(
+    db_client: &impl DatabaseClient,
     instance: &Instance,
     sender: &User,
     question_id: &str,
@@ -103,12 +104,13 @@ pub fn prepare_create_question_vote(
         votes,
     );
     let recipients = Recipient::for_inbox(question_owner);
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         sender,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 #[cfg(test)]

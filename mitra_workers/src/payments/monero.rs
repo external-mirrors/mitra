@@ -104,12 +104,13 @@ async fn send_invoice_status_update(
     };
     if let Some(ref remote_payer) = sender.actor_json {
         prepare_update_agreement(
+            db_client,
             instance,
             &recipient,
             &payment_info,
             invoice,
             remote_payer,
-        )?.save_and_enqueue(db_client).await?;
+        ).await?.enqueue(db_client).await?;
     };
     Ok(())
 }
@@ -344,12 +345,13 @@ async fn create_or_update_monero_subscription(
     ).await?;
     if let Some(ref remote_sender) = sender.actor_json {
         prepare_add_subscriber(
+            db_client,
             instance,
             remote_sender,
             &recipient,
             subscription.expires_at,
             Some(invoice.id),
-        ).save_and_enqueue(db_client).await?;
+        ).await?.enqueue(db_client).await?;
     };
     Ok(())
 }

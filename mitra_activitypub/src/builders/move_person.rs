@@ -4,6 +4,7 @@ use serde::Serialize;
 use mitra_config::Instance;
 use mitra_models::{
     accounts::types::User,
+    database::{DatabaseClient, DatabaseError},
     profiles::types::DbActor,
 };
 use mitra_utils::id::generate_ulid;
@@ -66,13 +67,14 @@ fn build_move_person(
     }
 }
 
-pub fn prepare_move_person(
+pub async fn prepare_move_person(
+    db_client: &impl DatabaseClient,
     instance: &Instance,
     sender: &User,
     linked_actor_id: &str,
     pull_mode: bool,
     followers: Vec<DbActor>,
-) -> OutgoingActivityJobData {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
     let authority = Authority::from(instance);
     let activity = build_move_person(
         instance.uri_str(),
@@ -83,12 +85,13 @@ pub fn prepare_move_person(
     let recipients = followers.iter()
         .flat_map(Recipient::for_inbox)
         .collect();
-    OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         sender,
         activity,
         recipients,
-    )
+    ).await
 }
 
 #[cfg(test)]

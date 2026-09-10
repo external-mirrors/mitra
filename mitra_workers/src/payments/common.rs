@@ -39,10 +39,11 @@ pub async fn update_expired_subscriptions(
         };
         if let Some(ref remote_sender) = sender.actor_json {
             prepare_remove_subscriber(
+                db_client,
                 instance,
                 remote_sender,
                 &recipient,
-            ).save_and_enqueue(db_client).await?;
+            ).await?.enqueue(db_client).await?;
         } else {
             create_subscription_expiration_notification(
                 db_client,

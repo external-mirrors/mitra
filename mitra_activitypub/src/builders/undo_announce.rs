@@ -101,12 +101,13 @@ pub async fn prepare_undo_announce(
         repost.visibility,
         &post.author,
     );
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         sender,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 #[cfg(test)]

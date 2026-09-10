@@ -3,7 +3,7 @@ use serde::Serialize;
 use mitra_config::Instance;
 use mitra_models::{
     accounts::types::User,
-    database::DatabaseError,
+    database::{DatabaseClient, DatabaseError},
     profiles::types::{DbActor, DbActorProfile},
 };
 use mitra_utils::id::generate_ulid;
@@ -60,7 +60,8 @@ fn build_reject_follow(
     }
 }
 
-pub fn prepare_reject_follow(
+pub async fn prepare_reject_follow(
+    db_client: &impl DatabaseClient,
     instance: &Instance,
     sender: &User,
     source_actor: &DbActor,
@@ -79,12 +80,13 @@ pub fn prepare_reject_follow(
         &follow_activity_id,
     );
     let recipients = Recipient::for_inbox(source_actor);
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         sender,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 #[cfg(test)]

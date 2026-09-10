@@ -220,7 +220,7 @@ impl OutgoingActivityJobData {
         recipients
     }
 
-    pub(super) fn new(
+    fn new(
         authority: &Authority,
         sender: &impl ManagedAccount,
         activity: impl Serialize,
@@ -240,6 +240,18 @@ impl OutgoingActivityJobData {
             recipients: recipients,
             failure_count: 0,
         }
+    }
+
+    pub(super) async fn new_outbox(
+        authority: &Authority,
+        db_client: &impl DatabaseClient,
+        sender: &impl ManagedAccount,
+        activity: impl Serialize,
+        recipients: Vec<Recipient>,
+    ) -> Result<Self, DatabaseError> {
+        let job = Self::new(authority, sender, activity, recipients);
+        job.add_activity_to_outbox(authority, db_client, sender).await?;
+        Ok(job)
     }
 
     pub fn new_forwarded(
@@ -303,7 +315,7 @@ impl OutgoingActivityJobData {
         Ok(canonical_activity_id)
     }
 
-    pub(super) async fn add_activity_to_outbox(
+    async fn add_activity_to_outbox(
         &self,
         authority: &Authority,
         db_client: &impl DatabaseClient,
@@ -343,14 +355,6 @@ impl OutgoingActivityJobData {
     ) -> Result<(), DatabaseError> {
         self.into_job(db_client, 0).await?;
         Ok(())
-    }
-
-    pub async fn save_and_enqueue(
-        self,
-        db_client: &impl DatabaseClient,
-    ) -> Result<(), DatabaseError> {
-        self.save_activity(db_client).await?;
-        self.enqueue(db_client).await
     }
 }
 

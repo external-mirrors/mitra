@@ -125,12 +125,13 @@ pub async fn prepare_delete_note(
         &post,
     );
     let recipients = get_note_recipients(db_client, &post).await?;
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         author,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 fn public() -> NonCanonicalUri {
@@ -235,12 +236,13 @@ pub async fn prepare_delete_group_note(
         post,
     );
     let recipients = delete_note.get_recipients(db_client).await?;
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         moderator,
         delete_note,
         recipients,
-    ))
+    ).await
 }
 
 #[cfg(test)]

@@ -90,12 +90,13 @@ pub async fn prepare_add_note(
         post_id,
     );
     let recipients = get_add_note_recipients(db_client, sender.id).await?;
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         sender,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 #[cfg(test)]

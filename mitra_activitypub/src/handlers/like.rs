@@ -251,13 +251,14 @@ pub async fn handle_like_c2s(
         &audience,
     ).await?;
     let account = get_user_by_id(db_client, author.id).await?;
-    let job_data = OutgoingActivityJobData::new(
+    let job_data = OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         &account,
         &activity,
         recipients,
-    );
-    job_data.save_and_enqueue(db_client).await?;
+    ).await?;
+    job_data.enqueue(db_client).await?;
     sync_conversation(
         db_client,
         instance,

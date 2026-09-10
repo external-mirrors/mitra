@@ -386,7 +386,7 @@ async fn update_credentials(
         &config.instance(),
         &media_server,
         &current_user,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());
@@ -582,7 +582,7 @@ async fn create_identity_proof(
         &config.instance(),
         &media_server,
         &current_user,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());
@@ -624,7 +624,7 @@ async fn delete_identity_proof(
         &config.instance(),
         &media_server,
         &current_user,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());
@@ -860,12 +860,13 @@ async fn unfollow_account(
                 ) = maybe_follow_request_deleted
                     .ok_or(DatabaseError::type_error())?;
                 prepare_undo_follow(
+                    db_client,
                     &config.instance(),
                     &current_user,
                     &remote_actor,
                     follow_request_id,
                     follow_request_has_deprecated_ap_id,
-                )?.save_and_enqueue(db_client).await?;
+                ).await?.enqueue(db_client).await?;
             };
         },
         Err(DatabaseError::NotFound(_)) => (), // not following
@@ -904,11 +905,12 @@ async fn remove_follower_view(
         let remote_actor = follower.actor_json
             .expect("actor data should be present");
         prepare_reject_follow(
+            db_client,
             &config.instance(),
             &current_user,
             &remote_actor,
             &follow_activity_id,
-        )?.save_and_enqueue(db_client).await?;
+        ).await?.enqueue(db_client).await?;
     };
     let relationship = get_relationship(
         db_client,

@@ -112,12 +112,13 @@ pub async fn prepare_accept_quote_request(
         request,
     );
     let recipients = activity.get_recipients(db_client).await?;
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         sender,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 #[derive(Serialize)]

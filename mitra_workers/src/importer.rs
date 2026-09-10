@@ -182,12 +182,13 @@ pub async fn import_followers_task(
                         let follower =
                             get_user_by_id(db_client, follower.id).await?;
                         prepare_undo_follow(
+                            db_client,
                             &instance,
                             &follower,
                             remote_actor,
                             follow_request_id,
                             follow_request_has_deprecated_ap_id,
-                        )?.save_and_enqueue(db_client).await?;
+                        ).await?.enqueue(db_client).await?;
                     },
                     // Not a follower, ignore
                     Err(DatabaseError::NotFound(_)) => continue,
@@ -216,11 +217,12 @@ pub async fn import_followers_task(
     };
     let db_client = &**get_database_client(db_pool).await?;
     prepare_move_person(
+        db_client,
         &instance,
         &user,
         &from_actor_id,
         true, // pull mode
         remote_followers,
-    ).save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
     Ok(())
 }

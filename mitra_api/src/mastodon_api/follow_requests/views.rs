@@ -156,11 +156,12 @@ async fn accept_follow_request_view(
         let activity_id = follow_request.activity_id
             .ok_or(DatabaseError::type_error())?;
         prepare_accept_follow(
+            db_client,
             &config.instance(),
             &current_user,
             &remote_actor,
             &activity_id,
-        )?.save_and_enqueue(db_client).await?;
+        ).await?.enqueue(db_client).await?;
     };
     let relationship = get_relationship(
         db_client,
@@ -190,11 +191,12 @@ async fn reject_follow_request_view(
         let activity_id = follow_request.activity_id
             .ok_or(DatabaseError::type_error())?;
         prepare_reject_follow(
+            db_client,
             &config.instance(),
             &current_user,
             &remote_actor,
             &activity_id,
-        )?.save_and_enqueue(db_client).await?;
+        ).await?.enqueue(db_client).await?;
     };
     let relationship = get_relationship(
         db_client,

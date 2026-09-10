@@ -113,12 +113,13 @@ async fn prepare_add_context_activity(
         conversation_activity,
     );
     let recipients = get_note_recipients(db_client, conversation_root).await?;
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         conversation_owner,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 /// Distributes activity to conversation participants if the owner is local
@@ -141,7 +142,7 @@ pub async fn sync_conversation(
                         &group,
                         activity,
                     ).await?;
-                    job_data.save_and_enqueue(db_client).await?;
+                    job_data.enqueue(db_client).await?;
                 };
             },
             Err(DatabaseError::NotFound(_)) => (), // remote group?
@@ -191,7 +192,7 @@ pub async fn sync_conversation(
             &root,
             conversation_audience,
             activity,
-        ).await?.save_and_enqueue(db_client).await?;
+        ).await?.enqueue(db_client).await?;
     } else {
         log::warn!("conversation audience is not known");
     };

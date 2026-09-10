@@ -600,7 +600,7 @@ async fn edit_status(
         &post,
     ).await?;
     let update_note_json = update_note.activity().clone();
-    update_note.save_and_enqueue(db_client).await?;
+    update_note.enqueue(db_client).await?;
     sync_conversation(
         db_client,
         &instance,
@@ -813,7 +813,7 @@ async fn favourite(
             &reaction,
         ).await?;
         let like_json = like.activity().clone();
-        like.save_and_enqueue(db_client).await?;
+        like.enqueue(db_client).await?;
         sync_conversation(
             db_client,
             &config.instance(),
@@ -877,7 +877,7 @@ async fn unfavourite(
             reaction_deleted.has_deprecated_ap_id,
         ).await?;
         let undo_like_json = undo_like.activity().clone();
-        undo_like.save_and_enqueue(db_client).await?;
+        undo_like.enqueue(db_client).await?;
         sync_conversation(
             db_client,
             &config.instance(),
@@ -1005,7 +1005,7 @@ async fn reblog(
         &config.instance(),
         &current_user,
         &repost,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());
@@ -1045,7 +1045,7 @@ async fn unreblog(
         &current_user,
         &post,
         &repost,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());
@@ -1205,7 +1205,7 @@ async fn pin(
         &config.instance(),
         &current_user,
         post.id,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());
@@ -1243,7 +1243,7 @@ async fn unpin(
         &config.instance(),
         &current_user,
         post.id,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());

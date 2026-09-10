@@ -64,6 +64,6 @@ pub async fn delete_account(
     ).await?;
     let deletion_queue = delete_profile(db_client, account.id()).await?;
     deletion_queue.into_job(db_client).await?;
-    activity.save_and_enqueue(db_client).await?;
+    activity.enqueue(db_client).await?;
     Ok(())
 }

@@ -67,7 +67,7 @@ pub async fn handle_quote_request(
         quoted_post.id,
         &request_instrument,
         activity,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
     Ok(Some(Descriptor::object(NOTE)))
 }
 

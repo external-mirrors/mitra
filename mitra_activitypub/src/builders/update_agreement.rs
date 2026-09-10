@@ -4,7 +4,7 @@ use serde::Serialize;
 use mitra_config::Instance;
 use mitra_models::{
     accounts::types::User,
-    database::DatabaseError,
+    database::{DatabaseClient, DatabaseError},
     invoices::types::Invoice,
     profiles::types::{DbActor, MoneroSubscription},
 };
@@ -75,7 +75,8 @@ fn build_update_agreement(
     Ok(activity)
 }
 
-pub fn prepare_update_agreement(
+pub async fn prepare_update_agreement(
+    db_client: &impl DatabaseClient,
     instance: &Instance,
     sender: &User,
     subscription_option: &MoneroSubscription,
@@ -91,12 +92,13 @@ pub fn prepare_update_agreement(
         invoice,
     )?;
     let recipients = Recipient::for_inbox(remote_payer);
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         sender,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 #[cfg(test)]

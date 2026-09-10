@@ -90,11 +90,12 @@ pub async fn handle_follow(
         };
         // Send Accept activity even if follow request has already been processed
         prepare_accept_follow(
+            db_client,
             &ap_client.instance,
             &target_account,
             &source_actor,
             &canonical_activity_id.to_string(),
-        )?.save_and_enqueue(db_client).await?;
+        ).await?.enqueue(db_client).await?;
     };
     Ok(Some(Descriptor::object("Actor")))
 }

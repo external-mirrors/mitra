@@ -110,12 +110,13 @@ pub async fn prepare_update_person(
         account,
     ).map_err(|_| DatabaseError::type_error())?;
     let recipients = get_update_person_recipients(db_client, account).await?;
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         account,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 #[cfg(test)]

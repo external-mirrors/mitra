@@ -115,7 +115,7 @@ pub async fn handle_question_vote(
         &media_server,
         &post_author,
         &post,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
     Ok(Some(Descriptor::object("Vote")))
 }
 

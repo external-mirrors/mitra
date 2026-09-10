@@ -41,7 +41,7 @@ pub async fn delete_local_post(
     let deletion_queue = delete_post(db_client, post.id).await?;
     deletion_queue.into_job(db_client).await?;
     let delete_note_json = delete_note.activity().clone();
-    delete_note.save_and_enqueue(db_client).await?;
+    delete_note.enqueue(db_client).await?;
     sync_conversation(
         db_client,
         &instance,
@@ -76,7 +76,7 @@ pub async fn delete_group_post(
         ).await?;
     };
     let delete_note_json = delete_note.activity().clone();
-    delete_note.save_and_enqueue(db_client).await?;
+    delete_note.enqueue(db_client).await?;
     sync_conversation(
         db_client,
         &instance,

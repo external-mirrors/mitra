@@ -93,12 +93,13 @@ pub async fn prepare_undo_like(
         reaction_id,
         reaction_has_deprecated_ap_id,
     );
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         sender,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 #[cfg(test)]

@@ -95,12 +95,13 @@ pub async fn handle_move(
                 maybe_follow_request_deleted
                     .expect("follow request must exist");
             prepare_undo_follow(
+                db_client,
                 instance,
                 &follower,
                 old_actor,
                 follow_request_id,
                 follow_request_has_deprecated_ap_id,
-            )?.save_and_enqueue(db_client).await?;
+            ).await?.enqueue(db_client).await?;
         };
         if follower.id == new_profile.id {
             // Don't self-follow
