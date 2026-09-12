@@ -18,12 +18,12 @@ use crate::{
 
 use super::{
     helpers::create_anonymous_account,
-    queries::{create_portable_user, create_user},
+    queries::{create_nomadic_account, create_user},
     types::{
         AutomatedAccountDetailed,
         AutomatedAccountType,
-        PortableUser,
-        PortableUserData,
+        NomadicAccountDetailed,
+        NomadicAccountData,
         User,
         UserCreateData,
     },
@@ -53,24 +53,24 @@ pub async fn create_test_automated_account(
     ).await.unwrap()
 }
 
-pub async fn create_test_portable_user(
+pub async fn create_test_nomadic_account(
     db_client: &mut impl DatabaseClient,
     username: &str,
     actor_id: &str,
-) -> PortableUser {
+) -> NomadicAccountDetailed {
     let profile = create_test_remote_profile(
         db_client,
         username,
         "server.local", // local webfinger
         actor_id,
     ).await;
-    let user_data = PortableUserData {
+    let account_data = NomadicAccountData {
         profile_id: profile.id,
         rsa_secret_key: generate_weak_rsa_key().unwrap(),
         ed25519_secret_key: generate_weak_ed25519_key(),
         invite_code: None,
     };
-    create_portable_user(db_client, user_data).await.unwrap()
+    create_nomadic_account(db_client, account_data).await.unwrap()
 }
 
 impl User {

@@ -85,12 +85,13 @@ async fn vote_view(
             // Each vote must be sent separately.
             // Pleroma doesn't support Create activities where object is an array.
             prepare_create_question_vote(
+                db_client,
                 &instance,
                 &current_user,
                 question_id,
                 question_owner,
                 vec![vote.clone()],
-            )?.save_and_enqueue(db_client).await?;
+            ).await?.enqueue(db_client).await?;
         };
     } else {
         // Local poll
@@ -102,7 +103,7 @@ async fn vote_view(
             &media_server,
             &post_author,
             &post,
-        ).await?.save_and_enqueue(db_client).await?;
+        ).await?.enqueue(db_client).await?;
     };
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);

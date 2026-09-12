@@ -5,6 +5,7 @@ use uuid::Uuid;
 use mitra_config::Instance;
 use mitra_models::{
     accounts::types::User,
+    database::{DatabaseClient, DatabaseError},
     profiles::types::DbActor,
 };
 use mitra_utils::id::generate_ulid;
@@ -72,14 +73,15 @@ fn build_add_person(
     }
 }
 
-fn prepare_add_person(
+async fn prepare_add_person(
+    db_client: &impl DatabaseClient,
     instance: &Instance,
     sender: &User,
     person: &DbActor,
     collection: LocalActorCollection,
     end_time: DateTime<Utc>,
     maybe_invoice_id: Option<Uuid>,
-) -> OutgoingActivityJobData {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
     let authority = Authority::from(instance);
     let activity = build_add_person(
         instance.uri_str(),
@@ -90,29 +92,32 @@ fn prepare_add_person(
         maybe_invoice_id,
     );
     let recipients = Recipient::for_inbox(person);
-    OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         sender,
         activity,
         recipients,
-    )
+    ).await
 }
 
-pub fn prepare_add_subscriber(
+pub async fn prepare_add_subscriber(
+    db_client: &impl DatabaseClient,
     instance: &Instance,
     subscription_sender: &DbActor,
     subscription_recipient: &User,
     subscription_expires_at: DateTime<Utc>,
     maybe_invoice_id: Option<Uuid>,
-) -> OutgoingActivityJobData {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
     prepare_add_person(
+        db_client,
         instance,
         subscription_recipient,
         subscription_sender,
         LocalActorCollection::Subscribers,
         subscription_expires_at,
         maybe_invoice_id,
-    )
+    ).await
 }
 
 #[cfg(test)]

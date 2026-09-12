@@ -126,7 +126,7 @@ impl PruneReposts {
                 &author,
                 &post,
                 &repost,
-            ).await?.save_and_enqueue(db_client).await?;
+            ).await?.enqueue(db_client).await?;
             println!("deleted repost of post {}", post.id);
         };
         Ok(())

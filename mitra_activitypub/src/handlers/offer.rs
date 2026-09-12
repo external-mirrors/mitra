@@ -98,12 +98,13 @@ pub async fn handle_offer(
     let remote_actor = actor_profile.actor_json
         .expect("actor data should be present");
     prepare_accept_offer(
+        db_client,
         &config.instance(),
         &proposer,
         &subscription_option,
         &db_invoice,
         &remote_actor,
         &offer.id,
-    )?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
     Ok(Some(Descriptor::object(AGREEMENT)))
 }

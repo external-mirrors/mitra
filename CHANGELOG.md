@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Make posts quotable on Mastodon ([#257](https://codeberg.org/silverpill/mitra/pulls/257)).
+- Allowed password digests to be stored in Pleroma format.
+- Added `ap outbox` command.
+
+### Changed
+
+- Return database error if private related post is exposed via `Status` entity.
+- Allowed quotes (links) in non-public local posts.
+
 ## [5.10.0] - 2026-08-24
 
 ### Added

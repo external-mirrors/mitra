@@ -4,6 +4,7 @@ use uuid::Uuid;
 use mitra_config::Instance;
 use mitra_models::{
     accounts::types::User,
+    database::{DatabaseClient, DatabaseError},
     profiles::types::{
         DbActor,
         RemoteMoneroSubscription,
@@ -88,14 +89,15 @@ fn build_offer_agreement(
     activity
 }
 
-pub fn prepare_offer_agreement(
+pub async fn prepare_offer_agreement(
+    db_client: &impl DatabaseClient,
     instance: &Instance,
     sender: &User,
     proposer_actor: &DbActor,
     subscription_option: &RemoteMoneroSubscription,
     invoice_id: Uuid,
     invoice_amount: u64,
-) -> OutgoingActivityJobData {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
     let authority = Authority::from(instance);
     let activity = build_offer_agreement(
         instance.uri_str(),
@@ -106,12 +108,13 @@ pub fn prepare_offer_agreement(
         invoice_amount,
     );
     let recipients = Recipient::for_inbox(proposer_actor);
-    OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         sender,
         activity,
         recipients,
-    )
+    ).await
 }
 
 #[cfg(test)]

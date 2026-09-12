@@ -4,6 +4,7 @@ use apx_sdk::{
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
     core::{
         multihash::encode_sha256_multihash,
+        url::canonical::NonCanonicalUri,
     },
     deserialization::deserialize_string_array,
 };
@@ -31,10 +32,13 @@ use crate::{
     identifiers::{
         compatible_post_object_id,
         compatible_profile_actor_id,
+        local_actor_id_canonical,
         local_actor_id_unified,
         local_conversation_collection,
+        local_object_id_canonical,
         local_object_id_unified,
         local_object_replies,
+        local_quote_authorization_id,
         local_tag_collection,
         IdBuilder,
         LocalActorCollection,
@@ -116,6 +120,18 @@ pub struct MediaAttachment {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+struct InteractionPolicySingle {
+    automatic_approval: Vec<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct InteractionPolicy {
+    can_quote: InteractionPolicySingle,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Note {
     #[serde(rename = "@context", skip_serializing_if = "Option::is_none")]
     pub(super) _context: Option<Context>,
@@ -165,7 +181,12 @@ pub struct Note {
     audience: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    interaction_policy: Option<InteractionPolicy>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     quote: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    quote_authorization: Option<NonCanonicalUri>,
     #[serde(skip_serializing_if = "Option::is_none")]
     quote_url: Option<String>,
 
@@ -303,6 +324,24 @@ pub fn build_note(
     let maybe_quote_url = related_posts
         .linked.first()
         .map(|linked| compatible_post_object_id(authority, linked));
+    // Mastodon can display self-quotes
+    let maybe_quote_authorization = related_posts.linked.first()
+        .filter(|linked| linked.is_local() && linked.is_public())
+        .map(|linked| {
+            let id_builder = authority.id_builder();
+            let linked_id = local_object_id_canonical(authority.root(), linked.id);
+            let actor_id = local_actor_id_canonical(
+                authority.root(),
+                linked.author.id,
+                &linked.author.username,
+            );
+            local_quote_authorization_id(
+                authority,
+                &id_builder.build(&linked_id).to_string(),
+                &id_builder.build(&actor_id).to_string(),
+                &object_id,
+            )
+        });
 
     for emoji in &post.emojis {
         // TODO: FEP-EF61: portable or anonymous emojis?
@@ -394,7 +433,12 @@ pub fn build_note(
         to: primary_audience,
         cc: secondary_audience,
         audience: group_audience,
+        interaction_policy: (post.visibility == Visibility::Public)
+            .then(|| InteractionPolicy { can_quote: InteractionPolicySingle {
+                automatic_approval: vec![AP_PUBLIC.to_owned()],
+            }}),
         quote: maybe_quote_url.clone(),
+        quote_authorization: maybe_quote_authorization,
         quote_url: maybe_quote_url,
         published: post.created_at,
         updated: post.updated_at,
@@ -626,6 +670,9 @@ mod tests {
             "published": "2023-02-24T23:36:38Z",
             "to": [AP_PUBLIC],
             "cc": ["https://server.example/users/author/followers"],
+            "interactionPolicy": {
+                "canQuote": {"automaticApproval": [AP_PUBLIC]},
+            },
         });
         assert_eq!(value, expected_value);
     }
@@ -957,6 +1004,9 @@ mod tests {
             "cc": [
                 "https://server.example/users/test/followers",
             ],
+            "interactionPolicy": {
+                "canQuote": {"automaticApproval": [AP_PUBLIC]},
+            },
         });
         assert_eq!(value, expected_value);
     }
@@ -1033,6 +1083,9 @@ mod tests {
             "cc": [
                 "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/46d160ae-af12-484d-9f44-419f00fc1b31/followers",
             ],
+            "interactionPolicy": {
+                "canQuote": {"automaticApproval": [AP_PUBLIC]},
+            },
         });
         assert_eq!(value, expected_value);
     }

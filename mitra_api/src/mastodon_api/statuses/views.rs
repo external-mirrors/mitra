@@ -99,7 +99,6 @@ use mitra_services::{
 use mitra_validators::{
     errors::ValidationError,
     posts::{
-        validate_local_post_links,
         validate_post_create_data,
         validate_post_mentions,
         validate_post_update_data,
@@ -313,7 +312,6 @@ async fn create_status(
     };
     validate_post_create_data(&post_data, Local)?;
     validate_post_mentions(&post_data.mentions, post_data.visibility)?;
-    validate_local_post_links(&post_data.links, post_data.visibility)?;
     if let Some(ref in_reply_to) = maybe_in_reply_to {
         validate_reply(
             in_reply_to,
@@ -381,7 +379,7 @@ async fn create_status(
         &post,
     ).await?;
     let create_note_json = create_note.activity().clone();
-    create_note.save_and_enqueue(db_client).await?;
+    create_note.enqueue(db_client).await?;
     sync_conversation(
         db_client,
         &instance,
@@ -391,7 +389,6 @@ async fn create_status(
     ).await?;
 
     let base_url = get_request_base_url(connection_info);
-    let authority = Authority::from(&instance);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = Status::from_post(
         &authority,
@@ -573,7 +570,6 @@ async fn edit_status(
     };
     validate_post_update_data(&post_data, Local)?;
     validate_post_mentions(&post_data.mentions, post.visibility)?;
-    validate_local_post_links(&post_data.links, post.visibility)?;
     if let Some(ref in_reply_to) = maybe_in_reply_to {
         validate_reply(
             in_reply_to,
@@ -604,7 +600,7 @@ async fn edit_status(
         &post,
     ).await?;
     let update_note_json = update_note.activity().clone();
-    update_note.save_and_enqueue(db_client).await?;
+    update_note.enqueue(db_client).await?;
     sync_conversation(
         db_client,
         &instance,
@@ -817,7 +813,7 @@ async fn favourite(
             &reaction,
         ).await?;
         let like_json = like.activity().clone();
-        like.save_and_enqueue(db_client).await?;
+        like.enqueue(db_client).await?;
         sync_conversation(
             db_client,
             &config.instance(),
@@ -881,7 +877,7 @@ async fn unfavourite(
             reaction_deleted.has_deprecated_ap_id,
         ).await?;
         let undo_like_json = undo_like.activity().clone();
-        undo_like.save_and_enqueue(db_client).await?;
+        undo_like.enqueue(db_client).await?;
         sync_conversation(
             db_client,
             &config.instance(),
@@ -1009,7 +1005,7 @@ async fn reblog(
         &config.instance(),
         &current_user,
         &repost,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());
@@ -1049,7 +1045,7 @@ async fn unreblog(
         &current_user,
         &post,
         &repost,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());
@@ -1209,7 +1205,7 @@ async fn pin(
         &config.instance(),
         &current_user,
         post.id,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());
@@ -1247,7 +1243,7 @@ async fn unpin(
         &config.instance(),
         &current_user,
         post.id,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());

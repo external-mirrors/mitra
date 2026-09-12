@@ -500,7 +500,7 @@ mod tests {
     use serde_json::json;
     use serial_test::serial;
     use crate::{
-        accounts::test_utils::create_test_portable_user,
+        accounts::test_utils::create_test_nomadic_account,
         database::test_utils::create_test_database,
         posts::test_utils::create_test_remote_post,
         profiles::test_utils::create_test_remote_profile,
@@ -654,7 +654,7 @@ mod tests {
     async fn test_add_object_to_collection() {
         let db_client = &mut create_test_database().await;
         let canonical_actor_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
-        let user = create_test_portable_user(
+        let account = create_test_nomadic_account(
             db_client,
             "test",
             canonical_actor_id,
@@ -674,14 +674,14 @@ mod tests {
         let canonical_collection_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/outbox";
         add_object_to_collection(
             db_client,
-            user.id,
+            account.id,
             canonical_collection_id,
             &canonical_activity_id.to_string(),
         ).await.unwrap();
         // Re-add
         add_object_to_collection(
             db_client,
-            user.id,
+            account.id,
             canonical_collection_id,
             &canonical_activity_id.to_string(),
         ).await.unwrap();
@@ -715,7 +715,7 @@ mod tests {
     async fn test_get_collection_items_with_cursor() {
         let db_client = &mut create_test_database().await;
         let actor_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
-        let user = create_test_portable_user(
+        let account = create_test_nomadic_account(
             db_client,
             "test",
             actor_id,
@@ -742,19 +742,19 @@ mod tests {
         ).await.unwrap();
         add_object_to_collection(
             db_client,
-            user.id,
+            account.id,
             collection_id,
             activity_1_id,
         ).await.unwrap();
         add_object_to_collection(
             db_client,
-            user.id,
+            account.id,
             collection_id,
             activity_2_id,
         ).await.unwrap();
         add_object_to_collection(
             db_client,
-            user.id,
+            account.id,
             collection_id,
             activity_3_id,
         ).await.unwrap();
@@ -810,7 +810,7 @@ mod tests {
     async fn test_create_activitypub_media() {
         let db_client = &mut create_test_database().await;
         let canonical_actor_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
-        let user = create_test_portable_user(
+        let account = create_test_nomadic_account(
             db_client,
             "test",
             canonical_actor_id,
@@ -821,7 +821,7 @@ mod tests {
         };
         create_activitypub_media(
             db_client,
-            user.id,
+            account.id,
             file_info.clone(),
         ).await.unwrap();
 
@@ -836,7 +836,7 @@ mod tests {
     #[serial]
     async fn test_delete_activitypub_media() {
         let db_client = &mut create_test_database().await;
-        let user = create_test_portable_user(
+        let account = create_test_nomadic_account(
             db_client,
             "test",
             "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
@@ -846,13 +846,13 @@ mod tests {
         };
         create_activitypub_media(
             db_client,
-            user.id,
+            account.id,
             file_info.clone(),
         ).await.unwrap();
 
         delete_activitypub_media(
             db_client,
-            user.id,
+            account.id,
             file_info.digest,
         ).await.unwrap();
     }

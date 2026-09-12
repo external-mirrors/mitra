@@ -136,12 +136,13 @@ async fn create_subscription_view(
     ).await?;
     if let Some(ref remote_subscriber) = subscriber.actor_json {
         prepare_add_subscriber(
+            db_client,
             &config.instance(),
             remote_subscriber,
             &current_user,
             subscription.expires_at,
             None, // no invoice
-        ).save_and_enqueue(db_client).await?;
+        ).await?.enqueue(db_client).await?;
     };
     let details = SubscriptionDetails::from(subscription);
     Ok(HttpResponse::Ok().json(details))
@@ -289,7 +290,7 @@ async fn register_subscription_option(
         &config.instance(),
         &media_server,
         &current_user,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());
@@ -377,13 +378,14 @@ async fn create_invoice_view(
             invoice_form.amount,
         ).await?;
         prepare_offer_agreement(
+            db_client,
             &config.instance(),
             &sender,
             recipient_actor,
             &subscription_option,
             db_invoice.id,
             invoice_form.amount,
-        ).save_and_enqueue(db_client).await?;
+        ).await?.enqueue(db_client).await?;
         db_invoice
     };
     let invoice = Invoice::from(db_invoice);

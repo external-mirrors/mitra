@@ -15,6 +15,7 @@ pub mod note;
 mod offer;
 pub mod proposal;
 mod question_vote;
+mod quote_request;
 mod reject;
 mod remove;
 mod undo;

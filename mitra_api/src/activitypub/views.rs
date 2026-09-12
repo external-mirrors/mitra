@@ -22,6 +22,7 @@ use actix_web::{
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use apx_core::{
+    base64,
     caip2::ChainId,
     hashlink::Hashlink,
     http_digest::ContentDigest,
@@ -52,6 +53,7 @@ use mitra_activitypub::{
     authentication::verify_signed_request,
     authority::Authority,
     builders::{
+        accept_mastodon_quote::build_quote_authorization,
         affiliation::Affiliation,
         announce::build_announce,
         collection::OrderedCollection,
@@ -101,9 +103,9 @@ use mitra_models::{
         queries::{
             get_group_account_by_id,
             get_managed_account_by_username,
-            get_portable_user_by_id,
-            get_portable_user_by_inbox_id,
-            get_portable_user_by_outbox_id,
+            get_nomadic_account_by_id,
+            get_nomadic_account_by_inbox_id,
+            get_nomadic_account_by_outbox_id,
             get_user_by_name,
         },
         types::Role,
@@ -625,10 +627,40 @@ async fn administrators_view(
     Ok(response)
 }
 
+#[get("/quote-authorizations/{target}/{actor}/{object}")]
+pub async fn quote_authorization_view(
+    config: web::Data<Config>,
+    path: web::Path<(String, String, String)>,
+) -> Result<HttpResponse, HttpError> {
+    let (target_object, target_actor, interacting_object) = path.into_inner();
+    // Remote IDs are not normalized
+    let decode_uri = |value| {
+        base64::decode_urlsafe_no_pad(value)
+            .ok()
+            .and_then(|bytes| String::from_utf8(bytes).ok())
+            .ok_or(ValidationError("invalid quote authorization ID"))
+    };
+    let target_object = decode_uri(target_object)?;
+    let target_actor = decode_uri(target_actor)?;
+    let interacting_object = decode_uri(interacting_object)?;
+    let authority = Authority::from(&config.instance());
+    let authorization = build_quote_authorization(
+        &authority,
+        &target_object,
+        &target_actor,
+        &interacting_object,
+    );
+    let response = HttpResponse::Ok()
+        .content_type(AP_MEDIA_TYPE)
+        .json(authorization);
+    Ok(response)
+}
+
 pub fn activitypub_scope() -> Scope {
     web::scope("/ap")
         .service(affiliations_view)
         .service(administrators_view)
+        .service(quote_authorization_view)
 }
 
 #[get("")]
@@ -996,7 +1028,7 @@ async fn apgateway_inbox_push_view(
         request_uri,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
-    let recipient = match get_portable_user_by_inbox_id(
+    let recipient = match get_nomadic_account_by_inbox_id(
         db_client_await!(&db_pool),
         &canonical_collection_id.to_string(),
     ).await {
@@ -1057,7 +1089,7 @@ async fn apgateway_inbox_pull_view(
         .without_query_and_fragment();
     let canonical_collection_id = canonicalize_id(&collection_id)?;
     let db_client = &**get_database_client(&db_pool).await?;
-    let collection_owner = get_portable_user_by_inbox_id(
+    let collection_owner = get_nomadic_account_by_inbox_id(
         db_client,
         &canonical_collection_id.to_string(),
     ).await?;
@@ -1101,7 +1133,7 @@ async fn apgateway_outbox_push_view(
         request_uri,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
-    let collection_owner = get_portable_user_by_outbox_id(
+    let collection_owner = get_nomadic_account_by_outbox_id(
         db_client,
         &canonical_collection_id.to_string(),
     ).await?;
@@ -1159,7 +1191,7 @@ async fn apgateway_outbox_pull_view(
     ).await?;
     let canonical_collection_id = canonicalize_id(&collection_id)?;
     let db_client = &**get_database_client(&db_pool).await?;
-    let collection_owner = get_portable_user_by_outbox_id(
+    let collection_owner = get_nomadic_account_by_outbox_id(
         db_client,
         &canonical_collection_id.to_string(),
     ).await?;
@@ -1257,7 +1289,7 @@ async fn apgateway_media_upload_view(
         HttpError::AuthError("invalid signature")
     })?;
     let db_client = &**get_database_client(&db_pool).await?;
-    let signer = match get_portable_user_by_id(
+    let signer = match get_nomadic_account_by_id(
         db_client,
         signer.id,
     ).await {
@@ -1343,7 +1375,7 @@ async fn apgateway_media_delete_view(
         HttpError::AuthError("invalid signature")
     })?;
     let db_client = &**get_database_client(&db_pool).await?;
-    let signer = match get_portable_user_by_id(
+    let signer = match get_nomadic_account_by_id(
         db_client,
         signer.id,
     ).await {

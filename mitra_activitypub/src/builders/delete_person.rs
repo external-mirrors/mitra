@@ -88,12 +88,13 @@ pub async fn prepare_delete_person(
     let recipients = get_delete_person_recipients(db_client, account.id()).await?;
     #[cfg(feature = "mini")]
     let recipients = crate::c2s::audience::get_recipients(instance, account);
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         account,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 #[cfg(test)]

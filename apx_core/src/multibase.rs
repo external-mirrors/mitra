@@ -87,19 +87,6 @@ impl Multibase {
     }
 }
 
-/// Decodes multibase base58 (bitcoin) value
-#[deprecated]
-pub fn decode_multibase_base58btc(value: &str)
-    -> Result<Vec<u8>, MultibaseError>
-{
-    Multibase::Base58Btc.decode_exact(value)
-}
-
-#[deprecated]
-pub fn encode_multibase_base58btc(value: &[u8]) -> String {
-    Multibase::Base58Btc.encode(value)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

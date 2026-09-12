@@ -148,12 +148,13 @@ pub async fn prepare_like(
         reaction.content.clone(),
         reaction.emoji.as_ref(),
     );
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         sender,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 #[cfg(test)]

@@ -11,6 +11,8 @@ use serde::{
 use serde_json::Value;
 use thiserror::Error;
 
+use apx_core::url::canonical::NonCanonicalUri;
+
 #[derive(Debug, Error)]
 #[error("{0}")]
 pub struct DeserializationError(&'static str);
@@ -56,6 +58,16 @@ pub fn deserialize_into_object_id_opt<'de, D>(
         None
     };
     Ok(maybe_object_id)
+}
+
+/// Deserializes object ID into `NonCanonicalUri`
+pub fn deserialize_into_object_id_typed<'de, D>(
+    deserializer: D,
+) -> Result<NonCanonicalUri, D::Error>
+    where D: Deserializer<'de>
+{
+    let object_id = deserialize_into_object_id(deserializer)?;
+    NonCanonicalUri::parse(&object_id).map_err(DeserializerError::custom)
 }
 
 /// Transforms single string or an array value into array of strings

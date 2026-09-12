@@ -128,12 +128,13 @@ pub async fn prepare_delete_note(
     let recipients = get_note_recipients(db_client, &post).await?;
     #[cfg(feature = "mini")]
     let recipients = crate::c2s::audience::get_recipients(instance, author);
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         author,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 fn public() -> NonCanonicalUri {
@@ -238,12 +239,13 @@ pub async fn prepare_delete_group_note(
         post,
     );
     let recipients = delete_note.get_recipients(db_client).await?;
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         moderator,
         delete_note,
         recipients,
-    ))
+    ).await
 }
 
 #[cfg(test)]

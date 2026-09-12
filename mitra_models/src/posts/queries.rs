@@ -1013,10 +1013,9 @@ pub(super) async fn get_related_posts(
     posts_ids: Vec<Uuid>,
 ) -> Result<Vec<PostDetailed>, DatabaseError> {
     // WARNING: read permissions are not checked here.
-    // Replies: scope widening is not allowed for local posts,
-    // but allowed for remote posts.
-    // Reposts: reposts of non-public posts are not allowed.
-    // Links: links to non-public posts are not allowed.
+    // Replied-to posts are not exposed through Mastodon API.
+    // Reposts of non-public posts and links to non-public posts
+    // are not allowed (enforced in `create_post`).
     let statement = format!(
         "
         WITH post_ids AS (SELECT unnest($1::uuid[]) AS post_id)
@@ -2209,6 +2208,24 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    async fn test_create_post_with_link_to_private_post() {
+        let db_client = &mut create_test_database().await;
+        let author = create_test_user(db_client, "test").await;
+        let post_data_1 = PostCreateData {
+            visibility: Visibility::Followers,
+            ..PostCreateData::for_test()
+        };
+        let post_1 = create_post(db_client, author.id, post_data_1).await.unwrap();
+        let post_data_2 = PostCreateData {
+            links: vec![post_1.id],
+            ..PostCreateData::for_test()
+        };
+        let error = create_post(db_client, author.id, post_data_2).await.err().unwrap();
+        assert_eq!(error.to_string(), "post not found");
+    }
+
+    #[tokio::test]
+    #[serial]
     async fn test_create_post_with_group() {
         let db_client = &mut create_test_database().await;
         let author = create_test_user(db_client, "test").await;
@@ -2265,6 +2282,25 @@ mod tests {
         ).await.unwrap();
         assert_eq!(repost_details.id, repost.id);
         assert_eq!(repost_details.has_deprecated_ap_id, false);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_repost_of_private_post() {
+        let db_client = &mut create_test_database().await;
+        let author = create_test_user(db_client, "test").await;
+        let post_data = PostCreateData {
+            visibility: Visibility::Followers,
+            ..PostCreateData::for_test()
+        };
+        let post = create_post(db_client, author.id, post_data).await.unwrap();
+        let repost_data = PostCreateData::repost(
+            post.id,
+            Visibility::Public,
+            None,
+        );
+        let error = create_post(db_client, author.id, repost_data).await.err().unwrap();
+        assert_eq!(error.to_string(), "post not found");
     }
 
     #[tokio::test]

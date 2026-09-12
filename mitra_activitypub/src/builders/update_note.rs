@@ -86,12 +86,13 @@ pub async fn prepare_update_note(
     let recipients = get_note_recipients(db_client, post).await?;
     #[cfg(feature = "mini")]
     let recipients = crate::c2s::audience::get_recipients(&instance, author);
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         author,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 #[cfg(test)]

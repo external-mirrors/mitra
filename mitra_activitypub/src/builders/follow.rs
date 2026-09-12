@@ -4,7 +4,7 @@ use uuid::Uuid;
 use mitra_config::Instance;
 use mitra_models::{
     accounts::types::User,
-    database::DatabaseError,
+    database::{DatabaseClient, DatabaseError},
     profiles::types::{DbActor, DbActorProfile},
 };
 
@@ -66,7 +66,8 @@ pub fn build_follow(
     }
 }
 
-pub fn prepare_follow(
+pub async fn prepare_follow(
+    db_client: &impl DatabaseClient,
     instance: &Instance,
     sender: &User,
     target_actor: &DbActor,
@@ -86,12 +87,13 @@ pub fn prepare_follow(
     let recipients = Recipient::for_inbox(target_actor);
     #[cfg(feature = "mini")]
     let recipients = crate::c2s::audience::get_recipients(instance, sender);
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         sender,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 #[cfg(test)]

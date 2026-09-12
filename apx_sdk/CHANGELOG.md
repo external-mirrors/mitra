@@ -8,6 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Added `deserialize_into_object_id_typed` function.
+- Added `decode_urlsafe_no_pad` function to `base64` module.
+
+### Removed
+
+- Removed `encode_multibase_base58btc` and `decode_multibase_base58btc` functions.
+- Removed `parse_url` function from `url::canonical` module.
+- Removed `CanonicalUri::to_http_uri` method.
+
+## [0.27.0] - 2026-08-29
+
+### Added
+
 - Implemented `Deserialize` for `NonCanonicalUri` type.
 - Added `origin()` method to `NonCanonicalUri` type.
 - Added `gateways()` method to `ApUri` type.

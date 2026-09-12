@@ -1,4 +1,5 @@
 pub mod accept_follow;
+pub mod accept_mastodon_quote;
 pub mod accept_offer;
 pub mod add_context_activity;
 pub mod add_note;

@@ -226,7 +226,7 @@ async fn add_alias_view(
         &instance,
         &media_server,
         &current_user,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let aliases = get_aliases(
@@ -269,7 +269,7 @@ async fn remove_alias_view(
         &instance,
         &media_server,
         &current_user,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
@@ -450,12 +450,13 @@ async fn move_followers_view(
     };
     let target_actor_id = profile_actor_id(&authority, &target);
     prepare_move_person(
+        db_client,
         &instance,
         &current_user,
         &target_actor_id,
         false, // push mode
         remote_followers,
-    ).save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);

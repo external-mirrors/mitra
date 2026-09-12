@@ -3,7 +3,7 @@ use serde::Serialize;
 use mitra_config::Instance;
 use mitra_models::{
     accounts::types::User,
-    database::{DatabaseError, DatabaseTypeError},
+    database::{DatabaseClient, DatabaseError, DatabaseTypeError},
     invoices::types::Invoice,
     profiles::types::{DbActor, MoneroSubscription},
 };
@@ -65,7 +65,8 @@ fn build_accept_offer(
     Ok(activity)
 }
 
-pub fn prepare_accept_offer(
+pub async fn prepare_accept_offer(
+    db_client: &impl DatabaseClient,
     instance: &Instance,
     sender: &User,
     subscription_option: &MoneroSubscription,
@@ -83,12 +84,13 @@ pub fn prepare_accept_offer(
         offer_activity_id,
     )?;
     let recipients = Recipient::for_inbox(remote_actor);
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         sender,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 #[cfg(test)]

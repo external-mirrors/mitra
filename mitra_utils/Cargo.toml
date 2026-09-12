@@ -28,6 +28,8 @@ iri-string = "0.7.14"
 isolang = { version = "2.4.0", default-features = false }
 # Used to determine file extension
 mime_guess = "2.0.5"
+# Used for PBKDF2-HMAC-SHA512 verification of Pleroma password digests
+pbkdf2 = { version = "0.12.2", default-features = false, features = ["simple", "std"] }
 # Used to generate random numbers
 rand = "0.9.0"
 # Used for working with regular expressions

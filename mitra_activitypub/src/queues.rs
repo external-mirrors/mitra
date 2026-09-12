@@ -1,7 +1,10 @@
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
-use apx_sdk::fetch::FetchError;
+use apx_sdk::{
+    core::url::canonical::CanonicalUri,
+    fetch::FetchError,
+};
 use chrono::{TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
@@ -9,7 +12,7 @@ use uuid::Uuid;
 
 use mitra_config::Config;
 use mitra_models::{
-    accounts::types::{ManagedAccount, PortableUser},
+    accounts::types::{ManagedAccount, NomadicAccountDetailed},
     activitypub::queries::{
         save_activity,
         add_object_to_collection,
@@ -40,6 +43,7 @@ use mitra_models::{
 };
 
 use crate::{
+    actors::builders::local_actor_data,
     authority::Authority,
     deliverer::{
         deliver_activity_worker,
@@ -216,7 +220,7 @@ impl OutgoingActivityJobData {
         recipients
     }
 
-    pub(super) fn new(
+    fn new(
         authority: &Authority,
         sender: &impl ManagedAccount,
         activity: impl Serialize,
@@ -238,9 +242,21 @@ impl OutgoingActivityJobData {
         }
     }
 
+    pub(super) async fn new_outbox(
+        authority: &Authority,
+        db_client: &impl DatabaseClient,
+        sender: &impl ManagedAccount,
+        activity: impl Serialize,
+        recipients: Vec<Recipient>,
+    ) -> Result<Self, DatabaseError> {
+        let job = Self::new(authority, sender, activity, recipients);
+        job.add_activity_to_outbox(authority, db_client, sender).await?;
+        Ok(job)
+    }
+
     pub fn new_forwarded(
         instance_uri: &str,
-        sender: &PortableUser,
+        sender: &NomadicAccountDetailed,
         activity: &JsonValue,
         recipients_actors: Vec<DbActor>,
         endpoint_type: EndpointType,
@@ -268,7 +284,7 @@ impl OutgoingActivityJobData {
             recipients.push(recipient);
         };
         let recipients = Self::sort_recipients(recipients);
-        let sender = Sender::from_portable_user(instance_uri, sender)?;
+        let sender = Sender::from_nomadic_account(instance_uri, sender)?;
         let job_data = Self {
             activity: activity.clone(),
             sender: sender,
@@ -285,7 +301,7 @@ impl OutgoingActivityJobData {
     async fn save_activity(
         &self,
         db_client: &impl DatabaseClient,
-    ) -> Result<(), DatabaseError> {
+    ) -> Result<CanonicalUri, DatabaseError> {
         // Activity ID should be present
         let activity_id = self.activity["id"].as_str()
             .ok_or(DatabaseTypeError)?;
@@ -350,6 +366,23 @@ impl OutgoingActivityJobData {
                 Err(other_error) => return Err(other_error),
             };
         };
+        Ok(canonical_activity_id)
+    }
+
+    async fn add_activity_to_outbox(
+        &self,
+        authority: &Authority,
+        db_client: &impl DatabaseClient,
+        account: &impl ManagedAccount,
+    ) -> Result<(), DatabaseError> {
+        let activity_id = self.save_activity(db_client).await?;
+        let actor_data = local_actor_data(authority.root(), account.profile());
+        add_object_to_collection(
+            db_client,
+            account.id(),
+            &actor_data.outbox,
+            &activity_id.to_string(),
+        ).await?;
         Ok(())
     }
 
@@ -376,14 +409,6 @@ impl OutgoingActivityJobData {
     ) -> Result<(), DatabaseError> {
         self.into_job(db_client, 0).await?;
         Ok(())
-    }
-
-    pub async fn save_and_enqueue(
-        self,
-        db_client: &impl DatabaseClient,
-    ) -> Result<(), DatabaseError> {
-        self.save_activity(db_client).await?;
-        self.enqueue(db_client).await
     }
 }
 

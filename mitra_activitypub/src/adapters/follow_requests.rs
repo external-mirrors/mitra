@@ -79,11 +79,12 @@ pub async fn follow_or_create_request(
         Ok(follow_request) => {
             if let Some(ref remote_actor) = target_profile.actor_json {
                 prepare_follow(
+                    db_client,
                     instance,
                     current_user,
                     remote_actor,
                     follow_request.id,
-                )?.save_and_enqueue(db_client).await?;
+                ).await?.enqueue(db_client).await?;
             } else if target_profile.manually_approves_followers {
                 create_follow_request_notification(
                     db_client,

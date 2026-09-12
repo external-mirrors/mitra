@@ -256,7 +256,7 @@ async fn update_group_view(
         &instance,
         &media_server,
         &group,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?.enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&instance);

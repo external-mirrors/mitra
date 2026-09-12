@@ -129,7 +129,7 @@ async fn create_reaction_view(
         &reaction,
     ).await?;
     let like_json = like.activity().clone();
-    like.save_and_enqueue(db_client).await?;
+    like.enqueue(db_client).await?;
     sync_conversation(
         db_client,
         &config.instance(),
@@ -191,7 +191,7 @@ async fn delete_reaction_view(
         reaction_deleted.has_deprecated_ap_id,
     ).await?;
     let undo_like_json = undo_like.activity().clone();
-    undo_like.save_and_enqueue(db_client).await?;
+    undo_like.enqueue(db_client).await?;
     sync_conversation(
         db_client,
         &config.instance(),

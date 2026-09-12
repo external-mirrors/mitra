@@ -91,12 +91,13 @@ pub async fn prepare_group_announce(
         group_activity,
     );
     let recipients = group_announce.get_recipients(db_client).await?;
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         sender,
         group_announce,
         recipients,
-    ))
+    ).await
 }
 
 #[cfg(test)]

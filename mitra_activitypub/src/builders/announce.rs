@@ -160,12 +160,13 @@ pub async fn prepare_announce(
         &authority,
         repost,
     );
-    Ok(OutgoingActivityJobData::new(
+    OutgoingActivityJobData::new_outbox(
         &authority,
+        db_client,
         sender,
         activity,
         recipients,
-    ))
+    ).await
 }
 
 // https://codeberg.org/fediverse/fep/src/branch/main/fep/ae0c/fep-ae0c.md#publishing-messages-to-a-relay-1
