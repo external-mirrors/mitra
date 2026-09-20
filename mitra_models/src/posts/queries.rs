@@ -2000,18 +2000,19 @@ pub async fn delete_repost(
     repost_id: Uuid,
 ) -> Result<(), DatabaseError> {
     let transaction = db_client.transaction().await?;
-    let maybe_post_row = transaction.query_opt(
+    let maybe_row = transaction.query_opt(
         "
         DELETE FROM post WHERE id = $1 AND repost_of_id IS NOT NULL
         RETURNING post
         ",
         &[&repost_id],
     ).await?;
-    let post_row = maybe_post_row.ok_or(DatabaseError::NotFound("post"))?;
-    let db_post: Post = post_row.try_get("post")?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
+    let db_repost: Post = row.try_get("post")?;
     // Update counters
-    let repost_of_id = db_post.repost_of_id.ok_or(DatabaseTypeError)?;
+    let repost_of_id = db_repost.repost_of_id.ok_or(DatabaseTypeError)?;
     update_repost_count(&transaction, repost_of_id, -1).await?;
+    update_post_count(&transaction, db_repost.author_id, -1).await?;
     transaction.commit().await?;
     Ok(())
 }
