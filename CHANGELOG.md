@@ -20,7 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Decrease user's post count when deleting repost.
-- Preserve groups containing posts during empty-profile cleanup.
+- Preserve groups containing posts during empty-profile cleanup ([#261](https://codeberg.org/silverpill/mitra/pulls/261)).
 
 ## [5.10.0] - 2026-08-24
 
