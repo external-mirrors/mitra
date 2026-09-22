@@ -1005,7 +1005,9 @@ pub async fn find_empty_profiles(
             )
             AND NOT EXISTS (
                 SELECT 1 FROM post
-                WHERE author_id = actor_profile.id
+                WHERE
+                    author_id = actor_profile.id
+                    OR group_id = actor_profile.id
             )
             AND NOT EXISTS (
                 SELECT 1 FROM post_reaction
