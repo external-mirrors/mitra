@@ -1064,7 +1064,10 @@ mod tests {
         emojis::queries::create_or_update_local_emoji,
         media::types::MediaInfo,
         posts::{
-            test_utils::create_test_local_post,
+            test_utils::{
+                create_test_local_post,
+                create_test_remote_post,
+            },
             views::refresh_latest_post_view,
         },
         profiles::{
@@ -1475,8 +1478,31 @@ mod tests {
     #[serial]
     async fn test_find_empty_profiles() {
         let db_client = &mut create_test_database().await;
+        // Local profile (empty)
+        let _profile_1 = create_test_local_profile(db_client, "local").await;
+        // Remote profile (empty)
+        let profile_2 = create_test_remote_profile(
+            db_client,
+            "remote",
+            "social.example",
+            "https://social.example/actors/1",
+        ).await;
+        // Remote profile with post
+        let profile_3 = create_test_remote_profile(
+            db_client,
+            "remote_with_post",
+            "social.example",
+            "https://social.example/actors/2",
+        ).await;
+        create_test_remote_post(
+            db_client,
+            profile_3.id,
+            "test post",
+            "https://social.example/objects/222",
+        ).await;
         let updated_before = Utc::now();
         let profiles = find_empty_profiles(db_client, updated_before).await.unwrap();
-        assert_eq!(profiles.is_empty(), true);
+        assert_eq!(profiles.len(), 1);
+        assert_eq!(profiles[0], profile_2.id);
     }
 }
