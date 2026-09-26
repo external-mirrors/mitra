@@ -2119,8 +2119,9 @@ paths:
                   type: string
                   default: text/markdown
                   enum:
-                    - text/html
                     - text/markdown
+                    - text/plain
+                    - text/html
                 title:
                   description: The title of the post.
                   type: string
@@ -2213,8 +2214,9 @@ paths:
                   type: string
                   default: text/markdown
                   enum:
-                    - text/html
                     - text/markdown
+                    - text/plain
+                    - text/html
               required:
                 - status
       responses:
@@ -2266,8 +2268,9 @@ paths:
                   type: string
                   default: text/markdown
                   enum:
-                    - text/html
                     - text/markdown
+                    - text/plain
+                    - text/html
                 title:
                   description: The title of the post.
                   type: string
@@ -2350,8 +2353,9 @@ paths:
                     description: The content type of the post source.
                     type: string
                     enum:
-                      - text/html
                       - text/markdown
+                      - text/plain
+                      - text/html
                     example: text/markdown
                   text:
                     description: The source text of the post.
@@ -3837,8 +3841,9 @@ components:
               items:
                 type: string
               example:
-                - text/html
                 - text/markdown
+                - text/plain
+                - text/html
     InstanceConfigurationAccounts:
       description: Limits related to accounts.
       type: object

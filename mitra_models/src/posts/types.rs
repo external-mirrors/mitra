@@ -84,6 +84,40 @@ impl ToSql for DbLanguage {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ContentType {
+    Markdown,
+    Text,
+    Html,
+}
+
+impl From<ContentType> for i16 {
+    fn from(value: ContentType) -> i16 {
+        match value {
+            ContentType::Markdown => 1,
+            ContentType::Text => 2,
+            ContentType::Html => 3,
+        }
+    }
+}
+
+impl TryFrom<i16> for ContentType {
+    type Error = DatabaseTypeError;
+
+    fn try_from(value: i16) -> Result<Self, Self::Error> {
+        let content_type = match value {
+            1 => Self::Markdown,
+            2 => Self::Text,
+            3 => Self::Html,
+            _ => return Err(DatabaseTypeError),
+        };
+        Ok(content_type)
+    }
+}
+
+int_enum_from_sql!(ContentType);
+int_enum_to_sql!(ContentType);
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Visibility {
     Public,
     Direct,
@@ -175,6 +209,7 @@ pub struct Post {
     pub title: Option<String>,
     pub content: String,
     pub content_source: Option<String>,
+    pub content_source_type: Option<ContentType>,
     pub language: Option<DbLanguage>,
     pub conversation_id: Option<Uuid>,
     pub in_reply_to_id: Option<Uuid>,
@@ -256,6 +291,7 @@ pub struct PostDetailed {
     pub title: Option<String>,
     pub content: String,
     pub content_source: Option<String>,
+    pub content_source_type: Option<ContentType>,
     pub language: Option<Language>,
     pub conversation: Option<Conversation>,
     pub in_reply_to_id: Option<Uuid>,
@@ -318,6 +354,7 @@ impl PostDetailed {
             db_post.title.is_some() ||
             db_post.content.len() != 0 ||
             db_post.content_source.is_some() ||
+            db_post.content_source_type.is_some() ||
             db_post.language.is_some() ||
             db_post.conversation_id.is_some() ||
             db_post.is_sensitive ||
@@ -389,6 +426,7 @@ impl PostDetailed {
             title: db_post.title,
             content: db_post.content,
             content_source: db_post.content_source,
+            content_source_type: db_post.content_source_type,
             language: db_post.language.map(|db_lang| db_lang.inner()),
             conversation: maybe_conversation,
             in_reply_to_id: db_post.in_reply_to_id,
@@ -576,6 +614,7 @@ pub struct PostCreateData {
     pub title: Option<String>,
     pub content: String,
     pub content_source: Option<String>,
+    pub content_source_type: Option<ContentType>,
     pub language: Option<Language>,
     pub visibility: Visibility,
     pub is_sensitive: bool,
@@ -614,6 +653,7 @@ impl PostCreateData {
             title: None,
             content: "".to_owned(),
             content_source: None,
+            content_source_type: None,
             language: None,
             visibility: visibility,
             is_sensitive: false,
@@ -635,6 +675,7 @@ pub struct PostUpdateData {
     pub title: Option<String>,
     pub content: String,
     pub content_source: Option<String>,
+    pub content_source_type: Option<ContentType>,
     pub language: Option<Language>,
     pub is_sensitive: bool,
     pub poll: Option<PollData>,

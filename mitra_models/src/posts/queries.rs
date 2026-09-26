@@ -256,6 +256,7 @@ pub async fn create_post(
             title,
             content,
             content_source,
+            content_source_type,
             language,
             conversation_id,
             in_reply_to_id,
@@ -267,17 +268,17 @@ pub async fn create_post(
             object_id,
             created_at
         )
-        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
         WHERE
         -- don't allow replies to reposts
         NOT EXISTS (
             SELECT 1 FROM post
-            WHERE post.id = $8 AND post.repost_of_id IS NOT NULL
+            WHERE post.id = $9 AND post.repost_of_id IS NOT NULL
         )
         -- don't allow reposts of non-public posts
         AND NOT EXISTS (
             SELECT 1 FROM post
-            WHERE post.id = $9 AND (
+            WHERE post.id = $10 AND (
                 post.repost_of_id IS NOT NULL
                 OR post.visibility != {visibility_public}
             )
@@ -294,6 +295,7 @@ pub async fn create_post(
             &post_data.title,
             &post_data.content,
             &post_data.content_source,
+            &post_data.content_source_type,
             &post_data.language.map(DbLanguage::new),
             &maybe_conversation.as_ref().map(|conversation| conversation.id),
             &post_data.context.in_reply_to_id(),
@@ -435,11 +437,12 @@ pub async fn update_post(
             title = $1,
             content = $2,
             content_source = $3,
-            language = $4,
-            is_sensitive = $5,
-            url = $6,
-            updated_at = $7
-        WHERE id = $8
+            content_source_type = $4,
+            language = $5,
+            is_sensitive = $6,
+            url = $7,
+            updated_at = $8
+        WHERE id = $9
             AND repost_of_id IS NULL
             AND ipfs_cid IS NULL
         RETURNING post
@@ -448,6 +451,7 @@ pub async fn update_post(
             &post_data.title,
             &post_data.content,
             &post_data.content_source,
+            &post_data.content_source_type,
             &post_data.language.map(DbLanguage::new),
             &post_data.is_sensitive,
             &post_data.url,

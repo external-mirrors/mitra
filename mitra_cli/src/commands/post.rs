@@ -150,6 +150,7 @@ impl CreatePost {
             title: None,
             content: content,
             content_source: None,
+            content_source_type: None,
             language: None,
             visibility: Visibility::Public,
             is_sensitive: false,

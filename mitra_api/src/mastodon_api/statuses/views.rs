@@ -211,7 +211,7 @@ async fn create_status(
         },
     };
     // Parse content
-    let PostContent { content, content_source, mentions, hashtags, links, linked, mut emojis } =
+    let PostContent { content, content_source, content_source_type, mentions, hashtags, links, linked, mut emojis } =
         parse_content(
             db_client,
             &instance,
@@ -297,6 +297,7 @@ async fn create_status(
         title: status_form.title.clone(),
         content: content,
         content_source: content_source,
+        content_source_type: content_source_type,
         language: status_form.language()?,
         visibility: visibility,
         is_sensitive: status_form.sensitive,
@@ -536,7 +537,7 @@ async fn edit_status(
     let instance = config.instance();
     let status_form = status_form.into_inner();
     // Parse content
-    let PostContent { content, content_source, mentions, hashtags, links, linked, emojis } =
+    let PostContent { content, content_source, content_source_type, mentions, hashtags, links, linked, emojis } =
         parse_content(
             db_client,
             &instance,
@@ -557,6 +558,7 @@ async fn edit_status(
         title: status_form.title.clone(),
         content: content,
         content_source: content_source,
+        content_source_type: content_source_type,
         language: status_form.language()?,
         is_sensitive: status_form.sensitive,
         poll: post.poll.map(PollData::from),

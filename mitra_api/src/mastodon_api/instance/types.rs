@@ -41,6 +41,7 @@ use crate::mastodon_api::{
     statuses::types::{
         POST_CONTENT_TYPE_HTML,
         POST_CONTENT_TYPE_MARKDOWN,
+        POST_CONTENT_TYPE_TEXT,
     },
     MASTODON_API_VERSION,
 };
@@ -218,7 +219,7 @@ struct PleromaFieldsLimits {
 struct PleromaMetadata {
     features: [&'static str; 3],
     fields_limits: PleromaFieldsLimits,
-    post_formats: [&'static str; 2],
+    post_formats: [&'static str; 3],
 }
 
 impl PleromaMetadata {
@@ -236,8 +237,9 @@ impl PleromaMetadata {
                 value_length: FIELD_VALUE_LENGTH_MAX,
             },
             post_formats: [
-                POST_CONTENT_TYPE_HTML,
                 POST_CONTENT_TYPE_MARKDOWN,
+                POST_CONTENT_TYPE_TEXT,
+                POST_CONTENT_TYPE_HTML,
             ],
         }
     }

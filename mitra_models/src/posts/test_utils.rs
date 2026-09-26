@@ -11,6 +11,7 @@ use crate::{
 use super::{
     queries::create_post,
     types::{
+        ContentType,
         PostContext,
         PostCreateData,
         PostDetailed,
@@ -64,6 +65,7 @@ impl Default for PostDetailed {
             title: None,
             content: "".to_string(),
             content_source: None,
+            content_source_type: Some(ContentType::Markdown),
             language: None,
             conversation: Some(Conversation::for_test(post_id)),
             in_reply_to_id: None,

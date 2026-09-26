@@ -19,7 +19,11 @@ use mitra_activitypub::{
 use mitra_models::{
     conversations::types::TrackingStatus,
     emojis::types::{CustomEmoji as DbCustomEmoji},
-    posts::types::{PostDetailed as DbPostDetailed, Visibility},
+    posts::types::{
+        ContentType,
+        PostDetailed as DbPostDetailed,
+        Visibility,
+    },
     profiles::types::DbActorProfile,
 };
 use mitra_utils::languages::Language;
@@ -45,6 +49,7 @@ use super::utils::parse_language_code;
 
 pub const POST_CONTENT_TYPE_HTML: &str = "text/html";
 pub const POST_CONTENT_TYPE_MARKDOWN: &str = "text/markdown";
+pub const POST_CONTENT_TYPE_TEXT: &str = "text/plain";
 
 const TRACKING_STATUS_NORMAL: &str = "normal";
 const TRACKING_STATUS_FOLLOW: &str = "follow";
@@ -489,7 +494,7 @@ impl StatusPreview {
     }
 }
 
-/// https://docs.joinmastodon.org/entities/StatusSource/
+// https://docs.joinmastodon.org/entities/StatusSource/
 #[derive(Serialize)]
 pub struct StatusSource {
     id: Uuid,
@@ -501,8 +506,16 @@ pub struct StatusSource {
 
 impl StatusSource {
     pub fn from_post(post: DbPostDetailed) -> Self {
-        let (content_source, content_type) = match post.content_source {
-            Some(source) => (source, POST_CONTENT_TYPE_MARKDOWN),
+        let (content_source, content_type) = match post.content_source_type {
+            Some(content_type) => {
+                let content_type = match content_type {
+                    ContentType::Markdown => POST_CONTENT_TYPE_MARKDOWN,
+                    ContentType::Text => POST_CONTENT_TYPE_TEXT,
+                    ContentType::Html => POST_CONTENT_TYPE_HTML,
+                };
+                let content_source = post.content_source.unwrap_or_default();
+                (content_source, content_type)
+            },
             None => (post.content, POST_CONTENT_TYPE_HTML),
         };
         Self {

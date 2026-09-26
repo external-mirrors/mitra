@@ -12,11 +12,18 @@ use mitra_models::{
     posts::{
         queries::get_post_by_id,
         helpers::{add_related_posts, add_user_actions, can_link_post},
-        types::{PostDetailed as DbPostDetailed, Visibility},
+        types::{
+            ContentType,
+            PostDetailed as DbPostDetailed,
+            Visibility,
+        },
     },
     relationships::queries::get_subscribers,
 };
-use mitra_utils::markdown::markdown_lite_to_html;
+use mitra_utils::{
+    html::clean_html_all,
+    markdown::markdown_lite_to_html,
+};
 use mitra_validators::{
     errors::ValidationError,
     polls::clean_poll_option_name,
@@ -43,11 +50,13 @@ use super::types::{
     Status,
     POST_CONTENT_TYPE_HTML,
     POST_CONTENT_TYPE_MARKDOWN,
+    POST_CONTENT_TYPE_TEXT,
 };
 
 pub struct PostContent {
     pub content: String,
     pub content_source: Option<String>,
+    pub content_source_type: Option<ContentType>,
     pub mentions: Vec<Uuid>,
     pub hashtags: Vec<String>,
     pub links: Vec<Uuid>,
@@ -103,6 +112,7 @@ async fn parse_microsyntaxes(
     Ok(PostContent {
         content,
         content_source: None,
+        content_source_type: None,
         mentions,
         hashtags,
         links,
@@ -118,14 +128,30 @@ pub async fn parse_content(
     content_type: &str,
     maybe_quote_of_id: Option<Uuid>,
 ) -> Result<PostContent, MastodonError> {
-    let (content_html, maybe_content_source) = match content_type {
-        POST_CONTENT_TYPE_HTML => (content.to_owned(), None),
+    let (
+        content_html,
+        content_source,
+        content_source_type,
+    ) = match content_type {
+        POST_CONTENT_TYPE_TEXT => (
+            clean_html_all(content),
+            content.to_owned(),
+            ContentType::Text,
+        ),
+        POST_CONTENT_TYPE_HTML => (
+            content.to_owned(),
+            content.to_owned(),
+            ContentType::Html,
+        ),
         POST_CONTENT_TYPE_MARKDOWN => {
             let content_html = markdown_lite_to_html(content)
                 .map_err(|_| ValidationError("invalid markdown"))?;
-            (content_html, Some(content.to_owned()))
+            (
+                content_html,
+                content.to_owned(),
+                ContentType::Markdown,
+            )
         },
-        // Some Pleroma clients use text/plain by default
         _ => return Err(ValidationError("unsupported post format").into()),
     };
     let mut output = parse_microsyntaxes(
@@ -133,7 +159,8 @@ pub async fn parse_content(
         instance,
         content_html,
     ).await?;
-    output.content_source = maybe_content_source;
+    output.content_source = Some(content_source);
+    output.content_source_type = Some(content_source_type);
     if let Some(quote_of_id) = maybe_quote_of_id {
         let quote_of = match get_post_by_id(db_client, quote_of_id).await {
             Ok(post) if can_link_post(&post) => post,
@@ -317,11 +344,11 @@ mod tests {
             "https://social.example/posts/1",
         ).await;
         let instance = Instance::for_test("https://local.example");
-        let content_str = "@test@social.example test [[https://social.example/posts/1]].";
+        let source = "@test@social.example test [[https://social.example/posts/1]].";
         let content = parse_content(
             db_client,
             &instance,
-            content_str,
+            source,
             POST_CONTENT_TYPE_MARKDOWN,
             None,
         ).await.unwrap();
@@ -331,5 +358,22 @@ mod tests {
         );
         assert_eq!(content.mentions.len(), 1);
         assert_eq!(content.links.len(), 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_parse_content_plaintext() {
+        let db_client = &create_test_database().await;
+        let instance = Instance::for_test("https://social.example");
+        let source = "<b>this</b> **is** not #markdown";
+        let content = parse_content(
+            db_client,
+            &instance,
+            source,
+            POST_CONTENT_TYPE_TEXT,
+            None,
+        ).await.unwrap();
+        assert_eq!(content.content, r#"this **is** not <a class="hashtag" href="https://social.example/collections/tags/markdown" rel="tag noopener">#markdown</a>"#);
+        assert_eq!(content.content_source.unwrap(), source);
     }
 }
