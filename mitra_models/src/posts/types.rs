@@ -477,47 +477,6 @@ impl PostDetailed {
     }
 }
 
-#[cfg(any(test, feature = "test-utils"))]
-impl Default for PostDetailed {
-    fn default() -> Self {
-        // TODO: use PostDetailed::new()
-        let post_id = Uuid::new_v4();
-        Self {
-            id: post_id,
-            author: DbActorProfile::default(),
-            title: None,
-            content: "".to_string(),
-            content_source: None,
-            language: None,
-            conversation: Some(Conversation::for_test(post_id)),
-            in_reply_to_id: None,
-            repost_of_id: None,
-            group: None,
-            visibility: Visibility::Public,
-            is_sensitive: false,
-            is_pinned: false,
-            reply_count: 0,
-            reaction_count: 0,
-            repost_count: 0,
-            poll: None,
-            attachments: vec![],
-            mentions: vec![],
-            tags: vec![],
-            links: vec![],
-            emojis: vec![],
-            reactions: vec![],
-            url: None,
-            object_id: None,
-            ipfs_cid: None,
-            created_at: Utc::now(),
-            updated_at: None,
-            actions: None,
-            related_posts: None,
-            parent_visible: true,
-        }
-    }
-}
-
 impl TryFrom<&Row> for PostDetailed {
     type Error = DatabaseError;
 
@@ -606,18 +565,6 @@ impl PostContext {
         match self {
             Self::Repost { repost_of_id } => Some(*repost_of_id),
             _ => None,
-        }
-    }
-}
-
-#[cfg(any(test, feature = "test-utils"))]
-impl Default for PostContext {
-    fn default() -> Self {
-        use crate::activitypub::constants::AP_PUBLIC;
-        Self::Top {
-            group_id: None,
-            object_id: None,
-            audience: Some(AP_PUBLIC.to_owned()),
         }
     }
 }
