@@ -552,13 +552,18 @@ pub async fn delete_profile(
     profile_id: Uuid,
 ) -> Result<DeletionQueue, DatabaseError> {
     let transaction = db_client.transaction().await?;
-    // Select all posts authored by given actor,
-    // their descendants and reposts.
+    // Wait for post writers before selecting the deletion set, and prevent
+    // inserts or deletions from changing it until this transaction commits.
+    transaction.execute("LOCK TABLE post IN EXCLUSIVE MODE", &[]).await?;
+    // Select authored posts and group posts, their descendants and reposts.
+    // post.group_id matches conversation.group_id, covering conversation cascades.
     let posts_rows = transaction.query(
         "
         WITH RECURSIVE context (post_id) AS (
             SELECT post.id FROM post
-            WHERE post.author_id = $1
+            WHERE
+                post.author_id = $1
+                OR post.group_id = $1
             UNION
             SELECT post.id FROM post
             JOIN context ON (

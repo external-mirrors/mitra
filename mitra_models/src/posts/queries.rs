@@ -1908,6 +1908,9 @@ pub async fn delete_post(
     post_id: Uuid,
 ) -> Result<DeletionQueue, DatabaseError> {
     let transaction = db_client.transaction().await?;
+    // Wait for post writers before selecting the deletion set, and prevent
+    // inserts or deletions from changing it until this transaction commits.
+    transaction.execute("LOCK TABLE post IN EXCLUSIVE MODE", &[]).await?;
     // Select all posts that will be deleted.
     // This includes given post, its descendants and reposts.
     let posts_rows = transaction.query(
@@ -2125,6 +2128,8 @@ pub async fn get_post_count(
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use chrono::TimeDelta;
     use serial_test::serial;
     use crate::{
@@ -2138,7 +2143,7 @@ mod tests {
             add_custom_feed_sources,
             create_custom_feed,
         },
-        database::test_utils::create_test_database,
+        database::test_utils::{connect_test_database, create_test_database},
         groups::{
             helpers::join_private_group,
             test_utils::create_test_remote_group,
@@ -2340,6 +2345,59 @@ mod tests {
         let deletion_queue = delete_post(db_client, post.id).await.unwrap();
         assert_eq!(deletion_queue.files.len(), 0);
         assert_eq!(deletion_queue.ipfs_objects.len(), 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_post_concurrent() {
+        let db_client = &mut create_test_database().await;
+        let author = create_test_user(db_client, "test").await;
+        let parent = create_test_local_post(db_client, author.id, "parent").await;
+        let reply_data = PostCreateData {
+            context: PostContext::reply_to(&parent),
+            ..PostCreateData::for_test()
+        };
+        let reply = create_post(db_client, author.id, reply_data).await.unwrap();
+        let remaining = create_test_local_post(db_client, author.id, "remaining").await;
+        let profile = get_profile_by_id(db_client, author.id).await.unwrap();
+        assert_eq!(profile.post_count, 3);
+
+        let mut delete_parent_client = connect_test_database().await;
+        let delete_parent_pid: i32 = delete_parent_client.query_one("SELECT pg_backend_pid()", &[])
+            .await.unwrap().get(0);
+        // Keep the reply deletion uncommitted while the parent deletion starts.
+        let mut delete_reply_transaction = db_client.transaction().await.unwrap();
+        delete_post(&mut delete_reply_transaction, reply.id).await.unwrap();
+        let release_reply_deletion = async {
+            loop {
+                let row = delete_reply_transaction.query_one(
+                    "SELECT pg_backend_pid() = ANY(pg_blocking_pids($1))",
+                    &[&delete_parent_pid],
+                ).await.unwrap();
+                if row.get::<_, bool>(0) {
+                    break;
+                };
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            };
+            // The parent deletion must wait before selecting its deletion set,
+            // otherwise it counts the reply again and decrements twice.
+            delete_reply_transaction.commit().await.unwrap();
+        };
+        let (result, ()) = tokio::time::timeout(Duration::from_secs(10), async {
+            tokio::join!(
+                delete_post(&mut delete_parent_client, parent.id),
+                release_reply_deletion,
+            )
+        }).await.expect("concurrent deletions should finish");
+        result.unwrap();
+
+        let profile = get_profile_by_id(db_client, author.id).await.unwrap();
+        assert_eq!(profile.post_count, 1);
+        get_post_by_id(db_client, remaining.id).await.unwrap();
+        for post_id in [parent.id, reply.id] {
+            let error = get_post_by_id(db_client, post_id).await.err().unwrap();
+            assert_eq!(error.to_string(), "post not found");
+        };
     }
 
     #[tokio::test]
