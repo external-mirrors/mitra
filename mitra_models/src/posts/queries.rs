@@ -2362,14 +2362,23 @@ mod tests {
         let profile = get_profile_by_id(db_client, author.id).await.unwrap();
         assert_eq!(profile.post_count, 3);
 
+        // Delete the parent and the reply concurrently
         let mut delete_parent_client = connect_test_database().await;
         let delete_parent_pid: i32 = delete_parent_client.query_one("SELECT pg_backend_pid()", &[])
             .await.unwrap().get(0);
-        // Keep the reply deletion uncommitted while the parent deletion starts.
         let mut delete_reply_transaction = db_client.transaction().await.unwrap();
         delete_post(&mut delete_reply_transaction, reply.id).await.unwrap();
         let release_reply_deletion = async {
+            // This loop keeps the "delete reply" transaction uncommitted
+            // until "delete parent" begins and attempts to acquire
+            // some lock held by "delete reply":
+            // - An exclusive lock on the `post` table (caused by LOCK).
+            // - Or a row-level lock on the `actor_profile` table (caused by UPDATE).
+            // This method is more reliable than waiting for a fixed amount of time.
             loop {
+                // `pg_blocking_pids()`: "Returns an array of the process ID(s)
+                // of the sessions that are blocking the server process with
+                // the specified process ID from acquiring a lock."
                 let row = delete_reply_transaction.query_one(
                     "SELECT pg_backend_pid() = ANY(pg_blocking_pids($1))",
                     &[&delete_parent_pid],
@@ -2379,10 +2388,12 @@ mod tests {
                 };
                 tokio::time::sleep(Duration::from_millis(10)).await;
             };
-            // The parent deletion must wait before selecting its deletion set,
-            // otherwise it counts the reply again and decrements twice.
             delete_reply_transaction.commit().await.unwrap();
         };
+        // The "delete parent" transaction will select `post` deletion sets
+        // while "delete reply" transaction is still running.
+        // A correct implementation must not allow selecting the reply twice
+        // (because that would result in a double decrement of `post_count`)
         let (result, ()) = tokio::time::timeout(Duration::from_secs(10), async {
             tokio::join!(
                 delete_post(&mut delete_parent_client, parent.id),
