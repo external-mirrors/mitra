@@ -860,6 +860,18 @@ pub async fn get_home_timeline(
                             AND custom_feed_source.source_id = post.author_id
                     )
                 UNION ALL
+                -- posts in followed groups
+                SELECT 1
+                WHERE
+                    post.in_reply_to_id IS NULL
+                    AND EXISTS (
+                        SELECT 1 FROM relationship
+                        WHERE
+                            source_id = $current_user_id
+                            AND target_id = post.group_id
+                            AND relationship_type IN ({relationship_follow})
+                    )
+                UNION ALL
                 -- posts where user is mentioned
                 SELECT 1 FROM post_mention
                 WHERE
