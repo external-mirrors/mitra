@@ -3,7 +3,6 @@ use apx_sdk::{
     deserialization::{
         deserialize_into_id_array,
         deserialize_into_object_id,
-        object_to_id,
     },
     utils::{is_activity, CoreType},
 };
@@ -18,10 +17,10 @@ use mitra_models::{
         DatabaseConnectionPool,
         DatabaseError,
     },
+    groups::helpers::get_affiliated_profiles,
     posts::queries::{
         create_post,
         get_post_by_id,
-        get_remote_post_by_object_id,
         get_remote_repost_by_activity_id,
     },
     posts::types::{PostCreateData, Visibility},
@@ -140,6 +139,15 @@ pub async fn handle_announce(
     if !post.is_public() {
         return Err(DatabaseError::NotFound("post").into());
     };
+    let db_client = &mut **get_database_client(db_pool).await?;
+    if author.is_group() {
+        let affiliated = get_affiliated_profiles(db_client, author.id).await?;
+        if !affiliated.is_empty() {
+            // Ignore reposts made by FEP-1b12 groups
+            log::warn!("ignoring repost from group {}", announce.actor);
+            return Ok(None);
+        };
+    };
     let visibility = get_repost_visibility(
         author.expect_actor_data(),
         &[announce.to.clone(), announce.cc.clone()].concat(),
@@ -150,7 +158,6 @@ pub async fn handle_announce(
         Some(canonical_activity_id.to_string()),
     );
     validate_repost_data(&repost_data)?;
-    let db_client = &mut **get_database_client(db_pool).await?;
     match create_post(db_client, author.id, repost_data).await {
         Ok(_) => Ok(Some(Descriptor::object("Object"))),
         Err(DatabaseError::AlreadyExists("post")) => {
@@ -164,11 +171,11 @@ pub async fn handle_announce(
     }
 }
 
-/// Wrapped activities from Lemmy
-/// https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md
+// https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md
 #[derive(Deserialize)]
 struct GroupAnnounce {
     id: String,
+    #[allow(dead_code)]
     #[serde(deserialize_with = "deserialize_into_object_id")]
     actor: String,
     object: JsonValue,
@@ -180,7 +187,7 @@ async fn handle_fep_1b12_announce(
     db_pool: &DatabaseConnectionPool,
     announce: JsonValue,
 ) -> HandlerResult {
-    let GroupAnnounce { id: announce_id, actor: group_id, object: activity } =
+    let GroupAnnounce { id: announce_id, object: activity, .. } =
         serde_json::from_value(announce)?;
     verify_activity_owner(&activity)?;
     let activity_id = get_object_id(&activity)?;
@@ -233,11 +240,6 @@ async fn handle_fep_1b12_announce(
     };
     // Authorization
     verify_activity_owner(&activity)?;
-    let group = ActorIdResolver::default().only_remote().resolve(
-        ap_client,
-        db_pool,
-        &group_id,
-    ).await?;
     match activity_type {
         DELETE => {
             let maybe_type = handle_delete(
@@ -248,40 +250,14 @@ async fn handle_fep_1b12_announce(
             Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
         },
         CREATE => {
-            let maybe_object_type = handle_create(
+            handle_create(
                 config,
                 ap_client,
                 db_pool,
                 activity.clone(),
                 None, // no sender (spam check will not be performed)
                 true, // authenticated (by embedding or fetched from origin)
-            )
-                .await?
-                .map(|desc| desc.to_string());
-            if let Some(ARTICLE | NOTE | PAGE) = maybe_object_type.as_deref() {
-                // Create repost
-                let db_client = &mut **get_database_client(db_pool).await?;
-                let object_id = object_to_id(&activity["object"])
-                    .map_err(|_| ValidationError("invalid activity object"))?;
-                let post = get_remote_post_by_object_id(
-                    db_client,
-                    &object_id,
-                ).await?;
-                if post.is_public() && post.in_reply_to_id.is_none() {
-                    let repost_data = PostCreateData::repost(
-                        post.id,
-                        Visibility::Public,
-                        Some(announce_id),
-                    );
-                    validate_repost_data(&repost_data)?;
-                    match create_post(db_client, group.id, repost_data).await {
-                        Ok(_) => (),
-                        // Announce(Note) was sent too
-                        Err(DatabaseError::AlreadyExists("post")) => (),
-                        Err(other_error) => return Err(other_error.into()),
-                    };
-                };
-            };
+            ).await?;
             Ok(Some(Descriptor::object(activity_type)))
         },
         LIKE | DISLIKE => {
