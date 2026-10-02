@@ -39,8 +39,9 @@ Demo instance: https://public.mitra.social/ ([invite-only](https://public.mitra.
 
 - [mitra-web](https://codeberg.org/silverpill/mitra-web) (Web)
 - [Bloat](https://git.freesoftwareextremist.com/bloat/about/) (Web, NoJS)
-- [Phanpy](https://github.com/cheeaun/phanpy) (Web)
 - [Nicolium](https://codeberg.org/mkljczk/nicolium) (Web)
+- [chan-fe](https://git.wizard.casa/nak/chan-fe) (Web)
+- [Phanpy](https://github.com/cheeaun/phanpy) (Web)
 - [Husky](https://github.com/captainepoch/husky) (Android)
 - [Fedilab](https://codeberg.org/tom79/Fedilab) (Android)
 - [Fedicat](https://codeberg.org/technicat/fedicat) (iOS)
