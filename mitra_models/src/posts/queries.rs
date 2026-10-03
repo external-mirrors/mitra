@@ -1328,6 +1328,8 @@ pub async fn get_thread(
     post_id: Uuid,
     current_user_id: Option<Uuid>,
 ) -> Result<Vec<PostDetailed>, DatabaseError> {
+    // The RECURSIVE part is fast,
+    // but related queries may be slow when the thread is big
     let statement = format!(
         "
         WITH RECURSIVE
@@ -1338,7 +1340,7 @@ pub async fn get_thread(
             WHERE post.conversation_id = (
                 SELECT post.conversation_id
                 FROM post
-                WHERE post.id = $post_id AND {visibility_filter}
+                WHERE post.id = $post_id
             )
         ),
         tree_node (id, path) AS (
@@ -1386,7 +1388,7 @@ pub async fn get_thread(
         };
         posts.push(post);
     };
-    if posts.is_empty() {
+    if !posts.iter().any(|post| post.id == post_id) {
         return Err(DatabaseError::NotFound("post"));
     };
     Ok(posts)
