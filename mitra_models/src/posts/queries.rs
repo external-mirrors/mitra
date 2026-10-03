@@ -2090,12 +2090,24 @@ pub async fn search_posts(
                         post_mention.post_id = post.id
                         AND post_mention.profile_id = $2
                 )
+                -- posts in threads where the current user is participating
+                OR EXISTS (
+                    SELECT 1 FROM post AS conversation_post
+                    WHERE
+                        conversation_post.conversation_id = post.conversation_id
+                        AND conversation_post.author_id = $2
+                        -- without NOT NULL it will be slow bitmap index scan
+                        AND conversation_post.conversation_id IS NOT NULL
+                        -- select only public posts to avoid visibility check
+                        AND post.visibility = {visibility_public}
+                )
             )
         ORDER BY post.id DESC
         LIMIT $3 OFFSET $4
         ",
         post_subqueries=post_subqueries(),
         search_config=escape_literal(search_config),
+        visibility_public=i16::from(Visibility::Public),
     );
     let rows = db_client.query(
         &statement,
