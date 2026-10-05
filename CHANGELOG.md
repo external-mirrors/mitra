@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allowed password digests to be stored in Pleroma format.
 - Added `ap outbox` command.
 - Added support for `text/plain` post format.
+- Added `fts create` command.
 
 ### Changed
 

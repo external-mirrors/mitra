@@ -81,6 +81,7 @@ async fn run_async() -> Result<(), Error> {
         Command::Config(command) => command.execute(&db_pool).await,
         Command::Emoji(command) => command.execute(&config, &db_pool).await,
         Command::Filter(command) => command.execute(&db_pool).await,
+        Command::Fts(command) => command.execute(&db_pool).await,
         Command::Invite(command) => command.execute(&db_pool).await,
         Command::Media(command) => command.execute(&config, &db_pool).await,
         Command::GetConfig(cmd) => cmd.execute(&db_pool).await,

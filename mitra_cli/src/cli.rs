@@ -45,6 +45,7 @@ use crate::commands::{
         ListFilterRules,
         RemoveFilterRule,
     },
+    fts::FtsCommand,
     invoice::{
         ReopenInvoice,
         RepairInvoice,
@@ -94,6 +95,8 @@ pub enum Command {
     Emoji(EmojiCommand),
     #[command(subcommand, hide = true)]
     Filter(FilterCommand),
+    #[command(subcommand, hide = true)]
+    Fts(FtsCommand),
     #[command(subcommand, hide = true)]
     Invite(InviteCommand),
     #[command(subcommand, hide = true)]
