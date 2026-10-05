@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
-    posts::queries::create_fts_index,
+    posts::queries::create_fts_index_unsafe,
 };
 
 /// Create an index for full-text search
@@ -19,7 +19,7 @@ impl CreateFtsIndex {
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &mut **get_database_client(db_pool).await?;
-        create_fts_index(db_client, &self.name).await?;
+        create_fts_index_unsafe(db_client, &self.name).await?;
         println!("index created");
         Ok(())
     }

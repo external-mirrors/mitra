@@ -2041,7 +2041,7 @@ pub async fn delete_repost(
     Ok(())
 }
 
-pub async fn create_fts_index(
+pub async fn create_fts_index_unsafe(
     db_client: &impl DatabaseClient,
     config_name: &str,
 ) -> Result<(), DatabaseError> {
@@ -3442,7 +3442,7 @@ mod tests {
     async fn test_create_fts_index() {
         let db_client = &create_test_database().await;
         let config_name = "english";
-        create_fts_index(db_client, config_name).await.unwrap();
+        create_fts_index_unsafe(db_client, config_name).await.unwrap();
     }
 
     #[tokio::test]
