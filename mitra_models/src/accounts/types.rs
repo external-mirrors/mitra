@@ -240,35 +240,6 @@ impl fmt::Display for User {
     }
 }
 
-#[cfg(any(test, feature = "test-utils"))]
-impl Default for User {
-    fn default() -> Self {
-        use apx_core::{
-            crypto::{
-                eddsa::generate_weak_ed25519_key,
-                rsa::generate_weak_rsa_key,
-            },
-        };
-        let id = Uuid::new_v4();
-        Self {
-            id: id,
-            password_digest: None,
-            login_address_ethereum: None,
-            login_address_monero: None,
-            rsa_secret_key: generate_weak_rsa_key().unwrap(),
-            ed25519_secret_key: generate_weak_ed25519_key(),
-            role: Role::default(),
-            client_config: ClientConfig::default(),
-            shared_client_config: SharedClientConfig::default(),
-            profile: DbActorProfile {
-                id: id,
-                user_id: Some(id),
-                ..Default::default()
-            },
-        }
-    }
-}
-
 impl User {
     pub fn new(
         db_user: DbUser,
@@ -348,37 +319,6 @@ impl UserCreateData {
             return Err(DatabaseTypeError);
         };
         Ok(())
-    }
-}
-
-#[cfg(any(test, feature = "test-utils"))]
-impl Default for UserCreateData {
-    fn default() -> Self {
-        use apx_core::{
-            crypto::{
-                eddsa::generate_ed25519_key,
-                rsa::{
-                    generate_weak_rsa_key,
-                    rsa_secret_key_to_pkcs8_pem,
-                },
-            },
-        };
-        let rsa_secret_key = generate_weak_rsa_key().unwrap();
-        let rsa_secret_key_pem =
-            rsa_secret_key_to_pkcs8_pem(&rsa_secret_key).unwrap();
-        // Generating unique key for each user to satisfy identity_key
-        // uniqueness constraint.
-        let ed25519_secret_key = generate_ed25519_key();
-        Self {
-            username: Default::default(),
-            password_digest: None,
-            login_address_ethereum: None,
-            login_address_monero: None,
-            rsa_secret_key: rsa_secret_key_pem,
-            ed25519_secret_key: ed25519_secret_key,
-            invite_code: None,
-            role: Role::default(),
-        }
     }
 }
 

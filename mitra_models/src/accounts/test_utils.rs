@@ -1,9 +1,16 @@
 use apx_core::{
     crypto::{
-        eddsa::generate_weak_ed25519_key,
-        rsa::generate_weak_rsa_key,
+        eddsa::{
+            generate_ed25519_key,
+            generate_weak_ed25519_key,
+        },
+        rsa::{
+            generate_weak_rsa_key,
+            rsa_secret_key_to_pkcs8_pem,
+        },
     },
 };
+use uuid::Uuid;
 
 use crate::{
     database::DatabaseClient,
@@ -22,12 +29,36 @@ use super::{
     types::{
         AutomatedAccountDetailed,
         AutomatedAccountType,
+        ClientConfig,
         NomadicAccountDetailed,
         NomadicAccountData,
+        Role,
+        SharedClientConfig,
         User,
         UserCreateData,
     },
 };
+
+impl Default for UserCreateData {
+    fn default() -> Self {
+        let rsa_secret_key = generate_weak_rsa_key().unwrap();
+        let rsa_secret_key_pem =
+            rsa_secret_key_to_pkcs8_pem(&rsa_secret_key).unwrap();
+        // Generating unique key for each user to satisfy identity_key
+        // uniqueness constraint.
+        let ed25519_secret_key = generate_ed25519_key();
+        Self {
+            username: Default::default(),
+            password_digest: None,
+            login_address_ethereum: None,
+            login_address_monero: None,
+            rsa_secret_key: rsa_secret_key_pem,
+            ed25519_secret_key: ed25519_secret_key,
+            invite_code: None,
+            role: Role::default(),
+        }
+    }
+}
 
 pub async fn create_test_user(
     db_client: &mut impl DatabaseClient,
@@ -71,6 +102,28 @@ pub async fn create_test_nomadic_account(
         invite_code: None,
     };
     create_nomadic_account(db_client, account_data).await.unwrap()
+}
+
+impl Default for User {
+    fn default() -> Self {
+        let id = Uuid::new_v4();
+        Self {
+            id: id,
+            password_digest: None,
+            login_address_ethereum: None,
+            login_address_monero: None,
+            rsa_secret_key: generate_weak_rsa_key().unwrap(),
+            ed25519_secret_key: generate_weak_ed25519_key(),
+            role: Role::default(),
+            client_config: ClientConfig::default(),
+            shared_client_config: SharedClientConfig::default(),
+            profile: DbActorProfile {
+                id: id,
+                user_id: Some(id),
+                ..Default::default()
+            },
+        }
+    }
 }
 
 impl User {
