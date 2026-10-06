@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Show posts from followed groups in home timeline.
 - Don't create reposts for FEP-1b12 group announcements.
 - Include conversations where the current user is participating in post search results.
+- Silently drop `View` activities.
 
 ### Fixed
 
