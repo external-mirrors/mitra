@@ -31,6 +31,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Account for group posts when deleting profiles and collecting orphaned media ([#262](https://codeberg.org/silverpill/mitra/pulls/261)).
 - Preserve groups containing posts during empty-profile cleanup ([#261](https://codeberg.org/silverpill/mitra/pulls/261)).
 
+### Security
+
+- Fixed embedded object origin check in collection fetcher.
+
 ## [5.10.0] - 2026-08-24
 
 ### Added

@@ -831,7 +831,7 @@ async fn fetch_collection(
     let mut authenticated = vec![];
     for item in items.into_iter().take(limit) {
         let item_id = object_to_id(&item)
-            .map(|id| HttpUri::parse(&id))
+            .map(|id| NonCanonicalUri::parse(&id))
             .map_err(|_| ValidationError("invalid object ID"))?
             .map_err(|_| ValidationError("invalid object ID"))?;
         match item {
@@ -844,7 +844,7 @@ async fn fetch_collection(
                 };
             },
         };
-        match ap_client.fetch_object(item_id.as_str()).await {
+        match ap_client.fetch_object(&item_id.to_string()).await {
             Ok(item) => authenticated.push(item),
             Err(error) => {
                 log::warn!("failed to fetch item ({error}): {item_id}");
