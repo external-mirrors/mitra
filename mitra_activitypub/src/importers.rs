@@ -754,11 +754,16 @@ pub async fn import_activity(
     ).await
 }
 
+pub enum CollectionItem {
+    Id(NonCanonicalUri),
+    Trusted(JsonValue),
+}
+
 async fn fetch_collection(
     ap_client: &ApClient,
     collection_id: &str,
     limit: usize,
-) -> Result<Vec<JsonValue>, HandlerError> {
+) -> Result<Vec<CollectionItem>, HandlerError> {
     // https://www.w3.org/TR/activitystreams-core/#collections
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
@@ -827,30 +832,49 @@ async fn fetch_collection(
             };
         };
     };
-
     let mut authenticated = vec![];
-    for item in items.into_iter().take(limit) {
-        let item_id = object_to_id(&item)
+    for item_value in items.into_iter().take(limit) {
+        let item_id = object_to_id(&item_value)
             .map(|id| NonCanonicalUri::parse(&id))
             .map_err(|_| ValidationError("invalid object ID"))?
             .map_err(|_| ValidationError("invalid object ID"))?;
-        match item {
-            JsonValue::String(_) => (),
+        let item = match item_value {
+            JsonValue::String(_) => CollectionItem::Id(item_id),
             _ => {
                 if item_id.origin() == collection.id.origin() {
                     // Can be trusted
-                    authenticated.push(item);
-                    continue
-                };
+                    CollectionItem::Trusted(item_value)
+                } else {
+                    CollectionItem::Id(item_id)
+                }
             },
         };
-        match ap_client.fetch_object(&item_id.to_string()).await {
-            Ok(item) => authenticated.push(item),
-            Err(error) => {
-                log::warn!("failed to fetch item ({error}): {item_id}");
-                continue;
+        authenticated.push(item);
+    };
+    Ok(authenticated)
+}
+
+async fn fetch_collection_and_items(
+    ap_client: &ApClient,
+    collection_id: &str,
+    limit: usize,
+) -> Result<Vec<JsonValue>, HandlerError> {
+    let items = fetch_collection(ap_client, collection_id, limit).await?;
+    let mut authenticated = vec![];
+    for item in items {
+        let value = match item {
+            CollectionItem::Id(item_id) => {
+                match ap_client.fetch_object(&item_id.to_string()).await {
+                    Ok(value) => value,
+                    Err(error) => {
+                        log::warn!("failed to fetch item ({error}): {item_id}");
+                        continue;
+                    },
+                }
             },
+            CollectionItem::Trusted(value) => value,
         };
+        authenticated.push(value);
     };
     Ok(authenticated)
 }
@@ -876,7 +900,11 @@ pub async fn import_collection(
     limit: usize,
 ) -> Result<Vec<String>, HandlerError> {
     let mut imported = vec![];
-    let items = fetch_collection(ap_client, collection_id, limit).await?;
+    let items = fetch_collection_and_items(
+        ap_client,
+        collection_id,
+        limit,
+    ).await?;
     let item_type = match &items[..] {
         [] => {
             log::info!("collection is empty");
@@ -1076,7 +1104,7 @@ pub async fn import_affiliations(
     let actor: Actor = ap_client.fetch_object(&actor_http_uri).await?;
     let affiliations = if let Some(collection_id) = actor.affiliations {
         let http_uri = context.prepare_object_id(&collection_id.to_string())?;
-        let items = fetch_collection(&ap_client, &http_uri, limit).await?;
+        let items = fetch_collection_and_items(&ap_client, &http_uri, limit).await?;
         handle_affiliations(&ap_client, db_pool, items).await?
     } else if let Some(collection_id) = actor.attributed_to {
         let http_uri = context.prepare_object_id(&collection_id.to_string())?;
