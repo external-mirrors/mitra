@@ -1,0 +1,18 @@
+[Unit]
+Description=Mitra Server
+After=postgresql.service
+Requires=postgresql.service
+
+[Service]
+ExecStart=/usr/bin/mitra server
+WorkingDirectory=/var/lib/mitra
+User=mitra
+Group=mitra
+
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

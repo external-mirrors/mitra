@@ -19,7 +19,7 @@ sed -i "s/0.0.0/${VERSION_DEB}/" $PACKAGE_DIR/debian/changelog
 echo "Architecture: $ARCH" >> $PACKAGE_DIR/debian/control
 
 # Service
-cp contrib/mitra.service $PACKAGE_DIR/debian/mitra.service
+cp contrib/systemd/mitra.service $PACKAGE_DIR/debian/mitra.service
 
 # Config file
 mkdir -p $PACKAGE_DIR/etc/mitra

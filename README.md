@@ -136,7 +136,7 @@ Start Mitra:
 
 An HTTP server will be needed to handle HTTPS requests. See examples of [Nginx](./contrib/nginx/mitra.conf) and [Caddy](./docs/reverse_proxy.md#caddy) configuration files.
 
-To run Mitra as a systemd service, check out the [systemd unit file example](./contrib/mitra.service).
+To run Mitra as a systemd service, check out the [systemd unit file example](./contrib/systemd/mitra.service).
 
 ### Other installation methods
 
