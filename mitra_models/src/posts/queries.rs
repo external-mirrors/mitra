@@ -39,16 +39,19 @@ use crate::profiles::{
 };
 use crate::relationships::types::RelationshipType;
 
-use super::types::{
-    DbLanguage,
-    Post,
-    PostContext,
-    PostCreateData,
-    PostDetailed,
-    PostReaction,
-    PostUpdateData,
-    Repost,
-    Visibility,
+use super::{
+    constants::PREINSTALLED_FTS_CONFIG,
+    types::{
+        DbLanguage,
+        Post,
+        PostContext,
+        PostCreateData,
+        PostDetailed,
+        PostReaction,
+        PostUpdateData,
+        Repost,
+        Visibility,
+    },
 };
 
 async fn create_post_attachments(
@@ -256,6 +259,7 @@ pub async fn create_post(
             title,
             content,
             content_source,
+            content_source_type,
             language,
             conversation_id,
             in_reply_to_id,
@@ -267,17 +271,17 @@ pub async fn create_post(
             object_id,
             created_at
         )
-        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
         WHERE
         -- don't allow replies to reposts
         NOT EXISTS (
             SELECT 1 FROM post
-            WHERE post.id = $8 AND post.repost_of_id IS NOT NULL
+            WHERE post.id = $9 AND post.repost_of_id IS NOT NULL
         )
         -- don't allow reposts of non-public posts
         AND NOT EXISTS (
             SELECT 1 FROM post
-            WHERE post.id = $9 AND (
+            WHERE post.id = $10 AND (
                 post.repost_of_id IS NOT NULL
                 OR post.visibility != {visibility_public}
             )
@@ -294,6 +298,7 @@ pub async fn create_post(
             &post_data.title,
             &post_data.content,
             &post_data.content_source,
+            &post_data.content_source_type,
             &post_data.language.map(DbLanguage::new),
             &maybe_conversation.as_ref().map(|conversation| conversation.id),
             &post_data.context.in_reply_to_id(),
@@ -435,11 +440,12 @@ pub async fn update_post(
             title = $1,
             content = $2,
             content_source = $3,
-            language = $4,
-            is_sensitive = $5,
-            url = $6,
-            updated_at = $7
-        WHERE id = $8
+            content_source_type = $4,
+            language = $5,
+            is_sensitive = $6,
+            url = $7,
+            updated_at = $8
+        WHERE id = $9
             AND repost_of_id IS NULL
             AND ipfs_cid IS NULL
         RETURNING post
@@ -448,6 +454,7 @@ pub async fn update_post(
             &post_data.title,
             &post_data.content,
             &post_data.content_source,
+            &post_data.content_source_type,
             &post_data.language.map(DbLanguage::new),
             &post_data.is_sensitive,
             &post_data.url,
@@ -854,6 +861,18 @@ pub async fn get_home_timeline(
                         JOIN custom_feed ON custom_feed.id = custom_feed_source.feed_id
                         WHERE custom_feed.owner_id = $current_user_id
                             AND custom_feed_source.source_id = post.author_id
+                    )
+                UNION ALL
+                -- posts in followed groups
+                SELECT 1
+                WHERE
+                    post.in_reply_to_id IS NULL
+                    AND EXISTS (
+                        SELECT 1 FROM relationship
+                        WHERE
+                            source_id = $current_user_id
+                            AND target_id = post.group_id
+                            AND relationship_type IN ({relationship_follow})
                     )
                 UNION ALL
                 -- posts where user is mentioned
@@ -1312,6 +1331,8 @@ pub async fn get_thread(
     post_id: Uuid,
     current_user_id: Option<Uuid>,
 ) -> Result<Vec<PostDetailed>, DatabaseError> {
+    // The RECURSIVE part is fast,
+    // but related queries may be slow when the thread is big
     let statement = format!(
         "
         WITH RECURSIVE
@@ -1322,7 +1343,7 @@ pub async fn get_thread(
             WHERE post.conversation_id = (
                 SELECT post.conversation_id
                 FROM post
-                WHERE post.id = $post_id AND {visibility_filter}
+                WHERE post.id = $post_id
             )
         ),
         tree_node (id, path) AS (
@@ -1370,7 +1391,7 @@ pub async fn get_thread(
         };
         posts.push(post);
     };
-    if posts.is_empty() {
+    if !posts.iter().any(|post| post.id == post_id) {
         return Err(DatabaseError::NotFound("post"));
     };
     Ok(posts)
@@ -1908,6 +1929,9 @@ pub async fn delete_post(
     post_id: Uuid,
 ) -> Result<DeletionQueue, DatabaseError> {
     let transaction = db_client.transaction().await?;
+    // Wait for post writers before selecting the deletion set, and prevent
+    // inserts or deletions from changing it until this transaction commits.
+    transaction.execute("LOCK TABLE post IN EXCLUSIVE MODE", &[]).await?;
     // Select all posts that will be deleted.
     // This includes given post, its descendants and reposts.
     let posts_rows = transaction.query(
@@ -2000,19 +2024,45 @@ pub async fn delete_repost(
     repost_id: Uuid,
 ) -> Result<(), DatabaseError> {
     let transaction = db_client.transaction().await?;
-    let maybe_post_row = transaction.query_opt(
+    let maybe_row = transaction.query_opt(
         "
         DELETE FROM post WHERE id = $1 AND repost_of_id IS NOT NULL
         RETURNING post
         ",
         &[&repost_id],
     ).await?;
-    let post_row = maybe_post_row.ok_or(DatabaseError::NotFound("post"))?;
-    let db_post: Post = post_row.try_get("post")?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
+    let db_repost: Post = row.try_get("post")?;
     // Update counters
-    let repost_of_id = db_post.repost_of_id.ok_or(DatabaseTypeError)?;
+    let repost_of_id = db_repost.repost_of_id.ok_or(DatabaseTypeError)?;
     update_repost_count(&transaction, repost_of_id, -1).await?;
+    update_post_count(&transaction, db_repost.author_id, -1).await?;
     transaction.commit().await?;
+    Ok(())
+}
+
+pub async fn create_fts_index_unsafe(
+    db_client: &impl DatabaseClient,
+    config_name: &str,
+) -> Result<(), DatabaseError> {
+    // WARNING: config name must be trusted
+    if config_name == PREINSTALLED_FTS_CONFIG {
+        return Err(DatabaseError::type_error());
+    };
+    let index_name = format!("post_content_tsvector_{config_name}_index");
+    let drop_statement = format!("DROP INDEX IF EXISTS {index_name}");
+    db_client.execute(&drop_statement, &[]).await?;
+    let create_statement = format!(
+        "
+        CREATE INDEX {index_name}
+        ON post USING GIN (
+            to_tsvector(
+                '{config_name}',
+                COALESCE(title, '') || ' ' || content
+            )
+        )
+        ");
+    db_client.execute(&create_statement, &[]).await?;
     Ok(())
 }
 
@@ -2068,12 +2118,24 @@ pub async fn search_posts(
                         post_mention.post_id = post.id
                         AND post_mention.profile_id = $2
                 )
+                -- posts in threads where the current user is participating
+                OR EXISTS (
+                    SELECT 1 FROM post AS conversation_post
+                    WHERE
+                        conversation_post.conversation_id = post.conversation_id
+                        AND conversation_post.author_id = $2
+                        -- without NOT NULL it will be slow bitmap index scan
+                        AND conversation_post.conversation_id IS NOT NULL
+                        -- select only public posts to avoid visibility check
+                        AND post.visibility = {visibility_public}
+                )
             )
         ORDER BY post.id DESC
         LIMIT $3 OFFSET $4
         ",
         post_subqueries=post_subqueries(),
         search_config=escape_literal(search_config),
+        visibility_public=i16::from(Visibility::Public),
     );
     let rows = db_client.query(
         &statement,
@@ -2124,6 +2186,8 @@ pub async fn get_post_count(
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use chrono::TimeDelta;
     use serial_test::serial;
     use crate::{
@@ -2137,13 +2201,12 @@ mod tests {
             add_custom_feed_sources,
             create_custom_feed,
         },
-        database::test_utils::create_test_database,
+        database::test_utils::{connect_test_database, create_test_database},
         groups::{
             helpers::join_private_group,
             test_utils::create_test_remote_group,
         },
         posts::{
-            constants::PREINSTALLED_FTS_CONFIG,
             test_utils::{
                 create_test_local_post,
                 create_test_remote_post,
@@ -2339,6 +2402,70 @@ mod tests {
         let deletion_queue = delete_post(db_client, post.id).await.unwrap();
         assert_eq!(deletion_queue.files.len(), 0);
         assert_eq!(deletion_queue.ipfs_objects.len(), 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_post_concurrent() {
+        let db_client = &mut create_test_database().await;
+        let author = create_test_user(db_client, "test").await;
+        let parent = create_test_local_post(db_client, author.id, "parent").await;
+        let reply_data = PostCreateData {
+            context: PostContext::reply_to(&parent),
+            ..PostCreateData::for_test()
+        };
+        let reply = create_post(db_client, author.id, reply_data).await.unwrap();
+        let remaining = create_test_local_post(db_client, author.id, "remaining").await;
+        let profile = get_profile_by_id(db_client, author.id).await.unwrap();
+        assert_eq!(profile.post_count, 3);
+
+        // Delete the parent and the reply concurrently
+        let mut delete_parent_client = connect_test_database().await;
+        let delete_parent_pid: i32 = delete_parent_client.query_one("SELECT pg_backend_pid()", &[])
+            .await.unwrap().get(0);
+        let mut delete_reply_transaction = db_client.transaction().await.unwrap();
+        delete_post(&mut delete_reply_transaction, reply.id).await.unwrap();
+        let release_reply_deletion = async {
+            // This loop keeps the "delete reply" transaction uncommitted
+            // until "delete parent" begins and attempts to acquire
+            // some lock held by "delete reply":
+            // - An exclusive lock on the `post` table (caused by LOCK).
+            // - Or a row-level lock on the `actor_profile` table (caused by UPDATE).
+            // This method is more reliable than waiting for a fixed amount of time.
+            loop {
+                // `pg_blocking_pids()`: "Returns an array of the process ID(s)
+                // of the sessions that are blocking the server process with
+                // the specified process ID from acquiring a lock."
+                let row = delete_reply_transaction.query_one(
+                    "SELECT pg_backend_pid() = ANY(pg_blocking_pids($1))",
+                    &[&delete_parent_pid],
+                ).await.unwrap();
+                if row.get::<_, bool>(0) {
+                    break;
+                };
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            };
+            delete_reply_transaction.commit().await.unwrap();
+        };
+        // The "delete parent" transaction will select `post` deletion sets
+        // while "delete reply" transaction is still running.
+        // A correct implementation must not allow selecting the reply twice
+        // (because that would result in a double decrement of `post_count`)
+        let (result, ()) = tokio::time::timeout(Duration::from_secs(10), async {
+            tokio::join!(
+                delete_post(&mut delete_parent_client, parent.id),
+                release_reply_deletion,
+            )
+        }).await.expect("concurrent deletions should finish");
+        result.unwrap();
+
+        let profile = get_profile_by_id(db_client, author.id).await.unwrap();
+        assert_eq!(profile.post_count, 1);
+        get_post_by_id(db_client, remaining.id).await.unwrap();
+        for post_id in [parent.id, reply.id] {
+            let error = get_post_by_id(db_client, post_id).await.err().unwrap();
+            assert_eq!(error.to_string(), "post not found");
+        };
     }
 
     #[tokio::test]
@@ -3308,6 +3435,14 @@ mod tests {
             updated_before,
         ).await.unwrap();
         assert_eq!(result, vec![post_2.id]);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_fts_index() {
+        let db_client = &create_test_database().await;
+        let config_name = "english";
+        create_fts_index_unsafe(db_client, config_name).await.unwrap();
     }
 
     #[tokio::test]

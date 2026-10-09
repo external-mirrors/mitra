@@ -1966,7 +1966,7 @@ dependencies = [
 
 [[package]]
 name = "mitra"
-version = "5.10.1-dev"
+version = "5.11.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -1981,7 +1981,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_activitypub"
-version = "5.10.1-dev"
+version = "5.11.0"
 dependencies = [
  "apx_core",
  "apx_sdk",
@@ -2008,7 +2008,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_adapters"
-version = "5.10.1-dev"
+version = "5.11.0"
 dependencies = [
  "apx_core",
  "apx_sdk",
@@ -2031,7 +2031,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_api"
-version = "5.10.1-dev"
+version = "5.11.0"
 dependencies = [
  "actix-cors",
  "actix-files",
@@ -2070,7 +2070,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_cli"
-version = "5.10.1-dev"
+version = "5.11.0"
 dependencies = [
  "anyhow",
  "apx_core",
@@ -2093,7 +2093,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_config"
-version = "5.10.1-dev"
+version = "5.11.0"
 dependencies = [
  "apx_core",
  "dotenvy",
@@ -2109,7 +2109,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_models"
-version = "5.10.1-dev"
+version = "5.11.0"
 dependencies = [
  "apx_core",
  "chrono",
@@ -2137,7 +2137,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_services"
-version = "5.10.1-dev"
+version = "5.11.0"
 dependencies = [
  "anyhow",
  "apx_core",
@@ -2161,7 +2161,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_utils"
-version = "5.10.1-dev"
+version = "5.11.0"
 dependencies = [
  "ammonia",
  "apx_core",
@@ -2187,7 +2187,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_validators"
-version = "5.10.1-dev"
+version = "5.11.0"
 dependencies = [
  "apx_core",
  "mitra_models",
@@ -2200,7 +2200,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_workers"
-version = "5.10.1-dev"
+version = "5.11.0"
 dependencies = [
  "anyhow",
  "apx_sdk",
@@ -2257,9 +2257,9 @@ dependencies = [
 
 [[package]]
 name = "monero-rpc"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5995558c390b32b0918621f97fd1c2a47fc84432c9c4d437c80b32892f373bfd"
+checksum = "7e5445b03e3be450e122d87d8a2442ebed8959a2cc95296d7758b6ecbad0afa9"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3133,9 +3133,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.37"
+version = "0.23.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "758025cb5fccfd3bc2fd74708fd4682be41d99e5dff73c377c0646c6012c73a4"
+checksum = "0d41d731c7d2f962d1ccc364cec258de3c0e93b38c2fb3ba97ac74513048d634"
 dependencies = [
  "once_cell",
  "ring",
@@ -3179,9 +3179,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-webpki"
-version = "0.103.13"
+version = "0.103.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61c429a8649f110dddef65e2a5ad240f747e85f7758a6bccc7e5777bd33f756e"
+checksum = "f3c3cf1d8b1e7d4927e2d154c3fcb02979afb9939629c62cd9048d4f07b60ac2"
 dependencies = [
  "ring",
  "rustls-pki-types",

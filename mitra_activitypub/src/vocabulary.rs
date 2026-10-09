@@ -20,6 +20,7 @@ pub const REJECT: &str = "Reject";
 pub const REMOVE: &str = "Remove";
 pub const UNDO: &str = "Undo";
 pub const UPDATE: &str = "Update";
+pub const VIEW: &str = "View";
 
 // Actor types
 pub const APPLICATION: &str = "Application";

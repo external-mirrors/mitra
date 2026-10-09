@@ -208,7 +208,7 @@ pub async fn handle_activity(
             handle_like(ap_client, db_pool, activity).await?
         },
         LISTEN => {
-            None // ignore
+            None // ignore Pleroma
         },
         MOVE => {
             handle_move(ap_client, db_pool, activity).await?
@@ -231,6 +231,9 @@ pub async fn handle_activity(
         },
         UPDATE => {
             handle_update(ap_client, db_pool, activity, is_authenticated).await?
+        },
+        VIEW => {
+            None // ignore PeerTube
         },
         _ => {
             log::warn!("activity type is not supported: {}", activity);

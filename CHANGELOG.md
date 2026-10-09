@@ -6,16 +6,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [5.11.0] - 2026-10-07
+
 ### Added
 
 - Make posts quotable on Mastodon ([#257](https://codeberg.org/silverpill/mitra/pulls/257)).
 - Allowed password digests to be stored in Pleroma format.
 - Added `ap outbox` command.
+- Added support for `text/plain` post format.
+- Added `fts create` command.
+- Show user's preferred authentication methods in `account list` command output.
 
 ### Changed
 
 - Return database error if private related post is exposed via `Status` entity.
 - Allowed quotes (links) in non-public local posts.
+- Show posts from followed groups in home timeline.
+- Don't create reposts for FEP-1b12 group announcements.
+- Include conversations where the current user is participating in post search results.
+- Silently drop `View` activities.
+- Allow remote FEP-1b12 "moderators" collections containing local actors.
+
+### Fixed
+
+- Decrease user's post count when deleting repost.
+- Prevent post count drift during concurrent post creation and deletion ([#262](https://codeberg.org/silverpill/mitra/pulls/261)).
+- Account for group posts when deleting profiles and collecting orphaned media ([#262](https://codeberg.org/silverpill/mitra/pulls/261)).
+- Preserve groups containing posts during empty-profile cleanup ([#261](https://codeberg.org/silverpill/mitra/pulls/261)).
+
+### Security
+
+- Fixed embedded object origin check in collection fetcher.
 
 ## [5.10.0] - 2026-08-24
 

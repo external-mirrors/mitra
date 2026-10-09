@@ -552,13 +552,18 @@ pub async fn delete_profile(
     profile_id: Uuid,
 ) -> Result<DeletionQueue, DatabaseError> {
     let transaction = db_client.transaction().await?;
-    // Select all posts authored by given actor,
-    // their descendants and reposts.
+    // Wait for post writers before selecting the deletion set, and prevent
+    // inserts or deletions from changing it until this transaction commits.
+    transaction.execute("LOCK TABLE post IN EXCLUSIVE MODE", &[]).await?;
+    // Select authored posts and group posts, their descendants and reposts.
+    // post.group_id matches conversation.group_id, covering conversation cascades.
     let posts_rows = transaction.query(
         "
         WITH RECURSIVE context (post_id) AS (
             SELECT post.id FROM post
-            WHERE post.author_id = $1
+            WHERE
+                post.author_id = $1
+                OR post.group_id = $1
             UNION
             SELECT post.id FROM post
             JOIN context ON (
@@ -1005,7 +1010,9 @@ pub async fn find_empty_profiles(
             )
             AND NOT EXISTS (
                 SELECT 1 FROM post
-                WHERE author_id = actor_profile.id
+                WHERE
+                    author_id = actor_profile.id
+                    OR group_id = actor_profile.id
             )
             AND NOT EXISTS (
                 SELECT 1 FROM post_reaction
@@ -1062,7 +1069,10 @@ mod tests {
         emojis::queries::create_or_update_local_emoji,
         media::types::MediaInfo,
         posts::{
-            test_utils::create_test_local_post,
+            test_utils::{
+                create_test_local_post,
+                create_test_remote_post,
+            },
             views::refresh_latest_post_view,
         },
         profiles::{
@@ -1473,8 +1483,31 @@ mod tests {
     #[serial]
     async fn test_find_empty_profiles() {
         let db_client = &mut create_test_database().await;
+        // Local profile (empty)
+        let _profile_1 = create_test_local_profile(db_client, "local").await;
+        // Remote profile (empty)
+        let profile_2 = create_test_remote_profile(
+            db_client,
+            "remote",
+            "social.example",
+            "https://social.example/actors/1",
+        ).await;
+        // Remote profile with post
+        let profile_3 = create_test_remote_profile(
+            db_client,
+            "remote_with_post",
+            "social.example",
+            "https://social.example/actors/2",
+        ).await;
+        create_test_remote_post(
+            db_client,
+            profile_3.id,
+            "test post",
+            "https://social.example/objects/222",
+        ).await;
         let updated_before = Utc::now();
         let profiles = find_empty_profiles(db_client, updated_before).await.unwrap();
-        assert_eq!(profiles.is_empty(), true);
+        assert_eq!(profiles.len(), 1);
+        assert_eq!(profiles[0], profile_2.id);
     }
 }

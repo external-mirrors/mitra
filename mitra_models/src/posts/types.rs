@@ -84,6 +84,40 @@ impl ToSql for DbLanguage {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ContentType {
+    Markdown,
+    Text,
+    Html,
+}
+
+impl From<ContentType> for i16 {
+    fn from(value: ContentType) -> i16 {
+        match value {
+            ContentType::Markdown => 1,
+            ContentType::Text => 2,
+            ContentType::Html => 3,
+        }
+    }
+}
+
+impl TryFrom<i16> for ContentType {
+    type Error = DatabaseTypeError;
+
+    fn try_from(value: i16) -> Result<Self, Self::Error> {
+        let content_type = match value {
+            1 => Self::Markdown,
+            2 => Self::Text,
+            3 => Self::Html,
+            _ => return Err(DatabaseTypeError),
+        };
+        Ok(content_type)
+    }
+}
+
+int_enum_from_sql!(ContentType);
+int_enum_to_sql!(ContentType);
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Visibility {
     Public,
     Direct,
@@ -175,6 +209,7 @@ pub struct Post {
     pub title: Option<String>,
     pub content: String,
     pub content_source: Option<String>,
+    pub content_source_type: Option<ContentType>,
     pub language: Option<DbLanguage>,
     pub conversation_id: Option<Uuid>,
     pub in_reply_to_id: Option<Uuid>,
@@ -256,6 +291,7 @@ pub struct PostDetailed {
     pub title: Option<String>,
     pub content: String,
     pub content_source: Option<String>,
+    pub content_source_type: Option<ContentType>,
     pub language: Option<Language>,
     pub conversation: Option<Conversation>,
     pub in_reply_to_id: Option<Uuid>,
@@ -318,6 +354,7 @@ impl PostDetailed {
             db_post.title.is_some() ||
             db_post.content.len() != 0 ||
             db_post.content_source.is_some() ||
+            db_post.content_source_type.is_some() ||
             db_post.language.is_some() ||
             db_post.conversation_id.is_some() ||
             db_post.is_sensitive ||
@@ -389,6 +426,7 @@ impl PostDetailed {
             title: db_post.title,
             content: db_post.content,
             content_source: db_post.content_source,
+            content_source_type: db_post.content_source_type,
             language: db_post.language.map(|db_lang| db_lang.inner()),
             conversation: maybe_conversation,
             in_reply_to_id: db_post.in_reply_to_id,
@@ -474,47 +512,6 @@ impl PostDetailed {
     pub fn expect_related_posts(&self) -> &RelatedPosts {
         self.related_posts.as_ref()
             .expect("related_posts field should be populated")
-    }
-}
-
-#[cfg(any(test, feature = "test-utils"))]
-impl Default for PostDetailed {
-    fn default() -> Self {
-        // TODO: use PostDetailed::new()
-        let post_id = Uuid::new_v4();
-        Self {
-            id: post_id,
-            author: DbActorProfile::default(),
-            title: None,
-            content: "".to_string(),
-            content_source: None,
-            language: None,
-            conversation: Some(Conversation::for_test(post_id)),
-            in_reply_to_id: None,
-            repost_of_id: None,
-            group: None,
-            visibility: Visibility::Public,
-            is_sensitive: false,
-            is_pinned: false,
-            reply_count: 0,
-            reaction_count: 0,
-            repost_count: 0,
-            poll: None,
-            attachments: vec![],
-            mentions: vec![],
-            tags: vec![],
-            links: vec![],
-            emojis: vec![],
-            reactions: vec![],
-            url: None,
-            object_id: None,
-            ipfs_cid: None,
-            created_at: Utc::now(),
-            updated_at: None,
-            actions: None,
-            related_posts: None,
-            parent_visible: true,
-        }
     }
 }
 
@@ -610,18 +607,6 @@ impl PostContext {
     }
 }
 
-#[cfg(any(test, feature = "test-utils"))]
-impl Default for PostContext {
-    fn default() -> Self {
-        use crate::activitypub::constants::AP_PUBLIC;
-        Self::Top {
-            group_id: None,
-            object_id: None,
-            audience: Some(AP_PUBLIC.to_owned()),
-        }
-    }
-}
-
 #[cfg_attr(any(test, feature = "test-utils"), derive(Default))]
 pub struct PostCreateData {
     pub id: Option<Uuid>,
@@ -629,6 +614,7 @@ pub struct PostCreateData {
     pub title: Option<String>,
     pub content: String,
     pub content_source: Option<String>,
+    pub content_source_type: Option<ContentType>,
     pub language: Option<Language>,
     pub visibility: Visibility,
     pub is_sensitive: bool,
@@ -667,6 +653,7 @@ impl PostCreateData {
             title: None,
             content: "".to_owned(),
             content_source: None,
+            content_source_type: None,
             language: None,
             visibility: visibility,
             is_sensitive: false,
@@ -688,6 +675,7 @@ pub struct PostUpdateData {
     pub title: Option<String>,
     pub content: String,
     pub content_source: Option<String>,
+    pub content_source_type: Option<ContentType>,
     pub language: Option<Language>,
     pub is_sensitive: bool,
     pub poll: Option<PollData>,

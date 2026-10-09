@@ -6,11 +6,19 @@ use super::migrate::apply_migrations;
 
 const DEFAULT_CONNECTION_URL: &str = "postgres://mitra:mitra@127.0.0.1:55432/mitra-test";
 
-async fn create_test_database_empty() -> Config {
+fn test_database_config() -> Config {
     let connection_url = std::env::var("TEST_DATABASE_URL")
         .unwrap_or(DEFAULT_CONNECTION_URL.to_string());
-    let mut db_config: Config = connection_url.parse()
-        .expect("invalid database connection URL");
+    connection_url.parse().expect("invalid database connection URL")
+}
+
+pub async fn connect_test_database() -> Client {
+    create_database_client_from_config(&test_database_config(), None).await
+        .expect("should create database client")
+}
+
+async fn create_test_database_empty() -> Config {
+    let mut db_config = test_database_config();
     let db_name = db_config.get_dbname()
         .expect("database name not specified")
         .to_string();

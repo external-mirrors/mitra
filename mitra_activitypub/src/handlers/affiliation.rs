@@ -15,6 +15,7 @@ use crate::{
     importers::{
         ActorIdResolver,
         ApClient,
+        CollectionItem,
     },
     ownership::get_object_id,
 };
@@ -57,15 +58,19 @@ pub async fn handle_affiliations(
 pub async fn handle_fep_1b12_moderators(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
-    items: Vec<JsonValue>,
+    items: Vec<CollectionItem>,
 ) -> Result<Vec<(Uuid, RelationshipType)>, HandlerError> {
     let mut affiliations = vec![];
     for item in items {
-        let item_id = get_object_id(&item)?;
+        let item_id = match item {
+            CollectionItem::Id(item_id) => item_id.to_string(),
+            CollectionItem::Trusted(item_value) =>
+                get_object_id(&item_value)?.to_string(),
+        };
         let subject = ActorIdResolver::default().resolve(
             ap_client,
             db_pool,
-            item_id,
+            &item_id,
         ).await?;
         affiliations.push((subject.id, RelationshipType::GroupAdmin));
     };

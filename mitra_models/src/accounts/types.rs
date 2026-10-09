@@ -201,6 +201,13 @@ impl Default for SharedClientConfig {
 json_from_sql!(SharedClientConfig);
 json_to_sql!(SharedClientConfig);
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum AuthenticationMethod {
+    Password,
+    Ethereum,
+    Monero,
+}
+
 #[derive(FromSql)]
 #[postgres(name = "user_account")]
 pub struct DbUser {
@@ -219,6 +226,22 @@ pub struct DbUser {
     created_at: DateTime<Utc>,
 }
 
+impl DbUser {
+    fn authentication_methods(&self) -> Vec<AuthenticationMethod> {
+        let mut methods = vec![];
+        if self.password_digest.is_some() {
+            methods.push(AuthenticationMethod::Password);
+        };
+        if self.login_address_ethereum.is_some() {
+            methods.push(AuthenticationMethod::Ethereum);
+        };
+        if self.login_address_monero.is_some() {
+            methods.push(AuthenticationMethod::Monero);
+        };
+        methods
+    }
+}
+
 // Represents local user (managed account)
 #[derive(Clone)]
 pub struct User {
@@ -226,6 +249,7 @@ pub struct User {
     pub password_digest: Option<String>,
     pub login_address_ethereum: Option<String>,
     pub login_address_monero: Option<String>,
+    pub authentication_methods: Vec<AuthenticationMethod>,
     pub rsa_secret_key: RsaSecretKey,
     pub ed25519_secret_key: Ed25519SecretKey,
     pub role: Role,
@@ -237,35 +261,6 @@ pub struct User {
 impl fmt::Display for User {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(formatter, "{}", self.profile)
-    }
-}
-
-#[cfg(any(test, feature = "test-utils"))]
-impl Default for User {
-    fn default() -> Self {
-        use apx_core::{
-            crypto::{
-                eddsa::generate_weak_ed25519_key,
-                rsa::generate_weak_rsa_key,
-            },
-        };
-        let id = Uuid::new_v4();
-        Self {
-            id: id,
-            password_digest: None,
-            login_address_ethereum: None,
-            login_address_monero: None,
-            rsa_secret_key: generate_weak_rsa_key().unwrap(),
-            ed25519_secret_key: generate_weak_ed25519_key(),
-            role: Role::default(),
-            client_config: ClientConfig::default(),
-            shared_client_config: SharedClientConfig::default(),
-            profile: DbActorProfile {
-                id: id,
-                user_id: Some(id),
-                ..Default::default()
-            },
-        }
     }
 }
 
@@ -284,6 +279,7 @@ impl User {
         if db_profile.user_id != Some(db_user.id) {
             return Err(DatabaseTypeError);
         };
+        let authentication_methods = db_user.authentication_methods();
         let rsa_secret_key =
             rsa_secret_key_from_pkcs8_pem(&db_user.rsa_private_key)
                 .map_err(|_| DatabaseTypeError)?;
@@ -300,6 +296,7 @@ impl User {
             password_digest: db_user.password_digest,
             login_address_ethereum: db_user.login_address_ethereum,
             login_address_monero: db_user.login_address_monero,
+            authentication_methods,
             rsa_secret_key: rsa_secret_key,
             ed25519_secret_key: ed25519_secret_key,
             role: db_user.user_role,
@@ -349,38 +346,6 @@ impl UserCreateData {
             return Err(DatabaseTypeError);
         };
         Ok(())
-    }
-}
-
-#[cfg(any(test, feature = "test-utils"))]
-impl Default for UserCreateData {
-    fn default() -> Self {
-        use apx_core::{
-            crypto::{
-                eddsa::generate_ed25519_key,
-                rsa::{
-                    generate_weak_rsa_key,
-                    rsa_secret_key_to_pkcs8_pem,
-                },
-            },
-        };
-        let rsa_secret_key = generate_weak_rsa_key().unwrap();
-        let rsa_secret_key_pem =
-            rsa_secret_key_to_pkcs8_pem(&rsa_secret_key).unwrap();
-        // Generating unique key for each user to satisfy identity_key
-        // uniqueness constraint.
-        let ed25519_secret_key = generate_ed25519_key();
-        Self {
-            id: None,
-            username: Default::default(),
-            password_digest: None,
-            login_address_ethereum: None,
-            login_address_monero: None,
-            rsa_secret_key: rsa_secret_key_pem,
-            ed25519_secret_key: ed25519_secret_key,
-            invite_code: None,
-            role: Role::default(),
-        }
     }
 }
 
@@ -656,6 +621,7 @@ pub struct AccountAdminInfo {
     pub account_type: AccountType,
     pub profile: DbActorProfile,
     pub role: Option<Role>,
+    pub authentication_methods: Vec<AuthenticationMethod>,
     pub last_login: Option<DateTime<Utc>>,
 }
 
@@ -665,6 +631,7 @@ impl TryFrom<&Row> for AccountAdminInfo {
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
         let profile = row.try_get("actor_profile")?;
+        let maybe_user_account: Option<DbUser> = row.try_get("user_account")?;
         let maybe_automated_account_type = row.try_get("automated_account_type")?;
         let is_portable = row.try_get("is_portable")?;
         let account_type = if let Some(automated_account_type) =
@@ -680,12 +647,16 @@ impl TryFrom<&Row> for AccountAdminInfo {
         } else {
             AccountType::User
         };
-        let role = row.try_get("role")?;
+        let role = maybe_user_account.as_ref().map(|account| account.user_role);
+        let authentication_methods = maybe_user_account
+            .map(|account| account.authentication_methods())
+            .unwrap_or_default();
         let last_login = row.try_get("last_login")?;
         let user = Self {
             account_type,
             profile,
             role,
+            authentication_methods,
             last_login,
         };
         user.profile.check_consistency()?;

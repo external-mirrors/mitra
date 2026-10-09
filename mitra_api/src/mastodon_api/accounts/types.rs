@@ -25,6 +25,7 @@ use mitra_adapters::payments::subscriptions::MONERO_PAYMENT_AMOUNT_MIN;
 use mitra_config::MediaLimits;
 use mitra_models::{
     accounts::types::{
+        AuthenticationMethod,
         ClientConfig,
         Permission,
         Role as DbRole,
@@ -201,7 +202,7 @@ pub struct Account {
     // CredentialAccount attributes
     pub source: Option<AccountSource>,
     pub role: Option<Role>,
-    pub authentication_methods: Option<Vec<String>>,
+    pub authentication_methods: Option<Vec<&'static str>>,
     pub client_config: Option<ClientConfig>,
 }
 
@@ -355,16 +356,14 @@ impl Account {
                 .map(|code| code.to_owned()),
         };
         let role = Role::from_db(user.role);
-        let mut authentication_methods = vec![];
-        if user.password_digest.is_some() {
-            authentication_methods.push(AUTHENTICATION_METHOD_PASSWORD.to_string());
-        };
-        if user.login_address_ethereum.is_some() {
-            authentication_methods.push(AUTHENTICATION_METHOD_EIP4361.to_string());
-        };
-        if user.login_address_monero.is_some() {
-            authentication_methods.push(AUTHENTICATION_METHOD_CAIP122_MONERO.to_string());
-        };
+        let authentication_methods = user.authentication_methods
+            .into_iter()
+            .map(|method| match method {
+                AuthenticationMethod::Password => AUTHENTICATION_METHOD_PASSWORD,
+                AuthenticationMethod::Ethereum => AUTHENTICATION_METHOD_EIP4361,
+                AuthenticationMethod::Monero => AUTHENTICATION_METHOD_CAIP122_MONERO,
+            })
+            .collect();
         let mut account = Self::from_profile(
             authority,
             media_server,

@@ -199,6 +199,7 @@ CREATE TABLE post (
     title TEXT,
     content TEXT NOT NULL,
     content_source TEXT,
+    content_source_type SMALLINT,
     language CHAR(3),
     conversation_id UUID, -- FK is added later
     in_reply_to_id UUID REFERENCES post (id) ON DELETE CASCADE,
