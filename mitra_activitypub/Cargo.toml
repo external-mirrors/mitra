@@ -34,7 +34,7 @@ uuid = { version = "1.12.1" }
 wildmatch = "2.1.1"
 
 apx_core = { path = "../apx_core", features = ["experiments"] }
-apx_sdk = { path = "../apx_sdk" }
+apx_sdk = { path = "../apx_sdk", default-features = false }
 mitra_adapters = { path = "../mitra_adapters" }
 mitra_config = { path = "../mitra_config" }
 mitra_models = { path = "../mitra_models" }

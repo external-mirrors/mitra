@@ -13,6 +13,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `to_canonical()` method to `NonCanonicalUri` type.
 - Implemented `Serialize` and `Deserialize` for `CanonicalUri` type.
 
+### Changed
+
+- Updated `reqwest` to version 0.13.
+- Added `rustls-tls-no-provider` feature. Default TLS backend (`rustls-tls`) now requires `aws-lc-rs`.
+
 ### Removed
 
 - Removed `encode_multibase_base58btc` and `decode_multibase_base58btc` functions.

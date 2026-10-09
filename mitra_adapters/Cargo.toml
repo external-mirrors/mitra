@@ -16,6 +16,8 @@ log = "0.4.20"
 env_logger = { version = "~0.10.2", default-features = false }
 # Used to determine the number of CPUs on the system
 num_cpus = "1.13.0"
+# Used to set crypto provider for rustls
+rustls = { version = "0.23.23", default-features = false, features = ["ring"] }
 # Used for serialization and deserialization
 serde = { version = "1.0.210", features = ["derive"] }
 # Used for working with JSON
@@ -28,7 +30,7 @@ tokio = { version = "~1.46.0", features = ["macros"] }
 uuid = "1.12.1"
 
 apx_core = { path = "../apx_core" }
-apx_sdk = { path = "../apx_sdk" }
+apx_sdk = { path = "../apx_sdk", default-features = false, features = ["rustls-tls-no-provider"] }
 mitra_config = { path = "../mitra_config" }
 mitra_models = { path = "../mitra_models" }
 mitra_services = { path = "../mitra_services" }

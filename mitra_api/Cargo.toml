@@ -54,7 +54,7 @@ uuid = { version = "1.12.1", features = ["serde", "v4"] }
 idna_adapter = "~1.1.0"
 
 apx_core = { path = "../apx_core" }
-apx_sdk = { path = "../apx_sdk" }
+apx_sdk = { path = "../apx_sdk", default-features = false }
 mitra_activitypub = { path = "../mitra_activitypub" }
 mitra_adapters = { path = "../mitra_adapters" }
 mitra_config = { path = "../mitra_config" }

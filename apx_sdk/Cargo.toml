@@ -21,7 +21,7 @@ http-body = "1.0.1"
 # Used for working with regular expressions
 regex = "1.10.6"
 # Used for making async HTTP requests
-reqwest = { version = "0.12.0", default-features = false, features = ["json", "socks", "stream"] }
+reqwest = { version = "0.13.0", default-features = false, features = ["json", "socks", "stream"] }
 bytes = "1.2.0"
 # Used for serialization/deserialization
 serde = { version = "1.0.186", features = ["derive"] }
@@ -42,7 +42,8 @@ tokio = { version = "1.38.0", features = ["macros", "rt"] }
 default = ["rustls-tls"]
 
 native-tls = ["reqwest/native-tls"]
-rustls-tls = ["reqwest/rustls-tls-native-roots"]
+rustls-tls = ["reqwest/rustls"]
+rustls-tls-no-provider = ["reqwest/rustls-no-provider"]
 
 test-utils = ["apx_core/test-utils"]
 
