@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Set software name to "mastodon" when Forgejo makes NodeInfo 2.0 request.
+
 ### Fixed
 
 - Fixed incorrect post count on some profiles.
