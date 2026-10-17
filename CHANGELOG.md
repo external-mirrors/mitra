@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Added `is_public` attribute to `Status.conversation` API entity.
+- Process incoming `Announce<Add>` and `Announce<Remove>` FEP-1b12 activities.
 
 ### Changed
 

@@ -9,7 +9,10 @@ use apx_core::{
     },
     did::Did,
     did_key::DidKey,
-    url::ap_uri::{is_ap_uri, ApUri},
+    url::{
+        ap_uri::{is_ap_uri, ApUri},
+        canonical::CanonicalUri,
+    },
 };
 use chrono::{DateTime, Utc};
 use postgres_types::FromSql;
@@ -637,6 +640,7 @@ pub struct DbActor {
     pub followers: Option<String>,
     pub subscribers: Option<String>,
     pub featured: Option<String>,
+    pub fep_1b12_administrators: Option<CanonicalUri>,
     pub url: Option<String>,
 
     #[serde(default)]

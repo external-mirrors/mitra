@@ -228,6 +228,9 @@ pub(crate) fn local_actor_data(
         followers: Some(LocalActorCollection::Followers.of(&actor_id)),
         subscribers: Some(LocalActorCollection::Subscribers.of(&actor_id)),
         featured: Some(LocalActorCollection::Featured.of(&actor_id)),
+        fep_1b12_administrators: profile.is_group()
+            .then_some(local_administrators_collection_path(profile.id)
+                .build_canonical(authority_root)),
         url: None,
         gateways: vec![],
         #[expect(deprecated)]

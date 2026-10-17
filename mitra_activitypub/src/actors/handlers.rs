@@ -1,6 +1,9 @@
 use apx_core::{
     url::{
-        canonical::CanonicalUri,
+        canonical::{
+            CanonicalUri,
+            NonCanonicalUri,
+        },
         common::Origin,
         http_uri::{Hostname, HttpUri},
     },
@@ -205,6 +208,9 @@ struct ValidatedActor {
     #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
     featured: Option<String>,
 
+    // FEP-1b12 "moderators"
+    attributed_to: Option<NonCanonicalUri>,
+
     endpoints: Option<Endpoints>,
 
     #[serde(default, deserialize_with = "deserialize_object_array")]
@@ -260,6 +266,11 @@ impl ValidatedActor {
         let maybe_canonical_featured = self.featured.as_deref()
             .map(canonicalize_id)
             .transpose()?;
+        let maybe_canonical_fep_1b12_administrators = if self.actor_type() == ActorType::Group {
+            self.attributed_to.as_ref().map(|id| id.to_canonical())
+        } else {
+            None
+        };
         let db_actor = DbActor {
             object_type: self.object_type.clone(),
             id: canonical_actor_id.to_string(),
@@ -270,6 +281,7 @@ impl ValidatedActor {
             followers: maybe_canonical_followers.map(|id| id.to_string()),
             subscribers: maybe_canonical_subscribers.map(|id| id.to_string()),
             featured: maybe_canonical_featured.map(|id| id.to_string()),
+            fep_1b12_administrators: maybe_canonical_fep_1b12_administrators,
             url: self.url.clone(),
             gateways: self.gateways.clone(),
             #[expect(deprecated)]

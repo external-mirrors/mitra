@@ -22,6 +22,7 @@ use crate::{
             create_relationship,
             delete_relationship,
             get_related_combined,
+            has_relationship,
         },
         types::{RelatedActorProfile, RelationshipType},
     },
@@ -46,12 +47,7 @@ pub async fn create_group(
     };
     let account =
         create_automated_account(&mut transaction, account_data).await?;
-    create_relationship(
-        &transaction,
-        owner_id,
-        account.id,
-        RelationshipType::GroupAdmin,
-    ).await?;
+    add_group_admin(&transaction, owner_id, account.id).await?;
     transaction.commit().await?;
     Ok(account)
 }
@@ -65,6 +61,46 @@ pub async fn get_group_by_id(
         return Err(DatabaseError::NotFound("group"));
     };
     Ok(profile)
+}
+
+pub async fn can_add_remove_admins(
+    db_client: &impl DatabaseClient,
+    member_id: Uuid,
+    group_id: Uuid,
+) -> Result<bool, DatabaseError> {
+    // Power levels are not checked
+    has_relationship(
+        db_client,
+        member_id,
+        group_id,
+        RelationshipType::GroupAdmin,
+    ).await
+}
+
+pub async fn add_group_admin(
+    db_client: &impl DatabaseClient,
+    member_id: Uuid,
+    group_id: Uuid,
+) -> Result<(), DatabaseError> {
+    create_relationship(
+        db_client,
+        member_id,
+        group_id,
+        RelationshipType::GroupAdmin,
+    ).await
+}
+
+pub async fn remove_group_admin(
+    db_client: &impl DatabaseClient,
+    member_id: Uuid,
+    group_id: Uuid,
+) -> Result<(), DatabaseError> {
+    delete_relationship(
+        db_client,
+        member_id,
+        group_id,
+        RelationshipType::GroupAdmin,
+    ).await
 }
 
 const AFFILIATION_TYPES: [RelationshipType; 2] = [
