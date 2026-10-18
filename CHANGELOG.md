@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Set software name to "mastodon" when Forgejo makes NodeInfo 2.0 request.
 - Allow subscribers-only replies under user's own public posts.
+- Don't append FEP-8967 links to post content.
 
 ### Fixed
 
