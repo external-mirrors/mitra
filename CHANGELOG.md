@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Fixed incorrect post count on some profiles.
+- Prevent scope widening when replying to followers-only posts in public conversations.
 
 ## [5.11.0] - 2026-10-07
 

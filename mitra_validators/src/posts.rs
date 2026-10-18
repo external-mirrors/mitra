@@ -230,8 +230,13 @@ pub fn validate_reply(
     if in_reply_to.repost_of_id.is_some() {
         return Err(ValidationError("can't reply to repost"));
     };
+    let is_public_conversation = in_reply_to.expect_conversation().is_public();
     let is_same_author = author_id == in_reply_to.author.id;
-    if !in_reply_to.visibility.can_reply_with(visibility, is_same_author) {
+    if !in_reply_to.visibility.can_reply_with(
+        visibility,
+        is_public_conversation,
+        is_same_author,
+    ) {
         return Err(ValidationError("reply must have narrower visibility"));
     };
     if in_reply_to.visibility != Visibility::Public &&

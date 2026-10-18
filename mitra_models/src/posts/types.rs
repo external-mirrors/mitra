@@ -128,22 +128,32 @@ pub enum Visibility {
 }
 
 impl Visibility {
-    pub fn can_reply_with(self, visibility: Self, is_same_author: bool) -> bool {
+    pub fn can_reply_with(
+        self,
+        visibility: Self,
+        is_public_conversation: bool,
+        is_same_author: bool,
+    ) -> bool {
         let allowed = match self {
             Self::Public => vec![
                 Self::Public,
                 Self::Followers,
                 Self::Direct,
             ],
-            Self::Followers if is_same_author => vec![
-                Self::Conversation,
-                Self::Followers,
-                Self::Direct,
-            ],
-            Self::Followers => vec![
-                Self::Conversation,
-                Self::Direct,
-            ],
+            Self::Followers => {
+                let mut allowed = vec![];
+                if !is_public_conversation {
+                    // `Conversation` replies are only allowed in limited conversations.
+                    // In public conversations, `Conversation` is equivalent
+                    // to `Public` and would lead to scope widening.
+                    allowed.push(Self::Conversation);
+                };
+                if is_same_author {
+                    allowed.push(Self::Followers);
+                };
+                allowed.push(Self::Direct);
+                allowed
+            },
             Self::Subscribers => vec![
                 Self::Conversation,
                 Self::Direct,
@@ -691,6 +701,21 @@ pub struct PostUpdateData {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_visibility_can_reply_with_followers() {
+        use Visibility::*;
+        // To Public
+        assert_eq!(Public.can_reply_with(Followers, false, false), true);
+        // Reply with Followers
+        assert_eq!(Followers.can_reply_with(Followers, false, false), false);
+        // Reply with Followers (same author)
+        assert_eq!(Followers.can_reply_with(Followers, false, true), true);
+        // Reply with Conversation
+        assert_eq!(Followers.can_reply_with(Conversation, false, false), true);
+        // Reply with Conversation (in public conversation)
+        assert_eq!(Followers.can_reply_with(Conversation, true, false), false);
+    }
 
     #[test]
     fn test_post_is_edited() {
