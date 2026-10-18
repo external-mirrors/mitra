@@ -880,6 +880,9 @@ fn get_object_visibility(
                 } else if audience.iter().any(|id| Some(id) == actor.followers.as_ref()) {
                     // Narrowing down the scope from Public to Followers
                     Visibility::Followers
+                } else if audience.iter().any(|id| Some(id) == actor.subscribers.as_ref()) {
+                    // Narrowing down the scope from Public to Subscribers
+                    Visibility::Subscribers
                 } else {
                     // DM or unknown audience
                     Visibility::Direct

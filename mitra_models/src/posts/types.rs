@@ -135,11 +135,17 @@ impl Visibility {
         is_same_author: bool,
     ) -> bool {
         let allowed = match self {
-            Self::Public => vec![
-                Self::Public,
-                Self::Followers,
-                Self::Direct,
-            ],
+            Self::Public => {
+                let mut allowed = vec![
+                    Self::Public,
+                    Self::Followers,
+                ];
+                if is_same_author {
+                    allowed.push(Self::Subscribers);
+                };
+                allowed.push(Self::Direct);
+                allowed
+            },
             Self::Followers => {
                 let mut allowed = vec![];
                 if !is_public_conversation {
@@ -154,10 +160,15 @@ impl Visibility {
                 allowed.push(Self::Direct);
                 allowed
             },
-            Self::Subscribers => vec![
-                Self::Conversation,
-                Self::Direct,
-            ],
+            Self::Subscribers => {
+                let mut allowed = vec![];
+                if !is_public_conversation {
+                    // `Conversation` replies are only allowed in limited conversations.
+                    allowed.push(Self::Conversation);
+                };
+                allowed.push(Self::Direct);
+                allowed
+            },
             Self::Group => vec![
                 Self::Conversation,
                 Self::Direct,
@@ -715,6 +726,23 @@ mod tests {
         assert_eq!(Followers.can_reply_with(Conversation, false, false), true);
         // Reply with Conversation (in public conversation)
         assert_eq!(Followers.can_reply_with(Conversation, true, false), false);
+    }
+
+    #[test]
+    fn test_visibility_can_reply_with_subscribers() {
+        use Visibility::*;
+        // To Public
+        assert_eq!(Public.can_reply_with(Subscribers, false, false), false);
+        // To Public (same author)
+        assert_eq!(Public.can_reply_with(Subscribers, false, true), true);
+        // Reply with Subscribers
+        assert_eq!(Subscribers.can_reply_with(Subscribers, false, false), false);
+        // Reply with Subscribers (same author)
+        assert_eq!(Subscribers.can_reply_with(Followers, false, true), false);
+        // Reply with Conversation
+        assert_eq!(Subscribers.can_reply_with(Conversation, false, false), true);
+        // Reply with Conversation (in public conversation)
+        assert_eq!(Subscribers.can_reply_with(Conversation, true, false), false);
     }
 
     #[test]
