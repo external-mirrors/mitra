@@ -47,6 +47,7 @@ It also supports the following standards:
   - The `implements` property is used to signal RFC-9421 support.
 - [FEP-044f: Consent-respecting quote posts](https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md)
   - "Consent-respecting" quotes are processed in the same way as regular quotes.
+  - Authorizations are automatically generated for local posts.
 - [FEP-5219: Groups and permissions](https://codeberg.org/fediverse/fep/src/branch/main/fep/5219/fep-5219.md)
   - Groups publish and read the `affiliations` collection.
 - [FEP-0806: Simple client-side encryption](https://codeberg.org/silverpill/feps/src/branch/main/0806/fep-0806.md)
@@ -55,9 +56,12 @@ It also supports the following standards:
 ### FEPs that might be supported in the future
 
 - [FEP-8fcf: Followers collection synchronization across servers](https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md)
-- [FEP-7502: Limiting visibility to authenticated actors](https://codeberg.org/fediverse/fep/src/branch/main/fep/7502/fep-7502.md)
 - [FEP-0499: Delivering to multiple inboxes with a multibox endpoint](https://codeberg.org/fediverse/fep/src/branch/main/fep/0499/fep-0499.md)
 - [FEP-c180: Problem Details for ActivityPub](https://codeberg.org/fediverse/fep/src/branch/main/fep/c180/fep-c180.md)
+- [FEP-8967: Generating link previews for attached links](https://codeberg.org/fediverse/fep/src/branch/main/fep/8967/fep-8967.md)
+- [FEP-bebd: Follow Invites](https://codeberg.org/fediverse/fep/src/branch/main/fep/bebd/fep-bebd.md)
+- [FEP-2345: fediverse:creator](https://codeberg.org/fediverse/fep/src/branch/main/fep/2345/fep-2345.md)
+- [FEP-49eb: Batched Inbox Delivery](https://codeberg.org/fediverse/fep/src/branch/main/fep/49eb/fep-49eb.md)
 
 ## ActivityPub
 
