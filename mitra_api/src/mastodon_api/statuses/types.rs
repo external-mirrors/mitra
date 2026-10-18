@@ -121,6 +121,7 @@ fn tracking_status_to_str(tracking_mode: Option<TrackingStatus>) -> &'static str
 pub struct StatusConversation {
     id: Uuid,
     root_id: Uuid,
+    is_public: bool,
 
     // For authenticated users
     tracking: Option<&'static str>,
@@ -276,6 +277,7 @@ impl Status {
             let conversation = StatusConversation {
                 id: conversation.id,
                 root_id: conversation.root_id,
+                is_public: conversation.is_public(),
                 tracking: post.actions.as_ref()
                     .map(|actions| tracking_status_to_str(actions.conversation_tracking_status)),
                 can_moderate: post.actions.as_ref()

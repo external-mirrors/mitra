@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `is_public` attribute to `Status.conversation` API entity.
+
 ### Changed
 
 - Set software name to "mastodon" when Forgejo makes NodeInfo 2.0 request.

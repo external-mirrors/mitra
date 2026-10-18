@@ -4508,6 +4508,10 @@ components:
           description: The ID of the conversation's root post.
           type: string
           format: uuid
+        is_public:
+          description: Is conversation's root post public?
+          type: boolean
+          example: true
         tracking:
           description: The conversation tracking status (only for authenticated users).
           type: string
