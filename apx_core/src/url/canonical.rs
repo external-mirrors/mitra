@@ -218,7 +218,15 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_uri_ap_with_gateway() {
+    fn test_parse_uri_ap_with_gateway_param() {
+        // @gateway parameters should be preserved
+        let url = "ap://did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor?@gateway=https%3A%2F%2Fserver1.example";
+        let uri = NonCanonicalUri::parse(url).unwrap();
+        assert_eq!(uri.to_string(), url);
+    }
+
+    #[test]
+    fn test_parse_uri_ap_compatible() {
         let url = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let uri = NonCanonicalUri::parse(url).unwrap();
         assert!(matches!(uri, NonCanonicalUri::Ap((Some(_), _))));
@@ -226,7 +234,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_uri_ap_with_gateway_and_query_params() {
+    fn test_parse_uri_ap_compatible_with_query_params() {
         let url = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/collection?page=1&test=true";
         let uri = NonCanonicalUri::parse(url).unwrap();
         assert_eq!(uri.to_string(), url);
