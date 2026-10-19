@@ -1,12 +1,17 @@
 use apx_sdk::{
     constants::AP_PUBLIC,
+    core::url::canonical::{CanonicalUri, NonCanonicalUri},
     deserialization::{
         deserialize_into_id_array,
-        deserialize_into_object_id,
+        deserialize_into_object_id_typed,
         deserialize_object_array,
     },
 };
-use serde::Deserialize;
+use serde::{
+    Deserialize,
+    Deserializer,
+    de::{Error as DeserializerError},
+};
 use serde_json::{Value as JsonValue};
 
 use mitra_models::{
@@ -36,7 +41,6 @@ use crate::{
     builders::add_context_activity::sync_conversation,
     filter::get_moderation_domain,
     forwarder::get_activity_recipients,
-    identifiers::canonicalize_id,
     importers::{
         get_post_by_object_id,
         ActorIdResolver,
@@ -54,36 +58,47 @@ use super::{
     HandlerResult,
 };
 
+/// Deserializes arbitrary property value into an array of `CanonicalUri` with `as:Public` normalization
+fn deserialize_audience<'de, D>(
+    deserializer: D,
+) -> Result<Vec<CanonicalUri>, D::Error>
+    where D: Deserializer<'de>
+{
+    let ids = deserialize_into_id_array(deserializer)?;
+    normalize_audience(&ids)
+        .map_err(DeserializerError::custom)
+}
+
 #[derive(Deserialize)]
 struct Like {
-    id: String,
+    id: NonCanonicalUri,
 
     #[serde(rename = "type")]
     activity_type: String,
 
-    #[serde(deserialize_with = "deserialize_into_object_id")]
-    actor: String,
+    #[serde(deserialize_with = "deserialize_into_object_id_typed")]
+    actor: NonCanonicalUri,
 
-    #[serde(deserialize_with = "deserialize_into_object_id")]
-    object: String,
+    #[serde(deserialize_with = "deserialize_into_object_id_typed")]
+    object: NonCanonicalUri,
 
     content: Option<String>,
 
     #[serde(default, deserialize_with = "deserialize_object_array")]
     tag: Vec<JsonValue>,
 
-    #[serde(default, deserialize_with = "deserialize_into_id_array")]
-    to: Vec<String>,
-    #[serde(default, deserialize_with = "deserialize_into_id_array")]
-    cc: Vec<String>,
+    #[serde(default, deserialize_with = "deserialize_audience")]
+    to: Vec<CanonicalUri>,
+    #[serde(default, deserialize_with = "deserialize_audience")]
+    cc: Vec<CanonicalUri>,
 }
 
 fn get_visibility(
     actor_data: &DbActor,
-    to: &[String],
-    cc: &[String],
+    to: &[CanonicalUri],
+    cc: &[CanonicalUri],
 ) -> Result<Visibility, ValidationError> {
-    let audience = normalize_audience(&[to, cc].concat())?;
+    let audience = [to, cc].concat();
     let visibility = if audience.iter()
         .any(|target_id| target_id.to_string() == AP_PUBLIC)
     {
@@ -109,14 +124,13 @@ pub async fn handle_like(
     let author = ActorIdResolver::default().only_remote().resolve(
         ap_client,
         db_pool,
-        &like.actor,
+        &like.actor.to_string(),
     ).await?;
     let authority = Authority::from(instance);
-    let canonical_object_id = canonicalize_id(&like.object)?;
     let post = match get_post_by_object_id(
         db_client_await!(db_pool),
         &authority,
-        &canonical_object_id,
+        &like.object.to_canonical(),
     ).await {
         Ok(post) => post,
         // Ignore like if post is not found locally
@@ -164,14 +178,13 @@ pub async fn handle_like(
             }
         },
     };
-    let canonical_activity_id = canonicalize_id(&like.id)?;
     let reaction_data = ReactionData {
         author_id: author.id,
         post_id: post.id,
         content: maybe_content,
         emoji_id: maybe_emoji_id,
         visibility: visibility,
-        activity_id: Some(canonical_activity_id.to_string()),
+        activity_id: Some(like.id.to_canonical().to_string()),
     };
     validate_reaction_data(&reaction_data)?;
     let db_client = &mut **get_database_client(db_pool).await?;
@@ -202,14 +215,13 @@ pub async fn handle_like_c2s(
     let author = ActorIdResolver::default().resolve(
         ap_client,
         db_pool,
-        &like.actor,
+        &like.actor.to_string(),
     ).await?;
     let authority = Authority::from(instance);
-    let canonical_object_id = canonicalize_id(&like.object)?;
     let post = match get_post_by_object_id(
         db_client_await!(db_pool),
         &authority,
-        &canonical_object_id,
+        &like.object.to_canonical(),
     ).await {
         Ok(post) => post,
         // Ignore like if post is not found locally
