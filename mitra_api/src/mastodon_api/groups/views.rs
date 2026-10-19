@@ -35,13 +35,11 @@ use mitra_models::{
     },
     groups::{
         helpers::{
+            create_group,
             get_affiliated_profiles,
             get_group_by_id,
         },
-        queries::{
-            create_group,
-            get_related_groups,
-        },
+        queries::get_related_groups,
         types::GroupCreateData,
     },
     posts::helpers::can_create_post,
