@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `deserialize_into_object_id_typed` function.
 - Added `decode_urlsafe_no_pad` function to `base64` module.
+- Added `to_canonical()` method to `NonCanonicalUri` type.
 
 ### Removed
 
