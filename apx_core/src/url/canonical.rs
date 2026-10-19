@@ -78,6 +78,24 @@ impl fmt::Display for CanonicalUri {
     }
 }
 
+impl Serialize for CanonicalUri {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        let uri_string = self.to_string();
+        serializer.serialize_str(&uri_string)
+    }
+}
+
+impl<'de> Deserialize<'de> for CanonicalUri {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        let value: String = Deserialize::deserialize(deserializer)?;
+        Self::parse_canonical(&value).map_err(DeserializerError::custom)
+    }
+}
+
 fn parse_compatible_ap_uri(
     http_uri: HttpUri,
 ) -> Result<(ApUri, HttpUri), CanonicalUriError> {
@@ -345,6 +363,22 @@ mod tests {
         let url = "ap+ef61://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let error = CanonicalUri::parse_canonical(url).err().unwrap();
         assert_eq!(error.0, "URI is not canonical");
+    }
+
+    #[test]
+    fn test_canonical_uri_serialize_deserialize() {
+        #[derive(Deserialize, Serialize)]
+        struct Object {
+            id: CanonicalUri,
+        }
+
+        let initial_value = serde_json::json!({
+            "id": "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        });
+        let object: Object =
+            serde_json::from_value(initial_value.clone()).unwrap();
+        let value = serde_json::to_value(object).unwrap();
+        assert_eq!(value, initial_value);
     }
 
     #[test]
