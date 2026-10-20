@@ -626,7 +626,6 @@ pub struct DbActorPublicKey {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(any(test, feature = "test-utils"), derive(Default))]
-#[serde(rename_all = "camelCase")]
 pub struct DbActor {
     #[serde(rename = "type")]
     pub object_type: String,
@@ -644,6 +643,7 @@ pub struct DbActor {
     pub gateways: Vec<String>,
 
     #[deprecated]
+    #[serde(rename = "camelCase")]
     pub public_key: Option<DbActorPublicKey>,
 }
 
