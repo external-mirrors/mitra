@@ -10,7 +10,7 @@ publish.workspace = true
 
 [dependencies]
 # Used for HTML sanitization
-ammonia = "4.1.4"
+ammonia = "~4.1.8"
   html5ever = "0.39.0"
 # Used to generate identicons
 eth-blockies = "1.1.0"
