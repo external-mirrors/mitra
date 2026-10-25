@@ -8,6 +8,7 @@ use mitra_config::Instance;
 use mitra_models::{
     accounts::types::User,
     database::{DatabaseClient, DatabaseError},
+    groups::types::GroupType,
     posts::{
         helpers::add_related_posts,
         types::PostDetailed,
@@ -204,7 +205,7 @@ fn build_delete_group_note(
         primary_audience
             .push(group_id_builder.build_unchecked(&followers));
     };
-    if !group.is_private_group() {
+    if group.group_type() == Some(GroupType::Public) {
         // Public group: Lemmy requires Public in `to`
         primary_audience.push(public());
     };
@@ -315,7 +316,11 @@ mod tests {
     fn test_build_delete_group_note() {
         let authority = Authority::server_unchecked(INSTANCE_URI);
         let author = DbActorProfile::local_for_test("author");
-        let group = DbActorProfile::local_for_test("group");
+        let group = {
+            let mut group = DbActorProfile::local_for_test("group");
+            group.actor_type = ActorType::Group;
+            group
+        };
         let moderator = DbActorProfile::local_for_test("moderator");
         let post = PostDetailed {
             id: uuid!("c9386582-c7c3-4e90-8dde-4ab4b1943d96"),

@@ -32,6 +32,7 @@ use crate::{
         DatabaseTypeError,
     },
     emojis::types::CustomEmoji,
+    groups::types::GroupType,
     media::types::{MediaInfo, PartialMediaInfo},
 };
 
@@ -887,8 +888,21 @@ impl DbActorProfile {
         self.actor_type == ActorType::Group
     }
 
+    pub fn group_type(&self) -> Option<GroupType> {
+        if self.actor_type == ActorType::Group {
+            let group_type = if self.manually_approves_followers {
+                GroupType::Private
+            } else {
+                GroupType::Public
+            };
+            Some(group_type)
+        } else {
+            None
+        }
+    }
+
     pub fn is_private_group(&self) -> bool {
-        self.is_group() && self.manually_approves_followers
+        self.group_type() == Some(GroupType::Private)
     }
 
     pub fn is_anonymous(&self) -> bool {

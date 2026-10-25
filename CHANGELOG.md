@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `is_public` attribute to `Status.conversation` API entity.
 - Process incoming `Announce<Add>` and `Announce<Remove>` FEP-1b12 activities.
+- Added `group_type` field to `Account` API entity.
 
 ### Changed
 
@@ -17,6 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow subscribers-only replies under user's own public posts.
 - Don't append FEP-8967 links to post content.
 - Show only affiliations with the highest privileges in `/api/v1/groups/{group_id}/members` response.
+
+### Deprecated
+
+- Deprecated `is_group` field on `Account` API entity.
 
 ### Fixed
 
