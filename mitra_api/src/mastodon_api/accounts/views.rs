@@ -87,6 +87,7 @@ use mitra_models::{
         DatabaseConnectionPool,
         DatabaseError,
     },
+    groups::helpers::leave_private_group,
     notifications::helpers::create_signup_notifications,
     posts::queries::get_posts_by_author,
     profiles::queries::{
@@ -852,6 +853,13 @@ async fn unfollow_account(
     let target = get_profile_by_id(db_client, *account_id).await?;
     match unfollow(db_client, current_user.id, target.id).await {
         Ok(maybe_follow_request_deleted) => {
+            if target.is_private_group() {
+                leave_private_group(
+                    db_client,
+                    current_user.id,
+                    target.id,
+                ).await?;
+            };
             if let Some(remote_actor) = target.actor_json {
                 // Remote follow
                 let (

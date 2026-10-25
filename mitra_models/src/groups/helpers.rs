@@ -182,6 +182,23 @@ pub async fn join_private_group(
     Ok(())
 }
 
+pub async fn leave_private_group(
+    db_client: &impl DatabaseClient,
+    member_id: Uuid,
+    group_id: Uuid,
+) -> Result<(), DatabaseError> {
+    match delete_relationship(
+        db_client,
+        member_id,
+        group_id,
+        RelationshipType::GroupMember,
+    ).await {
+        Ok(_) | Err(DatabaseError::NotFound(_)) => (),
+        Err(other_error) => return Err(other_error),
+    };
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use apx_core::crypto::{
@@ -194,6 +211,7 @@ mod tests {
         database::{
             test_utils::create_test_database,
         },
+        groups::test_utils::create_test_remote_group,
         relationships::queries::has_relationship,
     };
     use super::*;
@@ -269,5 +287,29 @@ mod tests {
             RelationshipType::GroupAdmin,
         ).await.unwrap();
         assert_eq!(is_admin, false);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_join_leave_private_group() {
+        let db_client = &mut create_test_database().await;
+        let user = create_test_user(db_client, "user").await;
+        let group = create_test_remote_group(
+            db_client,
+            "group",
+            "group.example",
+            "https://group.example/group",
+            true, // private
+        ).await;
+        join_private_group(db_client, user.id, group.id).await.unwrap();
+        leave_private_group(db_client, user.id, group.id).await.unwrap();
+
+        let is_member = has_relationship(
+            db_client,
+            user.id,
+            group.id,
+            RelationshipType::GroupMember,
+        ).await.unwrap();
+        assert!(!is_member);
     }
 }
