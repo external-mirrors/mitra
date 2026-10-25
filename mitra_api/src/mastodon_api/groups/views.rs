@@ -304,8 +304,17 @@ async fn group_members_view(
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let affiliations: Vec<_> = get_affiliated_profiles(db_client, group.id)
-        .await?
+    let mut affiliated = get_affiliated_profiles(db_client, group.id).await?;
+    affiliated.sort_by_key(|related_profile| {
+        let weight = match related_profile.relationship_type {
+            RelationshipType::GroupAdmin => 0,
+            RelationshipType::GroupMember => 1,
+            _ => 2,
+        };
+        (related_profile.profile.id, weight)
+    });
+    affiliated.dedup_by_key(|related_profile| related_profile.profile.id);
+    let affiliations: Vec<_> = affiliated
         .into_iter()
         .map(|related_profile| Affiliation::from_related_profile(
             &authority,
