@@ -176,11 +176,6 @@ fn build_delete_group_note(
     let post_id = post_object_id(authority, post);
     let post_author_id = profile_actor_id(authority, &post.author);
     let post_id_builder = IdBuilder::for_profile(authority, &post.author);
-    let mut primary_audience = vec![
-        public(), // Lemmy requires Public in `to`
-        post_id_builder.build_unchecked(&post_author_id),
-    ];
-    let secondary_audience = vec![];
     let group = post.group.as_ref().expect("post should belong to group");
     let (group_id, maybe_group_followers) = match group.actor_json {
         Some(ref actor_data) => (
@@ -199,11 +194,19 @@ fn build_delete_group_note(
         },
     };
     let group_id_builder = IdBuilder::for_profile(authority, group);
+    let mut primary_audience = vec![
+        post_id_builder.build_unchecked(&post_author_id),
+    ];
+    let secondary_audience = vec![];
     primary_audience
         .push(group_id_builder.build_unchecked(&group_id));
     if let Some(followers) = maybe_group_followers {
         primary_audience
             .push(group_id_builder.build_unchecked(&followers));
+    };
+    if !group.is_private_group() {
+        // Public group: Lemmy requires Public in `to`
+        primary_audience.push(public());
     };
     DeleteGroupNote {
         _context: build_default_context(),
@@ -255,7 +258,7 @@ mod tests {
     use uuid::uuid;
     use mitra_models::{
         posts::types::RelatedPosts,
-        profiles::types::DbActorProfile,
+        profiles::types::{ActorType, DbActorProfile},
     };
     use super::*;
 
@@ -346,13 +349,48 @@ mod tests {
             "summary": "",
             "audience": "https://social.example/users/group",
             "to": [
-                AP_PUBLIC,
                 "https://social.example/users/author",
                 "https://social.example/users/group",
                 "https://social.example/users/group/followers",
+                AP_PUBLIC,
             ],
             "cc": [],
         });
         assert_eq!(activity_value, expected_value);
+    }
+
+    #[test]
+    fn test_build_delete_private_group_note() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
+        let author = DbActorProfile::local_for_test("author");
+        let group = {
+            let mut group = DbActorProfile::local_for_test("group");
+            group.actor_type = ActorType::Group;
+            group.manually_approves_followers = true;
+            group
+        };
+        assert!(group.is_private_group());
+        let moderator = DbActorProfile::local_for_test("moderator");
+        let post = PostDetailed {
+            id: uuid!("c9386582-c7c3-4e90-8dde-4ab4b1943d96"),
+            author,
+            group: Some(group),
+            related_posts: Some(RelatedPosts::default()),
+            ..Default::default()
+        };
+        let activity = build_delete_group_note(
+            &authority,
+            &moderator,
+            &post,
+        );
+        let activity_value = serde_json::to_value(activity).unwrap();
+        assert_eq!(
+            activity_value["to"],
+            json!([
+                "https://social.example/users/author",
+                "https://social.example/users/group",
+                "https://social.example/users/group/followers",
+            ]),
+        );
     }
 }
