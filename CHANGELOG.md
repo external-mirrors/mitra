@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow subscribers-only replies under user's own public posts.
 - Don't append FEP-8967 links to post content.
 - Show only affiliations with the highest privileges in `/api/v1/groups/{group_id}/members` response.
+- Merge adjacent blockquote lines and greentext lines into single blockquote.
 
 ### Deprecated
 
