@@ -5,6 +5,32 @@ info:
   version: 1.0.0
 
 paths:
+  /oauth/authorize:
+    get:
+      summary: Displays an authorization form to the user.
+      parameters:
+        - name: response_type
+          in: query
+          description: Should be set equal to `code`.
+          required: true
+          schema:
+            type: string
+        - name: client_id
+          in: query
+          description: The client ID, obtained during app registration.
+          required: true
+          schema:
+            type: string
+        - name: redirect_uri
+          in: query
+          description: Set a URI to redirect the user to. If this parameter is set to `urn:ietf:wg:oauth:2.0:oob` then the authorization code will be shown instead. Must match the redirect URI declared during app registration.
+          required: true
+          schema:
+            type: string
+            format: uri
+      responses:
+        "200":
+          description: Successful operation
   /oauth/token:
     post:
       summary: Returns an access token, to be used during API calls that are not public.
@@ -79,6 +105,8 @@ paths:
                     example: 604800
         400:
           description: Invalid token request
+        "429":
+          description: Too many requests
   /oauth/revoke:
     post:
       summary: Revoke an access token to make it no longer valid for use.

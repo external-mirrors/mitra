@@ -31,6 +31,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Remove `Public` from moderation activity audience if the group is private.
 - Terminate membership when unfollowing a private group.
 
+### Security
+
+- Rate-limit POST requests to `/oauth/authorize` API endpoint.
+
 ## [5.11.0] - 2026-10-07
 
 ### Added
