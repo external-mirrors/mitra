@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't append FEP-8967 links to post content.
 - Show only affiliations with the highest privileges in `/api/v1/groups/{group_id}/members` response.
 - Merge adjacent blockquote lines and greentext lines into single blockquote.
+- Write warning to log if requested scopes don't match app scopes at authorization step.
 
 ### Deprecated
 

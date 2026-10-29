@@ -28,6 +28,12 @@ paths:
           schema:
             type: string
             format: uri
+        - name: scope
+          in: query
+          description: Has no effect (scopes are not supported).
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: Successful operation
@@ -73,6 +79,10 @@ paths:
                   description: Signature (required if grant type is "eip4361" or "caip122_monero").
                   type: string
                   nullable: true
+                  example: null
+                scope:
+                  description: Has no effect (scopes are not supported).
+                  type: string
                   example: null
               required:
                 - grant_type

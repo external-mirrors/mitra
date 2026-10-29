@@ -120,6 +120,9 @@ async fn authorize_view(
     if !unsupported_scopes.is_empty() {
         log::warn!("unsupported scopes: {:?}", unsupported_scopes);
     };
+    if !verify_scopes(&supported_scopes, &oauth_app.scopes) {
+        log::warn!("requested scopes are not a subset of app scopes");
+    };
 
     let authorization_code = generate_oauth_token();
     let created_at = Utc::now();
@@ -209,6 +212,8 @@ async fn token_view(
                 .ok_or(ValidationError("authorization code is required"))?;
             let client_id = request_data.client_id
                 .ok_or(ValidationError("client ID is required"))?;
+            // Scopes provided in the request data are ignored and
+            // scopes associated with the authorization are used instead.
             get_user_by_authorization_code(
                 db_client,
                 client_id,
@@ -291,6 +296,7 @@ async fn token_view(
     };
     log::info!("requested token with scopes: {:?}", scopes);
     if let Some(ref oauth_app) = maybe_oauth_app {
+        // Not necessary for `authorization_code` grant type
         if !verify_scopes(&scopes, &oauth_app.scopes) {
             log::warn!("requested token scopes are not a subset of app scopes");
         };
