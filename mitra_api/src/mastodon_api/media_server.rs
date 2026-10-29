@@ -67,3 +67,22 @@ impl ClientMediaServer {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_create_media_proxy_url() {
+        let server = ClientMediaServer::for_test("https://local.example");
+        let media_info = PartialMediaInfo::Link {
+            media_type: "image/png".to_owned(),
+            url: "https://remote.example/test".to_owned(),
+        };
+        let proxy_url = server.url_for(&media_info);
+        assert_eq!(
+            proxy_url,
+            "https://local.example/api/media_proxy/https%3A%2F%2Fremote.example%2Ftest?signature=1a61132cceff1dd2f9adbcc8b2a840994374782e45defefdfab51670ca47c135574a9d47745fbab595bf43f4c1da811d7ed4506f12983ee71262187243156303",
+        );
+    }
+}
