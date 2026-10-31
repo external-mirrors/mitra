@@ -76,7 +76,7 @@ pub async fn handle_move(
     match subtype {
         MoveSubtype::Push => {
             // Find aliases reported by server (actor's alsoKnownAs property)
-            if new_profile.aliases.contains(&old_actor_id) {
+            if !new_profile.aliases.contains(&old_actor_id) {
                 return Err(ValidationError("target ID is not an alias").into());
             };
         },
