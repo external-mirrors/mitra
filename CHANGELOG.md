@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [5.12.0] - 2026-10-31
+
 ### Added
 
 - Added `is_public` attribute to `Status.conversation` API entity.
