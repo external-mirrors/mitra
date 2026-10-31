@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [5.12.1] - 2026-10-31
+
 ### Security
 
 - Prevent follower hijacking when processing `Move<Actor>` activity of "push" subtype.
