@@ -115,6 +115,9 @@ pub fn json_error_handler(
     }
 }
 
+// For use in Mastodon API views.
+// Base URL does not always match instance URL.
+// Example: web client served as onion service.
 pub fn get_request_base_url(connection_info: ConnectionInfo) -> String {
     let scheme = connection_info.scheme();
     let host = connection_info.host();
