@@ -2066,6 +2066,48 @@ pub async fn create_fts_index_unsafe(
     Ok(())
 }
 
+pub async fn delete_fts_index_unsafe(
+    db_client: &impl DatabaseClient,
+    config_name: &str,
+) -> Result<(), DatabaseError> {
+    // WARNING: config name must be trusted
+    if config_name == PREINSTALLED_FTS_CONFIG {
+        return Err(DatabaseError::type_error());
+    };
+    let index_name = format!("post_content_tsvector_{config_name}_index");
+    let drop_statement = format!("DROP INDEX {index_name}");
+    db_client.execute(&drop_statement, &[]).await?;
+    Ok(())
+}
+
+pub async fn get_fts_indexes(
+    db_client: &impl DatabaseClient,
+) -> Result<Vec<String>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT indexname
+        FROM pg_indexes
+        WHERE
+            schemaname = 'public'
+            AND tablename = 'post'
+            AND indexname LIKE 'post_content_tsvector_%_index'
+        ORDER BY indexname ASC
+        ",
+        &[],
+    ).await?;
+    let mut configs = Vec::with_capacity(rows.len());
+    for row in rows {
+        let index_name: String = row.try_get("indexname")?;
+        if let Some(config_name) = index_name
+            .strip_prefix("post_content_tsvector_")
+            .and_then(|s| s.strip_suffix("_index"))
+        {
+            configs.push(config_name.to_owned());
+        };
+    };
+    Ok(configs)
+}
+
 pub async fn search_posts(
     db_client: &impl DatabaseClient,
     search_config: &str,
@@ -3442,7 +3484,21 @@ mod tests {
     async fn test_create_fts_index() {
         let db_client = &create_test_database().await;
         let config_name = "english";
+        assert_eq!(
+            get_fts_indexes(db_client).await.unwrap(),
+            vec![PREINSTALLED_FTS_CONFIG.to_owned()],
+        );
         create_fts_index_unsafe(db_client, config_name).await.unwrap();
+        assert_eq!(
+            get_fts_indexes(db_client).await.unwrap(),
+            vec![config_name.to_owned(), PREINSTALLED_FTS_CONFIG.to_owned()],
+        );
+        delete_fts_index_unsafe(db_client, config_name).await.unwrap();
+        assert_eq!(
+            get_fts_indexes(db_client).await.unwrap(),
+            vec![PREINSTALLED_FTS_CONFIG.to_owned()],
+        );
+        assert!(delete_fts_index_unsafe(db_client, PREINSTALLED_FTS_CONFIG).await.is_err());
     }
 
     #[tokio::test]

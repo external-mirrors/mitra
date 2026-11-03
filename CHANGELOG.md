@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `fts delete` and `fts list` commands.
+
 ## [5.12.1] - 2026-10-31
 
 ### Security
