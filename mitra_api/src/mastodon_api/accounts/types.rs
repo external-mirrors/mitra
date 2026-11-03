@@ -32,6 +32,7 @@ use mitra_models::{
         SharedClientConfig,
         User,
     },
+    groups::types::GroupType,
     media::types::{MediaInfo, PartialMediaInfo},
     posts::types::{DbLanguage, Visibility},
     profiles::types::{
@@ -189,6 +190,7 @@ pub struct Account {
     pub mention_policy: String,
     pub bot: bool,
     is_group: bool, // not part of Mastodon API
+    group_type: Option<&'static str>, // not part of Mastodon API
     discoverable: bool,
     pub identity_proofs: Vec<AccountField>,
     pub payment_options: Vec<AccountPaymentOption>,
@@ -216,6 +218,12 @@ impl Account {
         let profile_url = profile_actor_url(authority, &profile);
         let preferred_handle = profile.preferred_handle().to_owned();
         let mention_policy = mention_policy_to_str(profile.mention_policy);
+        let maybe_group_type = profile
+            .group_type()
+            .map(|group_type| match group_type {
+                GroupType::Public => "public",
+                GroupType::Private => "private",
+            });
 
         let avatar_url = profile.avatar
             .map(|image| media_server.url_for(&image))
@@ -316,6 +324,7 @@ impl Account {
             mention_policy: mention_policy.to_string(),
             bot: profile.actor_type == ActorType::Automated,
             is_group: profile.actor_type == ActorType::Group,
+            group_type: maybe_group_type,
             discoverable: true,
             identity_proofs,
             payment_options,

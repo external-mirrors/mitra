@@ -3,6 +3,7 @@ use apx_sdk::{
         verify_portable_object,
         AuthenticationError,
     },
+    core::url::canonical::NonCanonicalUri,
     deserialization::{deserialize_into_object_id, object_to_id},
     utils::{is_actor, is_object},
 };
@@ -47,12 +48,22 @@ use super::{
     HandlerResult,
 };
 
+#[derive(Deserialize)]
+struct UpdateAgreement {
+    actor: NonCanonicalUri,
+    object: Agreement,
+}
+
 async fn handle_update_agreement(
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
-    let agreement: Agreement =
-        serde_json::from_value(activity["object"].clone())?;
+    let update: UpdateAgreement = serde_json::from_value(activity)?;
+    let actor = get_remote_profile_by_actor_id(
+        db_client_await!(db_pool),
+        &update.actor.to_canonical().to_string(),
+    ).await?;
+    let agreement = update.object;
     let agreement_id = agreement.id.as_ref()
         .ok_or(ValidationError("missing 'id' field"))?;
     let new_status = agreement.preview
@@ -63,6 +74,9 @@ async fn handle_update_agreement(
         db_client,
         agreement_id,
     ).await?;
+    if invoice.recipient_id != actor.id {
+        return Err(ValidationError("actor is not allowed to update agreement").into());
+    };
     if invoice.invoice_status == InvoiceStatus::Open
         && new_status == Some(InvoiceStatus::Paid)
     {

@@ -34,6 +34,11 @@ struct Move {
     target: String,
 }
 
+enum MoveSubtype {
+    Push,
+    Pull,
+}
+
 pub async fn handle_move(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
@@ -43,7 +48,11 @@ pub async fn handle_move(
     let activity: Move = serde_json::from_value(activity)?;
     // Mastodon (push mode): actor is old profile (object)
     // Mitra (pull mode): actor is new profile (target)
-    if activity.object != activity.actor && activity.target != activity.actor {
+    let subtype = if activity.actor == activity.object {
+        MoveSubtype::Push
+    } else if activity.actor == activity.target {
+        MoveSubtype::Pull
+    } else {
         return Err(ValidationError("actor ID mismatch").into());
     };
 
@@ -63,16 +72,24 @@ pub async fn handle_move(
         &activity.target,
     ).await?;
 
-    // Find aliases by DIDs (verified)
     let db_client = &mut **get_database_client(db_pool).await?;
-    let mut aliases = find_verified_aliases(db_client, &new_profile).await?
-        .into_iter()
-        .map(|profile| profile_actor_id(&authority, &profile))
-        .collect::<Vec<_>>();
-    // Add aliases reported by server (actor's alsoKnownAs property)
-    aliases.extend(new_profile.aliases.clone().into_actor_ids());
-    if !aliases.contains(&old_actor_id) {
-        return Err(ValidationError("target ID is not an alias").into());
+    match subtype {
+        MoveSubtype::Push => {
+            // Find aliases reported by server (actor's alsoKnownAs property)
+            if !new_profile.aliases.contains(&old_actor_id) {
+                return Err(ValidationError("target ID is not an alias").into());
+            };
+        },
+        MoveSubtype::Pull => {
+            // Find aliases by DIDs (verified)
+            let aliases = find_verified_aliases(db_client, &new_profile).await?
+                .into_iter()
+                .map(|profile| profile_actor_id(&authority, &profile))
+                .collect::<Vec<_>>();
+            if !aliases.contains(&old_actor_id) {
+                return Err(ValidationError("object ID is not an alias").into());
+            };
+        },
     };
 
     let followers = get_followers(db_client, old_profile.id).await?;

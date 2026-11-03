@@ -33,6 +33,9 @@ http_port = 8383
 # Origin URLs must not have trailing slashes.
 #http_cors_allowlist = ["http://127.0.0.1:8383"]
 
+# Required when running as Tor or I2P service
+#http_behind_reverse_proxy = false
+
 # Log level (debug, info, warn)
 #log_level = "info"
 

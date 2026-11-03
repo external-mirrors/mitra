@@ -29,6 +29,17 @@ use crate::{
 
 pub struct IdPath(String);
 
+impl IdPath {
+    pub(super) fn build_canonical(
+        &self,
+        authority_root: &AuthorityRoot,
+    ) -> CanonicalUri {
+        CanonicalUri
+            ::parse_canonical(&format!("{}{}", authority_root, self.0))
+            .expect("URI should be valid")
+    }
+}
+
 pub fn local_actor_id_canonical(
     authority_root: &AuthorityRoot,
     internal_id: Uuid,
@@ -41,8 +52,7 @@ pub fn local_actor_id_canonical(
         },
         AuthorityRoot::Key(_) => format!("/actors/{internal_id}"),
     };
-    let id = format!("{}{}", authority_root, path);
-    CanonicalUri::parse_canonical(&id).expect("URI should be valid")
+    IdPath(path).build_canonical(authority_root)
 }
 
 pub enum LocalActorCollection {
@@ -114,9 +124,8 @@ pub fn local_object_id_canonical(
     authority_root: &AuthorityRoot,
     internal_id: Uuid,
 ) -> CanonicalUri {
-    let path = local_object_path(internal_id);
-    let id = format!("{}{}", authority_root, path.0);
-    CanonicalUri::parse_canonical(&id).expect("URI should be valid")
+    local_object_path(internal_id)
+        .build_canonical(authority_root)
 }
 
 pub fn local_object_id(instance_uri: &str, internal_object_id: Uuid) -> String {
@@ -216,8 +225,7 @@ pub fn local_activity_id_canonical(
         activity_type.to_lowercase(),
         internal_id,
     );
-    let id = format!("{}{}", authority_root, path);
-    CanonicalUri::parse_canonical(&id).expect("URI should be valid")
+    IdPath(path).build_canonical(authority_root)
 }
 
 pub fn local_activity_id(
@@ -495,9 +503,7 @@ impl IdBuilder {
         authority_root: &AuthorityRoot,
         path: IdPath,
     ) -> NonCanonicalUri {
-        let canonical_id = format!("{}{}", authority_root, path.0);
-        let canonical_id = CanonicalUri::parse_canonical(&canonical_id)
-            .expect("URI should be valid");
+        let canonical_id = path.build_canonical(authority_root);
         self.build(&canonical_id)
     }
 

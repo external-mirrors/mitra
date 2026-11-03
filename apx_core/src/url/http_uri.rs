@@ -177,6 +177,14 @@ impl HttpUri {
             self.port_or_known_default(),
         )
     }
+
+    pub(crate) fn path_and_query(&self) -> String {
+        format!(
+            "{}{}",
+            self.path(),
+            self.query().map(|query| format!("?{query}")).unwrap_or_default(),
+        )
+    }
 }
 
 /// Returns the original URI string

@@ -3,7 +3,6 @@ use actix_multipart::form::MultipartForm;
 use actix_web::{
     body::{BoxBody, EitherBody},
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
-    get,
     http::header as http_header,
     middleware::{ErrorHandlers, ErrorHandlerResponse},
     post,
@@ -79,7 +78,7 @@ use super::utils::{
     AUTHORIZATION_CODE_LIFETIME,
 };
 
-#[get("/authorize")]
+// https://docs.joinmastodon.org/methods/oauth/#authorize
 async fn authorization_page_view() -> HttpResponse {
     let (page, nonce) = render_authorization_page();
     let mut csp = ContentSecurityPolicy::default();
@@ -90,7 +89,6 @@ async fn authorization_page_view() -> HttpResponse {
         .body(page)
 }
 
-#[post("/authorize")]
 async fn authorize_view(
     db_pool: web::Data<DatabaseConnectionPool>,
     form_data: web::Form<AuthorizationRequest>,
@@ -121,6 +119,9 @@ async fn authorize_view(
         clean_scopes(&query_params.scope.replace('+', " "));
     if !unsupported_scopes.is_empty() {
         log::warn!("unsupported scopes: {:?}", unsupported_scopes);
+    };
+    if !verify_scopes(&supported_scopes, &oauth_app.scopes) {
+        log::warn!("requested scopes are not a subset of app scopes");
     };
 
     let authorization_code = generate_oauth_token();
@@ -211,6 +212,8 @@ pub async fn token_view(
                 .ok_or(ValidationError("authorization code is required"))?;
             let client_id = request_data.client_id
                 .ok_or(ValidationError("client ID is required"))?;
+            // Scopes provided in the request data are ignored and
+            // scopes associated with the authorization are used instead.
             get_user_by_authorization_code(
                 db_client,
                 client_id,
@@ -293,6 +296,7 @@ pub async fn token_view(
     };
     log::info!("requested token with scopes: {:?}", scopes);
     if let Some(ref oauth_app) = maybe_oauth_app {
+        // Not necessary for `authorization_code` grant type
         if !verify_scopes(&scopes, &oauth_app.scopes) {
             log::warn!("requested token scopes are not a subset of app scopes");
         };
@@ -328,6 +332,7 @@ pub async fn token_view(
     Ok(response)
 }
 
+// https://docs.joinmastodon.org/methods/oauth/#revoke
 #[post("/revoke")]
 async fn revoke_token_view(
     auth: BearerAuth,
@@ -358,7 +363,12 @@ pub fn oauth_api_scope(
     Error = ActixError,
     InitError = (),
 >> {
-    let token_view_limited = web::resource("/token").route(
+    let authorize_resource = web::resource("/authorize")
+        .route(web::get().to(authorization_page_view))
+        .route(web::post()
+            .to(authorize_view)
+            .wrap(Governor::new(&ratelimit_configs.login)));
+    let token_resource = web::resource("/token").route(
         web::post()
             .to(token_view)
             .wrap(Governor::new(&ratelimit_configs.login)));
@@ -369,8 +379,7 @@ pub fn oauth_api_scope(
                 Ok(ErrorHandlerResponse::Response(response.map_into_left_body()))
             })
         )
-        .service(authorization_page_view)
-        .service(authorize_view)
-        .service(token_view_limited)
+        .service(authorize_resource)
+        .service(token_resource)
         .service(revoke_token_view)
 }

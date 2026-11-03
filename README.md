@@ -30,7 +30,6 @@ Matrix chat: [#mitra:unredacted.org](https://matrix.to/#/#mitra:unredacted.org)
 ## Instances
 
 - [FediDB](https://fedidb.org/software/mitra)
-- [Fediverse Observer](https://mitra.fediverse.observer/list)
 - [FediList](https://fedilist.com/instance?software=mitra)
 
 Demo instance: https://public.mitra.social/ ([invite-only](https://public.mitra.social/about))
@@ -136,7 +135,7 @@ Start Mitra:
 
 An HTTP server will be needed to handle HTTPS requests. See examples of [Nginx](./contrib/nginx/mitra.conf) and [Caddy](./docs/reverse_proxy.md#caddy) configuration files.
 
-To run Mitra as a systemd service, check out the [systemd unit file example](./contrib/mitra.service).
+To run Mitra as a systemd service, check out the [systemd unit file example](./contrib/systemd/mitra.service).
 
 ### Other installation methods
 

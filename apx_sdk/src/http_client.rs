@@ -209,7 +209,7 @@ pub fn create_http_client(
     };
     if agent.ssrf_protection_enabled {
         client_builder = client_builder.dns_resolver(
-            dns_resolver::SafeResolver::new().into());
+            dns_resolver::SafeResolver::new());
     };
     let redirect_policy = match redirect_action {
         RedirectAction::None => RedirectPolicy::none(),

@@ -1,5 +1,11 @@
 // http://nodeinfo.diaspora.software/protocol.html
-use actix_web::{get, web, HttpResponse};
+use actix_web::{
+    get,
+    http::header::USER_AGENT,
+    web,
+    HttpRequest,
+    HttpResponse,
+};
 use apx_sdk::jrd::{JsonResourceDescriptor, Link};
 
 use mitra_config::Config;
@@ -35,12 +41,25 @@ pub async fn get_nodeinfo_jrd(
 pub async fn get_nodeinfo_2_0(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
+    request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let usage = get_usage(db_client).await?;
     let instance_staff = get_instance_staff(&config, db_client).await?;
     let metadata = Metadata::new(&config, instance_staff);
-    let nodeinfo = NodeInfo20::new(&config, usage, metadata);
+    // Validation Error: forgefed.NodeInfo: Field node.SoftwareName contains the value mitra,
+    // which is not in allowed subset [forgejo gitea mastodon gotosocial]
+    let nodeinfo = if request.headers()
+        .get(USER_AGENT)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|header| header.starts_with("Gitea"))
+    {
+        let mut config = (**config).clone();
+        config.software.name = "mastodon";
+        NodeInfo20::new(&config, usage, metadata)
+    } else {
+        NodeInfo20::new(&config, usage, metadata)
+    };
     let response = HttpResponse::Ok().json(nodeinfo);
     Ok(response)
 }

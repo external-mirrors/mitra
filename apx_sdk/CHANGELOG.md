@@ -10,12 +10,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `deserialize_into_object_id_typed` function.
 - Added `decode_urlsafe_no_pad` function to `base64` module.
+- Added `to_canonical()` method to `NonCanonicalUri` type.
+- Implemented `Serialize` and `Deserialize` for `CanonicalUri` type.
+
+### Changed
+
+- Updated `reqwest` to version 0.13.
+- Added `rustls-tls-no-provider` feature. Default TLS backend (`rustls-tls`) now requires `aws-lc-rs`.
 
 ### Removed
 
 - Removed `encode_multibase_base58btc` and `decode_multibase_base58btc` functions.
 - Removed `parse_url` function from `url::canonical` module.
 - Removed `CanonicalUri::to_http_uri` method.
+
+### Security
+
+- Include query in `(request-target)` value when creating/verifying Cavage HTTP signatures.
+- Require signed `Date`, `(created)` and `(expires)` components when verifying Cavage HTTP signatures.
 
 ## [0.27.0] - 2026-08-29
 

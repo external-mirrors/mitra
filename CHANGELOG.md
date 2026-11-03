@@ -6,6 +6,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [5.12.1] - 2026-10-31
+
+### Security
+
+- Prevent follower hijacking when processing `Move<Actor>` activity of "push" subtype.
+
+## [5.12.0] - 2026-10-31
+
+### Added
+
+- Added `is_public` attribute to `Status.conversation` API entity.
+- Process incoming `Announce<Add>` and `Announce<Remove>` FEP-1b12 activities.
+- Added `group_type` field to `Account` API entity.
+
+### Changed
+
+- Set software name to "mastodon" when Forgejo makes NodeInfo 2.0 request.
+- Allow subscribers-only replies under user's own public posts.
+- Don't append FEP-8967 links to post content.
+- Show only affiliations with the highest privileges in `/api/v1/groups/{group_id}/members` response.
+- Merge adjacent blockquote lines and greentext lines into single blockquote.
+- Write warning to log if requested scopes don't match app scopes at authorization step.
+
+### Deprecated
+
+- Deprecated `is_group` field on `Account` API entity.
+
+### Fixed
+
+- Fixed incorrect post count on some profiles.
+- Prevent scope widening when replying to followers-only posts in public conversations.
+- Remove `Public` from moderation activity audience if the group is private.
+- Terminate membership when unfollowing a private group.
+
+### Security
+
+- Rate-limit POST requests to `/oauth/authorize` API endpoint.
+- Check actor's permissions when processing `Update<Agreement>` activity.
+- Prevent follower hijacking when processing `Move<Actor>` activity of "pull" subtype.
+
 ## [5.11.0] - 2026-10-07
 
 ### Added

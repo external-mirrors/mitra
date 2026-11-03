@@ -78,6 +78,24 @@ impl fmt::Display for CanonicalUri {
     }
 }
 
+impl Serialize for CanonicalUri {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        let uri_string = self.to_string();
+        serializer.serialize_str(&uri_string)
+    }
+}
+
+impl<'de> Deserialize<'de> for CanonicalUri {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        let value: String = Deserialize::deserialize(deserializer)?;
+        Self::parse_canonical(&value).map_err(DeserializerError::custom)
+    }
+}
+
 fn parse_compatible_ap_uri(
     http_uri: HttpUri,
 ) -> Result<(ApUri, HttpUri), CanonicalUriError> {
@@ -115,6 +133,11 @@ impl NonCanonicalUri {
             }
         };
         Ok(uri)
+    }
+
+    /// Canonicalizes this URI
+    pub fn to_canonical(&self) -> CanonicalUri {
+        self.clone().into_canonical()
     }
 
     pub fn into_canonical(self) -> CanonicalUri {
@@ -196,6 +219,7 @@ mod tests {
         let uri = NonCanonicalUri::parse(url).unwrap();
         assert!(matches!(uri, NonCanonicalUri::Http(_)));
         assert_eq!(uri.to_string(), url);
+        assert_eq!(uri.to_canonical().to_string(), url);
     }
 
     #[test]
@@ -204,6 +228,7 @@ mod tests {
         let uri = NonCanonicalUri::parse(url).unwrap();
         assert!(matches!(uri, NonCanonicalUri::Ap((None, _))));
         assert_eq!(uri.to_string(), url);
+        assert_eq!(uri.to_canonical().to_string(), url);
     }
 
     #[test]
@@ -215,21 +240,55 @@ mod tests {
             uri.to_string(),
             "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
         );
+        assert_eq!(uri.to_canonical().to_string(), uri.to_string());
     }
 
     #[test]
-    fn test_parse_uri_ap_with_gateway() {
+    fn test_parse_uri_ap_with_gateway_query_param() {
+        // @gateway parameters should be preserved
+        let url = "ap://did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor?@gateway=https%3A%2F%2Fserver1.example";
+        let uri = NonCanonicalUri::parse(url).unwrap();
+        assert_eq!(uri.to_string(), url);
+        // Canonical URI does not contain query params (per FEP-ef61)
+        assert_eq!(
+            uri.to_canonical().to_string(),
+            "ap://did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor",
+        );
+    }
+
+    #[test]
+    fn test_parse_uri_ap_with_query_params() {
+        let url = "ap://did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/collection?maxItems=5";
+        let uri = NonCanonicalUri::parse(url).unwrap();
+        assert_eq!(uri.to_string(), url);
+        // Canonical URI does not contain query params (per FEP-ef61)
+        assert_eq!(
+            uri.to_canonical().to_string(),
+            "ap://did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/collection",
+        );
+    }
+
+    #[test]
+    fn test_parse_uri_ap_compatible() {
         let url = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let uri = NonCanonicalUri::parse(url).unwrap();
         assert!(matches!(uri, NonCanonicalUri::Ap((Some(_), _))));
         assert_eq!(uri.to_string(), url);
+        assert_eq!(
+            uri.to_canonical().to_string(),
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        );
     }
 
     #[test]
-    fn test_parse_uri_ap_with_gateway_and_query_params() {
+    fn test_parse_uri_ap_compatible_with_query_params() {
         let url = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/collection?page=1&test=true";
         let uri = NonCanonicalUri::parse(url).unwrap();
         assert_eq!(uri.to_string(), url);
+        assert_eq!(
+            uri.to_canonical().to_string(),
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/collection",
+        );
     }
 
     #[test]
@@ -237,6 +296,7 @@ mod tests {
         let url = "https://www.w3.org/ns/activitystreams#Public";
         let uri = NonCanonicalUri::parse(url).unwrap();
         assert_eq!(uri.to_string(), url);
+        assert_eq!(uri.to_canonical().to_string(), url);
     }
 
     #[test]
@@ -244,6 +304,7 @@ mod tests {
         let url = "http://social.example.i2p/users/test";
         let uri = NonCanonicalUri::parse(url).unwrap();
         assert_eq!(uri.to_string(), url);
+        assert_eq!(uri.to_canonical().to_string(), url);
     }
 
     #[test]
@@ -251,6 +312,7 @@ mod tests {
         let url = "http://127.0.0.1:8380/users/test";
         let uri = NonCanonicalUri::parse(url).unwrap();
         assert_eq!(uri.to_string(), url);
+        assert_eq!(uri.to_canonical().to_string(), url);
     }
 
     #[test]
@@ -261,7 +323,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_ap_uri_with_query_params() {
+    fn test_parse_canonical_lenient_ap_uri_with_query_params() {
         let url = "ap://did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor?gateways=https%3A%2F%2Fserver1.example,https%3A%2F%2Fserver2.example";
         let canonical_uri = CanonicalUri::parse(url).unwrap();
         assert!(matches!(canonical_uri, CanonicalUri::Ap(_)));
@@ -301,6 +363,22 @@ mod tests {
         let url = "ap+ef61://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let error = CanonicalUri::parse_canonical(url).err().unwrap();
         assert_eq!(error.0, "URI is not canonical");
+    }
+
+    #[test]
+    fn test_canonical_uri_serialize_deserialize() {
+        #[derive(Deserialize, Serialize)]
+        struct Object {
+            id: CanonicalUri,
+        }
+
+        let initial_value = serde_json::json!({
+            "id": "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        });
+        let object: Object =
+            serde_json::from_value(initial_value.clone()).unwrap();
+        let value = serde_json::to_value(object).unwrap();
+        assert_eq!(value, initial_value);
     }
 
     #[test]

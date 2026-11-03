@@ -4,6 +4,14 @@ use apx_core::crypto::{
 };
 use uuid::Uuid;
 
+#[derive(PartialEq)]
+pub enum GroupType {
+    Public,
+    Private,
+    // TODO: SemiPrivate,
+    // TODO: postingRestrictedToMods
+}
+
 pub struct GroupCreateData {
     pub username: String,
     pub bio: Option<String>,

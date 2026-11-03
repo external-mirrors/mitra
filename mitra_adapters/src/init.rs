@@ -67,6 +67,10 @@ pub fn initialize_app(
     for warning in config_warnings {
         log::warn!("{}", warning);
     };
+    // Should be called once for each process
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("failed to select rustls crypto provider");
     config
 }
 

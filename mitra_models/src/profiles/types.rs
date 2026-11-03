@@ -9,7 +9,10 @@ use apx_core::{
     },
     did::Did,
     did_key::DidKey,
-    url::ap_uri::{is_ap_uri, ApUri},
+    url::{
+        ap_uri::{is_ap_uri, ApUri},
+        canonical::CanonicalUri,
+    },
 };
 use chrono::{DateTime, Utc};
 use postgres_types::FromSql;
@@ -29,6 +32,7 @@ use crate::{
         DatabaseTypeError,
     },
     emojis::types::CustomEmoji,
+    groups::types::GroupType,
     media::types::{MediaInfo, PartialMediaInfo},
 };
 
@@ -626,7 +630,6 @@ pub struct DbActorPublicKey {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(any(test, feature = "test-utils"), derive(Default))]
-#[serde(rename_all = "camelCase")]
 pub struct DbActor {
     #[serde(rename = "type")]
     pub object_type: String,
@@ -638,12 +641,14 @@ pub struct DbActor {
     pub followers: Option<String>,
     pub subscribers: Option<String>,
     pub featured: Option<String>,
+    pub fep_1b12_administrators: Option<CanonicalUri>,
     pub url: Option<String>,
 
     #[serde(default)]
     pub gateways: Vec<String>,
 
     #[deprecated]
+    #[serde(rename = "camelCase")]
     pub public_key: Option<DbActorPublicKey>,
 }
 
@@ -883,8 +888,21 @@ impl DbActorProfile {
         self.actor_type == ActorType::Group
     }
 
+    pub fn group_type(&self) -> Option<GroupType> {
+        if self.actor_type == ActorType::Group {
+            let group_type = if self.manually_approves_followers {
+                GroupType::Private
+            } else {
+                GroupType::Public
+            };
+            Some(group_type)
+        } else {
+            None
+        }
+    }
+
     pub fn is_private_group(&self) -> bool {
-        self.is_group() && self.manually_approves_followers
+        self.group_type() == Some(GroupType::Private)
     }
 
     pub fn is_anonymous(&self) -> bool {

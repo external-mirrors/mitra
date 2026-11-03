@@ -10,14 +10,14 @@ publish.workspace = true
 
 [dependencies]
 # Used for HTML sanitization
-ammonia = "4.1.4"
+ammonia = "~4.1.8"
   html5ever = "0.39.0"
 # Used to generate identicons
 eth-blockies = "1.1.0"
 # Used for working with dates
 chrono = { version = "0.4.34", default-features = false, features = ["std", "clock"] }
 # Used for parsing markdown
-comrak = { version = "0.40.0", default-features = false, features = ["bon"] }
+comrak = { version = "0.55.0", default-features = false, features = ["bon"] }
 # Used to parse URI query parameters
 form_urlencoded = "1.2.2"
 # Used for extracting text from HTML

@@ -49,10 +49,12 @@ use crate::{
 };
 
 use super::{
+    add::handle_add,
     create::handle_create,
     delete::handle_delete,
     like::handle_like,
     note::normalize_audience,
+    remove::handle_remove,
     undo::handle_undo,
     update::handle_update,
     Descriptor,
@@ -201,7 +203,7 @@ async fn handle_fep_1b12_announce(
         return Ok(None);
     };
     match activity_type {
-        CREATE | DELETE | DISLIKE | LIKE | UNDO | UPDATE => (),
+        ADD | CREATE | DELETE | DISLIKE | LIKE | REMOVE | UNDO | UPDATE => (),
         _ => {
             log::warn!("activity is not supported: Announce({activity_type})");
             return Ok(None);
@@ -241,6 +243,11 @@ async fn handle_fep_1b12_announce(
     // Authorization
     verify_activity_owner(&activity)?;
     match activity_type {
+        ADD => {
+            let maybe_type =
+                handle_add(config, ap_client, db_pool, activity).await?;
+            Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
+        },
         DELETE => {
             let maybe_type = handle_delete(
                 ap_client,
@@ -262,6 +269,11 @@ async fn handle_fep_1b12_announce(
         },
         LIKE | DISLIKE => {
             let maybe_type = handle_like(ap_client, db_pool, activity).await?;
+            Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
+        },
+        REMOVE => {
+            let maybe_type =
+                handle_remove(ap_client, db_pool, activity).await?;
             Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
         },
         UNDO => {

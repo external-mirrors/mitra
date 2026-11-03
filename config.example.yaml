@@ -34,6 +34,9 @@ http_port: 8383
 #http_cors_allowlist:
 #  - http://127.0.0.1:8383
 
+# Required when running as Tor or I2P service
+#http_behind_reverse_proxy: false
+
 # Log level (debug, info, warn)
 #log_level: info
 

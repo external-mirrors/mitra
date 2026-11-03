@@ -22,14 +22,14 @@ log = "0.4.20"
 # Used to work with Monero addresses
 monero = "0.22.0"
 # Used to work with monero-wallet-rpc
-monero-rpc = { version = "0.5.2", default-features = false, features = ["rpc_authentication", "rustls-tls"] }
+monero-rpc = { git = "https://github.com/silverpill/monero-rpc-rs", rev = "9e4192163abf806731226423624b9388c7417824", default-features = false, features = ["rpc_authentication", "rustls-tls-no-provider"] }
 # Used to work with monero-lws API
-monero-lws = { version = "0.2.0" }
+monero-lws = { git = "https://github.com/silverpill/monero-lws-rs", rev = "9bf190a95732118af76ff0a897eba7567d6530f4" }
 # Used for working with regular expressions
 regex = "1.10.6"
 # Used for making async HTTP requests
 # Requires quinn even if http3 is disabled: https://github.com/seanmonstar/reqwest/issues/2318
-reqwest = { version = "0.12.28", default-features = false, features = ["json", "multipart", "rustls-tls-native-roots"] }
+reqwest = { version = "0.13.3", default-features = false, features = ["json", "query", "multipart"] }
 # Used for serialization/deserialization
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.132"

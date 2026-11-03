@@ -20,7 +20,7 @@ services:
   monerod:
     profiles:
       - monero
-    image: ghcr.io/sethforprivacy/simple-monerod:v0.18.5.0
+    image: ghcr.io/sethforprivacy/simple-monerod:v0.18.5.1
     ports:
       - "58081:18081"
     command:
@@ -40,9 +40,11 @@ services:
   monero-wallet-rpc:
     profiles:
       - monero
-    image: ghcr.io/sethforprivacy/simple-monero-wallet-rpc:v0.18.4.6
+    image: ghcr.io/sethforprivacy/simple-monero-wallet-rpc:v0.18.5.1
     depends_on:
       - "monerod"
+    environment:
+      RPC_EXPOSE_UNAUTHENTICATED: 1
     ports:
       - "58083:18083"
     command:
@@ -61,7 +63,7 @@ services:
       - monero
     depends_on:
       - "monerod"
-    image: ghcr.io/farcaster-project/containers/monero-lws:monerod-0.18.0.0
+    image: ghcr.io/farcaster-project/containers/monero-lws:0.3-monero-0.18.5.1
     environment:
       NETWORK: main
       MONERO_DAEMON_ADDRESS: monerod:18082

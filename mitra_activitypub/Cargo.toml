@@ -27,14 +27,14 @@ serde_json = "1.0.132"
 # Used for creating error types
 thiserror = "2.0.18"
 # Async runtime
-tokio = { version = "~1.46.0" }
+tokio = { version = "~1.51.0" }
 # Used to work with UUIDs
 uuid = { version = "1.12.1" }
 # Used for working with block/allow lists
 wildmatch = "2.1.1"
 
 apx_core = { path = "../apx_core", features = ["experiments"] }
-apx_sdk = { path = "../apx_sdk" }
+apx_sdk = { path = "../apx_sdk", default-features = false }
 mitra_adapters = { path = "../mitra_adapters" }
 mitra_config = { path = "../mitra_config" }
 mitra_models = { path = "../mitra_models" }

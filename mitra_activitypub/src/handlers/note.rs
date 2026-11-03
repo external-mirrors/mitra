@@ -172,7 +172,7 @@ fn deserialize_attachment<'de, D>(
         match value["type"].as_str() {
             Some(AUDIO | DOCUMENT | IMAGE | VIDEO) => (),
             Some(LINK) => {
-                // Lemmy compatibility
+                // Lemmy post link or FEP-8967 link
                 let link_href = if let Some(href) = value["href"].as_str() {
                     href.to_string()
                 } else {
@@ -470,7 +470,14 @@ async fn get_object_attachments(
         let attachment = match attachment_value {
             Attachment::Media(attachment) => attachment,
             Attachment::Link(link) => {
-                unprocessed.push(link);
+                let in_content = object.content.as_ref().is_some_and(|content| {
+                    // Mastodon may escape '&' in URLs
+                    content.contains(&link) || content.contains(&link.replace('&', "&amp;"))
+                });
+                // Links that are already present in content (FEP-8967) will be ignored
+                if !in_content {
+                    unprocessed.push(link);
+                };
                 continue;
             },
         };
@@ -880,6 +887,9 @@ fn get_object_visibility(
                 } else if audience.iter().any(|id| Some(id) == actor.followers.as_ref()) {
                     // Narrowing down the scope from Public to Followers
                     Visibility::Followers
+                } else if audience.iter().any(|id| Some(id) == actor.subscribers.as_ref()) {
+                    // Narrowing down the scope from Public to Subscribers
+                    Visibility::Subscribers
                 } else {
                     // DM or unknown audience
                     Visibility::Direct
