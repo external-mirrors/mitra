@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Security
 
 - Include query in `(request-target)` value when creating/verifying Cavage HTTP signatures.
+- Require signed `Date`, `(created)` and `(expires)` components when verifying Cavage HTTP signatures.
 
 ## [0.27.0] - 2026-08-29
 

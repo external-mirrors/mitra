@@ -163,6 +163,8 @@ pub fn parse_http_signature_cavage(
     request_uri: &Uri,
     request_headers: &HeaderMap,
 ) -> Result<HttpSignatureData, VerificationError> {
+    let mut required_components = REQUIRED_COMPONENTS_CAVAGE.to_vec();
+
     // Parse Signature header
     let signature_header = request_headers.get("signature")
         .ok_or(VerificationError::NoSignature)?
@@ -196,20 +198,23 @@ pub fn parse_http_signature_cavage(
         .map_err(|_| VerificationError::header_value("Host"))?
         .to_string();
     let created_at = if let Some(created_at) = signature_parameters.get("created") {
-        let create_at_timestamp = created_at.parse()
+        required_components.push("(created)");
+        let created_at_timestamp = created_at.parse()
             .map_err(|_| VerificationError::ParseError("invalid timestamp"))?;
-        Utc.timestamp_opt(create_at_timestamp, 0).single()
+        Utc.timestamp_opt(created_at_timestamp, 0).single()
             .ok_or(VerificationError::ParseError("invalid timestamp"))?
     } else {
         let date_str = request_headers.get("date")
             .ok_or(VerificationError::header_missing("Date"))?
             .to_str()
             .map_err(|_| VerificationError::header_value("Date"))?;
+        required_components.push("date");
         let date = DateTime::parse_from_rfc2822(date_str)
             .map_err(|_| VerificationError::header_value("Date"))?;
         date.with_timezone(&Utc)
     };
     let expires_at = if let Some(expires_at) = signature_parameters.get("expires") {
+        required_components.push("(expires)");
         let expires_at_timestamp = expires_at.parse()
             .map_err(|_| VerificationError::ParseError("invalid timestamp"))?;
         Utc.timestamp_opt(expires_at_timestamp, 0).single()
@@ -219,7 +224,6 @@ pub fn parse_http_signature_cavage(
     };
 
     let signed_headers: Vec<_> = headers_parameter.split(' ').collect();
-    let mut required_components = REQUIRED_COMPONENTS_CAVAGE.to_vec();
     let maybe_digest = get_content_digest(
         request_method,
         request_headers,
