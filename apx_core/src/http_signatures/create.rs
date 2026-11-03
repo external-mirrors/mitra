@@ -91,6 +91,21 @@ impl From<SfvError> for HttpSignatureError {
     }
 }
 
+// "generate the header field value by concatenating
+// the lowercased :method, an ASCII space, and the :path pseudo-headers
+// (as specified in HTTP/2, Section 8.1.2.3 [7])."
+// Where ":path pseudo-header" is actually path + query.
+pub(super) fn construct_cavage_request_target(
+    method: &Method,
+    path_and_query: &str,
+) -> String {
+    format!(
+        "{} {}",
+        method.as_str().to_lowercase(),
+        path_and_query,
+    )
+}
+
 /// Creates HTTP signature according to the old HTTP Signatures Spec  
 /// <https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures>
 pub fn create_http_signature_cavage(
@@ -104,10 +119,9 @@ pub fn create_http_signature_cavage(
         .map_err(HttpSignatureError::UrlError)?;
     let request_uri = HttpUri::parse(&request_url)
         .map_err(HttpSignatureError::UrlError)?;
-    let request_target = format!(
-        "{} {}",
-        request_method.as_str().to_lowercase(),
-        request_uri.path(),
+    let request_target = construct_cavage_request_target(
+        &request_method,
+        &request_uri.path_and_query(),
     );
     let host = if let Some(port) = request_uri.port() {
         format!("{}:{}", request_uri.host(), port)

@@ -26,6 +26,7 @@ use crate::{
         parse_content_digest_header,
         ContentDigest,
     },
+    http_signatures::create::construct_cavage_request_target,
     http_utils::remove_quotes,
 };
 
@@ -237,10 +238,11 @@ pub fn parse_http_signature_cavage(
     let mut signature_base_entries = IndexMap::new();
     for header in signed_headers {
         let header_value = if header == "(request-target)" {
-            format!(
-                "{} {}",
-                request_method.as_str().to_lowercase(),
-                request_uri.path(),
+            construct_cavage_request_target(
+                request_method,
+                request_uri.path_and_query()
+                    .map(|val| val.as_str())
+                    .unwrap_or_default(),
             )
         } else if header == "(created)" {
             signature_parameters.get("created")

@@ -24,6 +24,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Removed `parse_url` function from `url::canonical` module.
 - Removed `CanonicalUri::to_http_uri` method.
 
+### Security
+
+- Include query in `(request-target)` value when creating/verifying Cavage HTTP signatures.
+
 ## [0.27.0] - 2026-08-29
 
 ### Added
