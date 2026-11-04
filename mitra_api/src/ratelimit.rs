@@ -29,6 +29,7 @@ impl KeyExtractor for RealIpKeyExtractor {
             .then_some(IpAddr::V4(Ipv4Addr::LOCALHOST));
         // Peer address is not known when unix socket is used
         let maybe_peer_ip = request.peer_addr().map(|socket| socket.ip());
+        // realip_remote_addr(): `Forwarded`, then `X-Forwarded-For`, then peer address
         let maybe_real_ip = request.connection_info()
             .realip_remote_addr()
             .and_then(|real_ip| IpAddr::from_str(real_ip).ok());
