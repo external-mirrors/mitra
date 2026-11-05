@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `fts delete` and `fts list` commands ([#265](https://codeberg.org/silverpill/mitra/pulls/265)).
 
+### Fixed
+
+- Hide error messages from `rustls_platform_verifier`.
+
 ### Security
 
 - Include query in `(request-target)` value when creating/verifying Cavage HTTP signatures.
