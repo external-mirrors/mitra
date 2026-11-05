@@ -350,7 +350,7 @@ dependencies = [
  "getrandom 0.2.16",
  "hex",
  "http 0.2.9",
- "http 1.1.0",
+ "http 1.5.0",
  "idna",
  "indexmap",
  "infer",
@@ -1545,12 +1545,11 @@ dependencies = [
 
 [[package]]
 name = "http"
-version = "1.1.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21b9ddb458710bc376481b842f5da65cdf31522de232c1ca8146abce2a358258"
+checksum = "918d3568bebf352712bc2ef3d46a8bcf1a75b373be6539de198e9105cbbf9ce0"
 dependencies = [
  "bytes",
- "fnv",
  "itoa",
 ]
 
@@ -1561,7 +1560,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1efedce1fb8e6913f23e0c92de8e62cd5b772a67e7b3946df930a62566c93184"
 dependencies = [
  "bytes",
- "http 1.1.0",
+ "http 1.5.0",
 ]
 
 [[package]]
@@ -1572,7 +1571,7 @@ checksum = "793429d76616a256bcb62c2a2ec2bed781c8307e797e2598c50010f2bee2544f"
 dependencies = [
  "bytes",
  "futures-util",
- "http 1.1.0",
+ "http 1.5.0",
  "http-body",
  "pin-project-lite",
 ]
@@ -1605,7 +1604,7 @@ dependencies = [
  "bytes",
  "futures-channel",
  "futures-core",
- "http 1.1.0",
+ "http 1.5.0",
  "http-body",
  "httparse",
  "itoa",
@@ -1621,7 +1620,7 @@ version = "0.27.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dfa8e654703247911e29c23fbeaa261834bd9bb74efba2f9acddc37bfb127f53"
 dependencies = [
- "http 1.1.0",
+ "http 1.5.0",
  "hyper",
  "hyper-util",
  "rustls",
@@ -1657,7 +1656,7 @@ dependencies = [
  "futures-channel",
  "futures-core",
  "futures-util",
- "http 1.1.0",
+ "http 1.5.0",
  "http-body",
  "hyper",
  "ipnet",
@@ -2320,13 +2319,13 @@ dependencies = [
 
 [[package]]
 name = "monero-lws"
-version = "0.2.0"
-source = "git+https://github.com/silverpill/monero-lws-rs?rev=9bf190a95732118af76ff0a897eba7567d6530f4#9bf190a95732118af76ff0a897eba7567d6530f4"
+version = "0.3.0"
+source = "git+https://github.com/silverpill/monero-lws-rs?rev=0ef44084b5115434188a5870d6f0f9e3efc20b8c#0ef44084b5115434188a5870d6f0f9e3efc20b8c"
 dependencies = [
  "anyhow",
  "fixed-hash",
  "hex",
- "http 0.2.9",
+ "http 1.5.0",
  "jsonrpc-core",
  "monero",
  "reqwest",
@@ -2338,8 +2337,8 @@ dependencies = [
 
 [[package]]
 name = "monero-rpc"
-version = "0.5.2"
-source = "git+https://github.com/silverpill/monero-rpc-rs?rev=9e4192163abf806731226423624b9388c7417824#9e4192163abf806731226423624b9388c7417824"
+version = "0.6.0"
+source = "git+https://github.com/silverpill/monero-rpc-rs?rev=9d582cc06679baaf8b7c6376a4fa2369d7ffc2ec#9d582cc06679baaf8b7c6376a4fa2369d7ffc2ec"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3072,7 +3071,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-util",
- "http 1.1.0",
+ "http 1.5.0",
  "http-body",
  "http-body-util",
  "hyper",
@@ -3658,7 +3657,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95bdefc0eedf06440b27092fbfe33f2cb493ad6a3423aa12cfe7f2aac44bd618"
 dependencies = [
  "hex",
- "http 1.1.0",
+ "http 1.5.0",
  "iri-string",
  "k256",
  "rand 0.8.5",
@@ -4134,7 +4133,7 @@ dependencies = [
  "bitflags",
  "bytes",
  "futures-util",
- "http 1.1.0",
+ "http 1.5.0",
  "http-body",
  "pin-project-lite",
  "tower",
