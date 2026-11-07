@@ -145,11 +145,8 @@ pub enum Command {
     SetRole(SetRole),
     RevokeOauthTokens(RevokeOauthTokens),
     ImportObject(ImportObject),
-    #[command(hide = true, alias = "fetch-replies")]
-    LoadReplies(LoadReplies),
     FetchObject(FetchObject),
     Webfinger(Webfinger),
-    LoadPortableObject(LoadPortableObject),
     CreateActivity(CreateActivity),
     SendActivity(SendActivity),
     #[command(visible_alias = "delete-account", alias = "delete-profile")]
@@ -170,13 +167,22 @@ pub enum Command {
     DeleteOrphanedFiles(DeleteOrphanedFiles),
     ListUnreachableActors(ListUnreachableActors),
     CreateMoneroWallet(CreateMoneroWallet),
-    CreateMoneroSignature(CreateMoneroSignature),
-    VerifyMoneroSignature(VerifyMoneroSignature),
     ReopenInvoice(ReopenInvoice),
     RepairInvoice(RepairInvoice),
     ListActiveAddresses(ListActiveAddresses),
-    GetPaymentAddress(GetPaymentAddress),
     InstanceReport(InstanceReport),
+
+    // Deprecated commands (no alias in groups)
+    #[command(hide = true, alias = "fetch-replies")]
+    LoadReplies(LoadReplies),
+    #[command(hide = true)]
+    LoadPortableObject(LoadPortableObject),
+    #[command(hide = true)]
+    CreateMoneroSignature(CreateMoneroSignature),
+    #[command(hide = true)]
+    VerifyMoneroSignature(VerifyMoneroSignature),
+    #[command(hide = true)]
+    GetPaymentAddress(GetPaymentAddress),
 
     /// Generate shell completions
     Completion {

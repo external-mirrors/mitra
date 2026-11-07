@@ -20,6 +20,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `create` and `send` commands to `ap` command group.
 - Added `create-system`, `export-posts` and `import-posts` commands to `account` command group.
 
+### Deprecated
+
+- Deprecated `load-portable-object`, `create-monero-signature`, `verify-monero-signature` and `get-payment-address` commands.
+
 ### Fixed
 
 - Hide error messages from `rustls_platform_verifier`.
