@@ -248,6 +248,7 @@ impl DeleteEmoji {
 #[derive(Subcommand)]
 pub enum EmojiCommand {
     Create(AddEmoji),
+    #[command(visible_alias = "steal")]
     Copy(ImportEmoji),
     List(ListEmojis),
     Delete(DeleteEmoji),
