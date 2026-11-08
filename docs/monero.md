@@ -28,7 +28,7 @@ blockchains:
 Create a wallet for your instance:
 
 ```
-mitra create-monero-wallet "mitra-wallet" "passw0rd"
+mitra monero create "mitra-wallet" "passw0rd"
 ```
 
 Set `wallet_name` and `wallet_password` parameters in your configuration:
@@ -56,7 +56,7 @@ blockchains:
 This monitoring method supports anonymous payments. To enable this feature, create a special anonymous account:
 
 ```shell
-mitra create-system-account anonymous
+mitra account create-system anonymous
 ```
 
 When anonymous payments are enabled, a notification is generated when a payment is sent to the primary wallet address.

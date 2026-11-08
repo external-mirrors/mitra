@@ -17,19 +17,19 @@ retention:
 Posts:
 
 ```shell
-mitra delete-extraneous-posts 15
+mitra prune posts 15
 ```
 
 Profiles:
 
 ```shell
-mitra delete-empty-profiles 30
+mitra prune profiles 30
 ```
 
 Delete attachments that don't belong to any post:
 
 ```shell
-mitra delete-unused-attachments 5
+mitra prune attachments 5
 ```
 
 ## Media proxy
@@ -37,5 +37,5 @@ mitra delete-unused-attachments 5
 Caching of media can be disabled completely by adding a [federation filter](./filter.md) rule:
 
 ```shell
-mitra add-filter-rule proxy-media server.example
+mitra filter add proxy-media server.example
 ```

@@ -110,11 +110,11 @@ pub fn parse_config(
         warnings.push(message.to_owned());
     };
     if config.blocked_instances.is_some() {
-        let message = "blocked_instances parameter is deprecated (use `mitra add-filter-rule`)";
+        let message = "blocked_instances parameter is deprecated (use `mitra filter add`)";
         warnings.push(message.to_owned());
     };
     if config.allowed_instances.is_some() {
-        let message = "allowed_instances parameter is deprecated (use `mitra add-filter-rule`)";
+        let message = "allowed_instances parameter is deprecated (use `mitra filter add`)";
         warnings.push(message.to_owned());
     };
     for blockchain_config in config.blockchains() {

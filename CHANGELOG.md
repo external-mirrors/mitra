@@ -19,10 +19,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Hide `check-uris` command from CLI help.
 - Added `create` and `send` commands to `ap` command group.
 - Added `create-system`, `export-posts` and `import-posts` commands to `account` command group.
+- Show command groups in `help` output and hide legacy commands.
 
 ### Deprecated
 
 - Deprecated `load-portable-object`, `create-monero-signature`, `verify-monero-signature` and `get-payment-address` commands.
+- Deprecated `get-config`, `update-config`, `add-filter-rule`, `remove-filter-rule`, `list-filter-rules`, `generate-invite-code`, `list-invite-codes`, `create-account`, `create-system-account`, `list-accounts`, `set-password`, `set-role`, `revoke-oauth-tokens`, `import-object`, `fetch-object`, `webfinger`, `create-activity`, `send-activity`, `delete-user`, `create-post`, `import-posts`, `export-posts`, `delete-post`, `add-emoji`, `import-emoji`, `delete-emoji`, `delete-extraneous-posts`, `prune-reposts`, `delete-unused-attachments`, `delete-empty-profiles`, `list-local-files`, `delete-orphaned-files`, `list-unreachable-actors`, `create-monero-wallet`, `reopen-invoice`, `repair-invoice`, `list-active-addresses`, `instance-report` (replaced by grouped commands).
 
 ### Fixed
 

@@ -35,29 +35,29 @@ reject *
 List rules:
 
 ```shell
-mitra list-filter-rules
+mitra filter list
 ```
 
 Add rule:
 
 ```shell
-mitra add-filter-rule reject mastodon.social
+mitra filter add reject mastodon.social
 ```
 
 Add wildcard rule:
 
 ```shell
-mitra add-filter-rule reject '*'
+mitra filter add reject '*'
 ```
 
 Remove rule:
 
 ```shell
-mitra remove-filter-rule reject mastodon.social
+mitra filter remove reject mastodon.social
 ```
 
-Use `update-config` command to change the list of filtered keywords:
+Use `config set` command to change the list of filtered keywords:
 
 ```shell
-mitra update-config filter_keywords '["foo", "bar"]'
+mitra config set filter_keywords '["foo", "bar"]'
 ```

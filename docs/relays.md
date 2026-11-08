@@ -11,7 +11,7 @@ Mitra supports LitePub relay protocol and partially supports Mastodon relay prot
 Create a new user:
 
 ```
-mitra create-account followbot <password>
+mitra account create followbot <password>
 ```
 
 Log in, search for a relay actor and follow it.

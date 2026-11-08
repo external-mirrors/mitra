@@ -83,7 +83,7 @@ Open configuration file `/etc/mitra/config.yaml` and configure the instance.
 Create admin account:
 
 ```shell
-su mitra -s $SHELL -c "mitra create-account <username> <password> admin"
+su mitra -s $SHELL -c "mitra account create <username> <password> admin"
 ```
 
 Start Mitra:
@@ -124,7 +124,7 @@ Put any static files into the web client directory. Building instructions for `m
 Create admin account:
 
 ```shell
-./mitra create-account <username> <password> admin
+./mitra account create <username> <password> admin
 ```
 
 Start Mitra:
