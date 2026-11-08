@@ -551,6 +551,10 @@ pub enum ApCommand {
     Import(ImportObject),
     Fetch(FetchObject),
     Webfinger(Webfinger),
+    #[command(hide = true)]
+    Create(CreateActivity),
+    #[command(hide = true)]
+    Send(SendActivity),
     Outbox(ShowOutbox)
 }
 
@@ -564,6 +568,8 @@ impl ApCommand {
             Self::Import(command) => command.execute(config, db_pool).await,
             Self::Fetch(command) => command.execute(config, db_pool).await,
             Self::Webfinger(command) => command.execute(config, db_pool).await,
+            Self::Create(command) => command.execute(config, db_pool).await,
+            Self::Send(command) => command.execute(config, db_pool).await,
             Self::Outbox(command) => command.execute(config, db_pool).await,
         }
     }
