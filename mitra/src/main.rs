@@ -85,6 +85,7 @@ async fn run_async() -> Result<(), Error> {
         Command::Fts(command) => command.execute(&db_pool).await,
         Command::Invite(command) => command.execute(&db_pool).await,
         Command::Media(command) => command.execute(&config, &db_pool).await,
+        Command::Monero(command) => command.execute(&config).await,
         Command::Post(command) => command.execute(&config, &db_pool).await,
         Command::Prune(command) => command.execute(&config, &db_pool).await,
         Command::User(command) => command.execute(&config, &db_pool).await,

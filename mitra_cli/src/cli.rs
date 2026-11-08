@@ -60,6 +60,7 @@ use crate::commands::{
         CreateMoneroSignature,
         CreateMoneroWallet,
         ListActiveAddresses,
+        MoneroCommand,
         VerifyMoneroSignature,
     },
     post::{
@@ -110,6 +111,8 @@ pub enum Command {
     Invite(InviteCommand),
     #[command(subcommand, hide = true)]
     Media(MediaCommand),
+    #[command(subcommand, hide = true)]
+    Monero(MoneroCommand),
     #[command(subcommand, hide = true)]
     Post(PostCommand),
     #[command(subcommand, hide = true)]

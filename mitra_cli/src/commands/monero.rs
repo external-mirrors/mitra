@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Error};
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 use mitra_config::Config;
 use mitra_services::{
@@ -109,5 +109,24 @@ impl ListActiveAddresses {
             println!("{}: {}", address, amount);
         };
         Ok(())
+    }
+}
+
+/// Manage Monero wallet
+#[derive(Subcommand)]
+pub enum MoneroCommand {
+    Create(CreateMoneroWallet),
+    ActiveAddresses(ListActiveAddresses),
+}
+
+impl MoneroCommand {
+    pub async fn execute(
+        self,
+        config: &Config,
+    ) -> Result<(), Error> {
+        match self {
+            Self::Create(command) => command.execute(config).await,
+            Self::ActiveAddresses(command) => command.execute(config).await,
+        }
     }
 }
