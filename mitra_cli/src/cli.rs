@@ -62,7 +62,13 @@ use crate::commands::{
         ListActiveAddresses,
         VerifyMoneroSignature,
     },
-    post::{CreatePost, DeletePost, ExportPosts, ImportPosts},
+    post::{
+        CreatePost,
+        DeletePost,
+        ExportPosts,
+        ImportPosts,
+        PostCommand,
+    },
     process::Worker,
     profile::{
         DeleteUser,
@@ -103,6 +109,8 @@ pub enum Command {
     Invite(InviteCommand),
     #[command(subcommand, hide = true)]
     Media(MediaCommand),
+    #[command(subcommand, hide = true)]
+    Post(PostCommand),
     #[command(subcommand, hide = true)]
     User(UserCommand),
 

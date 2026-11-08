@@ -11,7 +11,7 @@ use apx_sdk::{
     utils::is_public,
 };
 use chrono::{DateTime, Utc};
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
@@ -339,5 +339,25 @@ impl DeletePost {
         };
         println!("post deleted");
         Ok(())
+    }
+}
+
+/// Manage posts
+#[derive(Subcommand)]
+pub enum PostCommand {
+    Create(CreatePost),
+    Delete(DeletePost),
+}
+
+impl PostCommand {
+    pub async fn execute(
+        self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        match self {
+            Self::Create(command) => command.execute(config, db_pool).await,
+            Self::Delete(command) => command.execute(config, db_pool).await,
+        }
     }
 }

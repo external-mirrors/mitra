@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `fts delete` and `fts list` commands ([#265](https://codeberg.org/silverpill/mitra/pulls/265)).
 - Added `emoji steal` alias for `emoji copy` command.
-- Added `user` command group.
+- Added `post` and `user` command groups.
 
 ### Changed
 
