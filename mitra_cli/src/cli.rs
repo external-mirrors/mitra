@@ -81,6 +81,7 @@ use crate::commands::{
         DeleteEmptyProfiles,
         DeleteExtraneousPosts,
         DeleteUnusedAttachments,
+        PruneCommand,
         PruneReposts,
     },
 };
@@ -111,6 +112,8 @@ pub enum Command {
     Media(MediaCommand),
     #[command(subcommand, hide = true)]
     Post(PostCommand),
+    #[command(subcommand, hide = true)]
+    Prune(PruneCommand),
     #[command(subcommand, hide = true)]
     User(UserCommand),
 

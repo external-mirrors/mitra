@@ -1,6 +1,6 @@
 use anyhow::Error;
 use apx_core::url::canonical::CanonicalUri;
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 use mitra_activitypub::{
     builders::undo_announce::prepare_undo_announce,
@@ -151,5 +151,29 @@ impl CheckUris {
             };
         };
         Ok(())
+    }
+}
+
+/// Remove unnecessary data
+#[derive(Subcommand)]
+pub enum PruneCommand {
+    Posts(DeleteExtraneousPosts),
+    Reposts(PruneReposts),
+    Attachments(DeleteUnusedAttachments),
+    Profiles(DeleteEmptyProfiles),
+}
+
+impl PruneCommand {
+    pub async fn execute(
+        self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        match self {
+            Self::Posts(command) => command.execute(config, db_pool).await,
+            Self::Reposts(command) => command.execute(config, db_pool).await,
+            Self::Attachments(command) => command.execute(config, db_pool).await,
+            Self::Profiles(command) => command.execute(config, db_pool).await,
+        }
     }
 }

@@ -86,6 +86,7 @@ async fn run_async() -> Result<(), Error> {
         Command::Invite(command) => command.execute(&db_pool).await,
         Command::Media(command) => command.execute(&config, &db_pool).await,
         Command::Post(command) => command.execute(&config, &db_pool).await,
+        Command::Prune(command) => command.execute(&config, &db_pool).await,
         Command::User(command) => command.execute(&config, &db_pool).await,
         // Dev commands (hidden)
         Command::CheckUris(cmd) => cmd.execute(&config, &db_pool).await,
