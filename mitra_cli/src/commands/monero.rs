@@ -86,6 +86,7 @@ impl VerifyMoneroSignature {
     }
 }
 
+/// List all addresses in Monero wallet that have positive balance
 #[derive(Parser)]
 pub struct ListActiveAddresses;
 
@@ -101,6 +102,9 @@ impl ListActiveAddresses {
             &wallet_client,
             monero_config.account_index,
         ).await?;
+        if addresses.is_empty() {
+            println!("wallet is empty");
+        };
         for (address, amount) in addresses {
             println!("{}: {}", address, amount);
         };

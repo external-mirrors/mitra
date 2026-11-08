@@ -57,9 +57,9 @@ use crate::commands::{
         MediaCommand,
     },
     monero::{
-        ListActiveAddresses,
         CreateMoneroSignature,
         CreateMoneroWallet,
+        ListActiveAddresses,
         VerifyMoneroSignature,
     },
     post::{CreatePost, DeletePost, ExportPosts, ImportPosts},
