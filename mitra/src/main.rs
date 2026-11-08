@@ -76,6 +76,7 @@ async fn run_async() -> Result<(), Error> {
             result.map_err(Into::into)
         },
         Command::Worker(cmd) => cmd.execute(config, db_pool).await,
+        // Groups
         Command::Account(command) => command.execute(&config, &db_pool).await,
         Command::Ap(command) => command.execute(&config, &db_pool).await,
         Command::Config(command) => command.execute(&db_pool).await,
@@ -84,6 +85,9 @@ async fn run_async() -> Result<(), Error> {
         Command::Fts(command) => command.execute(&db_pool).await,
         Command::Invite(command) => command.execute(&db_pool).await,
         Command::Media(command) => command.execute(&config, &db_pool).await,
+        // Dev commands (hidden)
+        Command::CheckUris(cmd) => cmd.execute(&config, &db_pool).await,
+        /* Legacy commands */
         Command::GetConfig(cmd) => cmd.execute(&db_pool).await,
         Command::UpdateConfig(cmd) => cmd.execute(&db_pool).await,
         Command::AddFilterRule(cmd) => cmd.execute(&db_pool).await,
@@ -119,7 +123,6 @@ async fn run_async() -> Result<(), Error> {
         Command::ListLocalFiles(cmd) => cmd.execute(&config, &db_pool).await,
         Command::DeleteOrphanedFiles(cmd) => cmd.execute(&config, &db_pool).await,
         Command::ListUnreachableActors(cmd) => cmd.execute(&config, &db_pool).await,
-        Command::CheckUris(cmd) => cmd.execute(&config, &db_pool).await,
         Command::CreateMoneroWallet(cmd) => cmd.execute(&config).await,
         Command::CreateMoneroSignature(cmd) => cmd.execute(&config).await,
         Command::VerifyMoneroSignature(cmd) => cmd.execute(&config).await,
@@ -128,6 +131,7 @@ async fn run_async() -> Result<(), Error> {
         Command::ListActiveAddresses(cmd) => cmd.execute(&config).await,
         Command::GetPaymentAddress(cmd) => cmd.execute(&config, &db_pool).await,
         Command::InstanceReport(cmd) => cmd.execute(&config, &db_pool).await,
+        /* --- */
         Command::Completion { .. } => unreachable!(),
     };
     result

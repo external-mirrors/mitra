@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Show "wallet is empty" if `list-active-addresses` command returns no addresses.
+- Hide `check-uris` command from CLI help.
 
 ### Fixed
 

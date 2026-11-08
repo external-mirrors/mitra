@@ -85,6 +85,7 @@ pub enum Command {
     #[command(hide = true)]
     Worker(Worker),
 
+    // Command groups
     #[command(subcommand, hide = true)]
     Account(AccountCommand),
     #[command(subcommand, hide = true)]
@@ -102,6 +103,11 @@ pub enum Command {
     #[command(subcommand, hide = true)]
     Media(MediaCommand),
 
+    // Dev commands (hidden)
+    #[command(hide = true)]
+    CheckUris(CheckUris),
+
+    // Legacy commands
     GetConfig(GetConfig),
     UpdateConfig(UpdateConfig),
     AddFilterRule(AddFilterRule),
@@ -142,7 +148,6 @@ pub enum Command {
     ListLocalFiles(ListLocalFiles),
     DeleteOrphanedFiles(DeleteOrphanedFiles),
     ListUnreachableActors(ListUnreachableActors),
-    CheckUris(CheckUris),
     CreateMoneroWallet(CreateMoneroWallet),
     CreateMoneroSignature(CreateMoneroSignature),
     VerifyMoneroSignature(VerifyMoneroSignature),
