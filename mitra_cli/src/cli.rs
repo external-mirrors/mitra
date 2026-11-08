@@ -67,6 +67,7 @@ use crate::commands::{
     profile::{
         DeleteUser,
         ListUnreachableActors,
+        UserCommand,
     },
     report::InstanceReport,
     storage::{
@@ -102,6 +103,8 @@ pub enum Command {
     Invite(InviteCommand),
     #[command(subcommand, hide = true)]
     Media(MediaCommand),
+    #[command(subcommand, hide = true)]
+    User(UserCommand),
 
     // Dev commands (hidden)
     #[command(hide = true)]

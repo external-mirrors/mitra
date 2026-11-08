@@ -1,5 +1,5 @@
 use anyhow::Error;
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 use mitra_activitypub::{
     adapters::users::delete_account,
@@ -81,5 +81,25 @@ impl DeleteUser {
         };
         println!("user deleted");
         Ok(())
+    }
+}
+
+/// Manage remote profiles
+#[derive(Subcommand)]
+pub enum UserCommand {
+    Unreachable(ListUnreachableActors),
+    Delete(DeleteUser),
+}
+
+impl UserCommand {
+    pub async fn execute(
+        self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        match self {
+            Self::Unreachable(command) => command.execute(config, db_pool).await,
+            Self::Delete(command) => command.execute(config, db_pool).await,
+        }
     }
 }
