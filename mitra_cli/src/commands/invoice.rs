@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Error};
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use uuid::Uuid;
 
 use mitra_adapters::payments::monero::{
@@ -132,5 +132,25 @@ impl GetPaymentAddress {
         ).await?;
         println!("payment address: {}", payment_address);
         Ok(())
+    }
+}
+
+/// Manage invoices
+#[derive(Subcommand)]
+pub enum InvoiceCommand {
+    Reopen(ReopenInvoice),
+    Repair(RepairInvoice),
+}
+
+impl InvoiceCommand {
+    pub async fn execute(
+        self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        match self {
+            Self::Reopen(command) => command.execute(config, db_pool).await,
+            Self::Repair(command) => command.execute(config, db_pool).await,
+        }
     }
 }

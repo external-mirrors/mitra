@@ -47,6 +47,7 @@ use crate::commands::{
     },
     fts::FtsCommand,
     invoice::{
+        InvoiceCommand,
         ReopenInvoice,
         RepairInvoice,
         GetPaymentAddress,
@@ -109,6 +110,8 @@ pub enum Command {
     Fts(FtsCommand),
     #[command(subcommand, hide = true)]
     Invite(InviteCommand),
+    #[command(subcommand, hide = true)]
+    Invoice(InvoiceCommand),
     #[command(subcommand, hide = true)]
     Media(MediaCommand),
     #[command(subcommand, hide = true)]
