@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Show "wallet is empty" if `list-active-addresses` command returns no addresses.
 - Hide `check-uris` command from CLI help.
 - Added `create` and `send` commands to `ap` command group.
+- Added `create-system`, `export-posts` and `import-posts` commands to `account` command group.
 
 ### Fixed
 

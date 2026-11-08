@@ -50,7 +50,10 @@ use mitra_models::{
 use mitra_utils::passwords::hash_password;
 use mitra_validators::accounts::validate_local_username;
 
-use super::profile::DeleteUser;
+use super::{
+    post::{ExportPosts, ImportPosts},
+    profile::DeleteUser,
+};
 
 /// Create new account
 #[derive(Parser)]
@@ -100,7 +103,7 @@ enum SystemAccountType {
     Anonymous,
 }
 
-/// Create system account
+/// Create new system account
 #[derive(Parser)]
 pub struct CreateSystemAccount {
     account_type: SystemAccountType,
@@ -291,9 +294,12 @@ impl ListInviteCodes {
 #[derive(Subcommand)]
 pub enum AccountCommand {
     Create(CreateAccount),
+    CreateSystem(CreateSystemAccount),
     List(ListAccounts),
     Password(SetPassword),
     Role(SetRole),
+    ExportPosts(ExportPosts),
+    ImportPosts(ImportPosts),
     Logout(RevokeOauthTokens),
     Delete(DeleteUser),
 }
@@ -306,9 +312,12 @@ impl AccountCommand {
     ) -> Result<(), Error> {
         match self {
             Self::Create(command) => command.execute(config, db_pool).await,
+            Self::CreateSystem(command) => command.execute(config, db_pool).await,
             Self::List(command) => command.execute(db_pool).await,
             Self::Password(command) => command.execute(db_pool).await,
             Self::Role(command) => command.execute(db_pool).await,
+            Self::ExportPosts(command) => command.execute(config, db_pool).await,
+            Self::ImportPosts(command) => command.execute(config, db_pool).await,
             Self::Logout(command) => command.execute(db_pool).await,
             Self::Delete(command) => command.execute(config, db_pool).await,
         }
