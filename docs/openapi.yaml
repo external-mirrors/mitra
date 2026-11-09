@@ -2728,28 +2728,6 @@ paths:
           description: Invalid tracking status.
         404:
           description: Post not found
-  /api/v1/statuses/{status_id}/make_permanent:
-    post:
-      summary: Save post to IPFS
-      security:
-        - tokenAuth: []
-      parameters:
-        - $ref: '#/components/parameters/status_id'
-      responses:
-        200:
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-        403:
-          description: Post does not belong to user or is not public
-        404:
-          description: Post not found
-        418:
-          description: IPFS integration is not enabled
-        422:
-          description: Post already saved to IPFS
   /api/v1/statuses/{status_id}/load_conversation:
     post:
       summary: Load replies or full conversation from a remote server.
@@ -4032,10 +4010,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BlockchainInfo'
-        ipfs_gateway_url:
-          description: IPFS gateway URL.
-          type: string
-          nullable: true
         pleroma:
           $ref: '#/components/schemas/InstancePleroma'
     InstanceV2:
@@ -4208,10 +4182,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BlockchainInfo'
-        ipfs_gateway_url:
-          description: IPFS gateway URL.
-          type: string
-          nullable: true
         pleroma:
           $ref: '#/components/schemas/InstancePleroma'
     Invoice:
@@ -4676,10 +4646,6 @@ components:
               nullable: true
               example: null
             - $ref: '#/components/schemas/Account'
-        ipfs_cid:
-          type: string
-          nullable: true
-          example: 'bafkr...'
         links:
           description: Posts linked to this post.
           type: array
