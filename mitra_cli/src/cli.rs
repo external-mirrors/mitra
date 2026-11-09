@@ -94,6 +94,7 @@ pub enum Command {
     Server,
     #[command(hide = true)]
     Worker(Worker),
+    Status(InstanceReport),
 
     // Command groups
     #[command(subcommand, hide = true)]

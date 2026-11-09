@@ -76,6 +76,7 @@ async fn run_async() -> Result<(), Error> {
             result.map_err(Into::into)
         },
         Command::Worker(cmd) => cmd.execute(config, db_pool).await,
+        Command::Status(command) => command.execute(&config, &db_pool).await,
         // Groups
         Command::Account(command) => command.execute(&config, &db_pool).await,
         Command::Ap(command) => command.execute(&config, &db_pool).await,
