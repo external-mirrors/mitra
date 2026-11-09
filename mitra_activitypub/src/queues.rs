@@ -470,7 +470,6 @@ pub async fn process_queued_outgoing_activities(
             job_data.activity,
         );
 
-        // TODO: perform filtering in OutgoingActivityJobData::prepare_recipients
         for recipient in recipients.iter_mut() {
             if !recipient.is_finished() {
                 let recipient_hostname =
