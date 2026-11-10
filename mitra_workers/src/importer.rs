@@ -7,12 +7,10 @@ use mitra_activitypub::{
     adapters::follow_requests::{
         accept_and_add_follower,
         follow_or_create_request,
+        unfollow_and_undo,
     },
     authority::Authority,
-    builders::{
-        move_person::prepare_move_person,
-        undo_follow::prepare_undo_follow,
-    },
+    builders::move_person::prepare_move_person,
     errors::HandlerError,
     importers::{
         is_actor_importer_error,
@@ -38,10 +36,7 @@ use mitra_models::{
     profiles::{
         queries::get_remote_profile_by_actor_id,
     },
-    relationships::{
-        helpers::create_follow_request,
-        queries::unfollow,
-    },
+    relationships::helpers::create_follow_request,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -169,27 +164,15 @@ pub async fn import_followers_task(
             // Immediately move local followers (only if alias can be verified)
             if let Some(ref from_profile) = maybe_from_profile {
                 let db_client = &mut **get_database_client(db_pool).await?;
-                match unfollow(db_client, follower.id, from_profile.id).await {
-                    Ok(maybe_follow_request_deleted) => {
-                        // Send Undo(Follow) to a remote actor
-                        let remote_actor = from_profile.actor_json.as_ref()
-                            .expect("actor data must be present");
-                        let (
-                            follow_request_id,
-                            follow_request_has_deprecated_ap_id,
-                        ) = maybe_follow_request_deleted
-                            .expect("follow request must exist");
-                        let follower =
-                            get_user_by_id(db_client, follower.id).await?;
-                        prepare_undo_follow(
-                            db_client,
-                            &instance,
-                            &follower,
-                            remote_actor,
-                            follow_request_id,
-                            follow_request_has_deprecated_ap_id,
-                        ).await?.enqueue(db_client).await?;
-                    },
+                let follower =
+                    get_user_by_id(db_client, follower.id).await?;
+                match unfollow_and_undo(
+                    db_client,
+                    &instance,
+                    &follower,
+                    from_profile,
+                ).await {
+                    Ok(_) => (),
                     // Not a follower, ignore
                     Err(DatabaseError::NotFound(_)) => continue,
                     Err(other_error) => return Err(other_error.into()),

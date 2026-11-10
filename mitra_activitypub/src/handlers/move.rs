@@ -10,17 +10,16 @@ use mitra_models::{
     },
     notifications::helpers::create_move_notification,
     profiles::helpers::find_verified_aliases,
-    relationships::queries::{
-        get_followers,
-        unfollow,
-    },
+    relationships::queries::get_followers,
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    adapters::follow_requests::follow_or_create_request,
+    adapters::follow_requests::{
+        follow_or_create_request,
+        unfollow_and_undo,
+    },
     authority::Authority,
-    builders::undo_follow::prepare_undo_follow,
     identifiers::profile_actor_id,
     importers::{ActorIdResolver, ApClient},
 };
@@ -101,25 +100,12 @@ pub async fn handle_move(
         };
         let follower = get_user_by_id(db_client, follower.id).await?;
         // Unfollow old profile
-        let maybe_follow_request_deleted = unfollow(
+        unfollow_and_undo(
             db_client,
-            follower.id,
-            old_profile.id,
+            instance,
+            &follower,
+            &old_profile,
         ).await?;
-        // Send Undo(Follow) if old actor is not local
-        if let Some(ref old_actor) = old_profile.actor_json {
-            let (follow_request_id, follow_request_has_deprecated_ap_id) =
-                maybe_follow_request_deleted
-                    .expect("follow request must exist");
-            prepare_undo_follow(
-                db_client,
-                instance,
-                &follower,
-                old_actor,
-                follow_request_id,
-                follow_request_has_deprecated_ap_id,
-            ).await?.enqueue(db_client).await?;
-        };
         if follower.id == new_profile.id {
             // Don't self-follow
             continue;

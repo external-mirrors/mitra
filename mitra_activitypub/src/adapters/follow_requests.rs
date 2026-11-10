@@ -5,6 +5,7 @@ use mitra_models::{
     accounts::types::User,
     activitypub::queries::add_relationship,
     database::{DatabaseClient, DatabaseError},
+    groups::helpers::leave_private_group,
     notifications::helpers::create_follow_request_notification,
     profiles::types::DbActorProfile,
     relationships::{
@@ -12,6 +13,7 @@ use mitra_models::{
         queries::{
             follow_request_accepted,
             get_relationship_by_id,
+            unfollow,
         },
         types::RelationshipDetailed,
     },
@@ -20,7 +22,10 @@ use mitra_models::{
 use crate::{
     adapters::users::get_actor_data,
     authority::{Authority, AuthorityRoot},
-    builders::follow::prepare_follow,
+    builders::{
+        follow::prepare_follow,
+        undo_follow::prepare_undo_follow,
+    },
     utils::parse_id_from_db_lenient,
 };
 
@@ -105,6 +110,43 @@ pub async fn follow_or_create_request(
         // or if already following
         Err(DatabaseError::AlreadyExists(_)) => (),
         Err(other_error) => return Err(other_error),
+    };
+    Ok(())
+}
+
+pub async fn unfollow_and_undo(
+    db_client: &mut impl DatabaseClient,
+    instance: &Instance,
+    source: &User,
+    target: &DbActorProfile,
+) -> Result<(), DatabaseError> {
+    let maybe_follow_request_deleted = unfollow(
+        db_client,
+        source.id,
+        target.id,
+    ).await?;
+    if target.is_private_group() {
+        leave_private_group(
+            db_client,
+            source.id,
+            target.id,
+        ).await?;
+    };
+    if let Some(ref remote_actor) = target.actor_json {
+        // Remote follow
+        let (
+            follow_request_id,
+            follow_request_has_deprecated_ap_id,
+        ) = maybe_follow_request_deleted
+            .ok_or(DatabaseError::type_error())?;
+        prepare_undo_follow(
+            db_client,
+            instance,
+            source,
+            remote_actor,
+            follow_request_id,
+            follow_request_has_deprecated_ap_id,
+        ).await?.enqueue(db_client).await?;
     };
     Ok(())
 }

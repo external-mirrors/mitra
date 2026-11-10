@@ -48,13 +48,15 @@ use uuid::Uuid;
 
 use mitra_activitypub::{
     adapters::{
-        follow_requests::follow_or_create_request,
+        follow_requests::{
+            follow_or_create_request,
+            unfollow_and_undo,
+        },
         users::create_or_update_local_actor,
     },
     authority::Authority,
     builders::{
         reject_follow::prepare_reject_follow,
-        undo_follow::prepare_undo_follow,
         update_person::prepare_update_person,
     },
     identifiers::local_actor_id,
@@ -87,7 +89,6 @@ use mitra_models::{
         DatabaseConnectionPool,
         DatabaseError,
     },
-    groups::helpers::leave_private_group,
     notifications::helpers::create_signup_notifications,
     posts::queries::get_posts_by_author,
     profiles::queries::{
@@ -108,7 +109,6 @@ use mitra_models::{
         hide_reposts,
         show_replies,
         show_reposts,
-        unfollow,
         mute,
         unmute,
     },
@@ -851,32 +851,13 @@ async fn unfollow_account(
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let target = get_profile_by_id(db_client, *account_id).await?;
-    match unfollow(db_client, current_user.id, target.id).await {
-        Ok(maybe_follow_request_deleted) => {
-            if target.is_private_group() {
-                leave_private_group(
-                    db_client,
-                    current_user.id,
-                    target.id,
-                ).await?;
-            };
-            if let Some(remote_actor) = target.actor_json {
-                // Remote follow
-                let (
-                    follow_request_id,
-                    follow_request_has_deprecated_ap_id,
-                ) = maybe_follow_request_deleted
-                    .ok_or(DatabaseError::type_error())?;
-                prepare_undo_follow(
-                    db_client,
-                    &config.instance(),
-                    &current_user,
-                    &remote_actor,
-                    follow_request_id,
-                    follow_request_has_deprecated_ap_id,
-                ).await?.enqueue(db_client).await?;
-            };
-        },
+    match unfollow_and_undo(
+        db_client,
+        &config.instance(),
+        &current_user,
+        &target,
+    ).await {
+        Ok(_) => (),
         Err(DatabaseError::NotFound(_)) => (), // not following
         Err(other_error) => return Err(other_error.into()),
     };

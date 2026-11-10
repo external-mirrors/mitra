@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `create` and `send` commands to `ap` command group.
 - Added `create-system`, `export-posts` and `import-posts` commands to `account` command group.
 - Show command groups in `help` output and hide legacy commands.
+- Leave private group when processing `Move` and when importing followers.
 
 ### Deprecated
 
