@@ -2,6 +2,7 @@ use actix_web::{
     delete,
     dev::ConnectionInfo,
     get,
+    http::Uri,
     post,
     patch,
     web,
@@ -35,6 +36,7 @@ use mitra_models::{
     },
     groups::{
         helpers::{
+            can_manage_group,
             create_group,
             get_affiliated_profiles,
             get_group_by_id,
@@ -49,7 +51,7 @@ use mitra_models::{
     },
     relationships::{
         helpers::create_follow_request,
-        queries::has_relationship,
+        queries::get_followers_paginated,
         types::RelationshipType,
     },
 };
@@ -72,11 +74,12 @@ use crate::{
                 parse_microsyntaxes,
                 parse_profile_bio,
             },
-            types::Account,
+            types::{Account, FollowListQueryParams},
         },
         auth::get_current_user,
         errors::MastodonError,
         media_server::ClientMediaServer,
+        pagination::{get_last_item, get_paginated_response},
     },
 };
 
@@ -191,11 +194,10 @@ async fn get_group_source(
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let group = get_group_account_by_id(db_client, *group_id).await?;
-    if !has_relationship(
+    if !can_manage_group(
         db_client,
         current_user.id,
         group.id,
-        RelationshipType::GroupAdmin,
     ).await? {
         return Err(MastodonError::PermissionError);
     };
@@ -217,11 +219,10 @@ async fn update_group_view(
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let mut group = get_group_account_by_id(db_client, *group_id).await?;
-    if !has_relationship(
+    if !can_manage_group(
         db_client,
         current_user.id,
         group.id,
-        RelationshipType::GroupAdmin,
     ).await? {
         return Err(MastodonError::PermissionError);
     };
@@ -277,11 +278,10 @@ async fn delete_group_view(
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let group = get_group_account_by_id(db_client, *group_id).await?;
-    if !has_relationship(
+    if !can_manage_group(
         db_client,
         current_user.id,
         group.id,
-        RelationshipType::GroupAdmin,
     ).await? {
         return Err(MastodonError::PermissionError);
     };
@@ -304,6 +304,7 @@ async fn group_members_view(
     let base_url = get_request_base_url(connection_info);
     let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
+    // Member list is always public
     let mut affiliated = get_affiliated_profiles(db_client, group.id).await?;
     affiliated.sort_by_key(|related_profile| {
         let weight = match related_profile.relationship_type {
@@ -325,6 +326,53 @@ async fn group_members_view(
     Ok(HttpResponse::Ok().json(affiliations))
 }
 
+#[get("/{group_id}/followers")]
+async fn group_followers_view(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    group_id: web::Path<Uuid>,
+    request_uri: Uri,
+    query_params: web::Query<FollowListQueryParams>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let group = get_group_by_id(db_client, *group_id).await?;
+    if !can_manage_group(
+        db_client,
+        current_user.id,
+        group.id,
+    ).await? {
+        return Err(MastodonError::PermissionError);
+    };
+    let followers = get_followers_paginated(
+        db_client,
+        group.id,
+        query_params.max_id,
+        query_params.limit.inner(),
+    ).await?;
+    let maybe_last_id = get_last_item(&followers, &query_params.limit)
+        .map(|item| item.related_id);
+    let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
+    let media_server = ClientMediaServer::new(&config, &base_url);
+    let accounts: Vec<Account> = followers.into_iter()
+        .map(|item| Account::from_profile(
+            &authority,
+            &media_server,
+            item.profile,
+        ))
+        .collect();
+    let response = get_paginated_response(
+        &base_url,
+        &request_uri,
+        accounts,
+        maybe_last_id,
+    );
+    Ok(response)
+}
+
 pub fn group_api_scope() -> Scope {
     web::scope("/v1/groups")
         .service(create_group_view)
@@ -333,4 +381,5 @@ pub fn group_api_scope() -> Scope {
         .service(update_group_view)
         .service(delete_group_view)
         .service(group_members_view)
+        .service(group_followers_view)
 }

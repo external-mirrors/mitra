@@ -63,17 +63,32 @@ pub async fn get_group_by_id(
     Ok(profile)
 }
 
+// - Edit group profile
+// - Delete group
+// - View followers
+pub async fn can_manage_group(
+    db_client: &impl DatabaseClient,
+    user_id: Uuid,
+    group_id: Uuid,
+) -> Result<bool, DatabaseError> {
+    has_relationship(
+        db_client,
+        user_id,
+        group_id,
+        RelationshipType::GroupAdmin,
+    ).await
+}
+
 pub async fn can_add_remove_admins(
     db_client: &impl DatabaseClient,
     member_id: Uuid,
     group_id: Uuid,
 ) -> Result<bool, DatabaseError> {
     // Power levels are not checked
-    has_relationship(
+    can_manage_group(
         db_client,
         member_id,
         group_id,
-        RelationshipType::GroupAdmin,
     ).await
 }
 
