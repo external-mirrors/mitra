@@ -157,6 +157,10 @@ pub async fn import_followers_task(
             },
             Err(other_error) => return Err(other_error.into()),
         };
+        if follower.id == user.id {
+            // Don't self-follow
+            continue;
+        };
         if let Some(remote_actor) = follower.actor_json {
             // Add remote actor to activity recipients list
             remote_followers.push(remote_actor);
