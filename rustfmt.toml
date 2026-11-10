@@ -16,7 +16,7 @@ imports_layout = "Vertical"
 trailing_comma = "Vertical"
 
 # Semicolon after `for` ? https://github.com/rust-lang/rustfmt/issues/4222
-# Preserve traling semicolons https://github.com/rust-lang/rustfmt/pull/6149
+# Preserve trailing semicolons https://github.com/rust-lang/rustfmt/pull/6149
 # Don't break await https://github.com/rust-lang/rustfmt/issues/6715
 # Function arguments per line https://github.com/rust-lang/rustfmt/issues/4306
 # Underindented chains https://github.com/rust-lang/rustfmt/issues/3157

@@ -23,9 +23,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Deprecated
 
-- Deprecated `load-portable-object`, `create-monero-signature`, `verify-monero-signature` and `get-payment-address` commands.
-- Deprecated `get-config`, `update-config`, `add-filter-rule`, `remove-filter-rule`, `list-filter-rules`, `generate-invite-code`, `list-invite-codes`, `create-account`, `create-system-account`, `list-accounts`, `set-password`, `set-role`, `revoke-oauth-tokens`, `import-object`, `fetch-object`, `webfinger`, `create-activity`, `send-activity`, `delete-user`, `create-post`, `import-posts`, `export-posts`, `delete-post`, `add-emoji`, `import-emoji`, `delete-emoji`, `delete-extraneous-posts`, `prune-reposts`, `delete-unused-attachments`, `delete-empty-profiles`, `list-local-files`, `delete-orphaned-files`, `list-unreachable-actors`, `create-monero-wallet`, `reopen-invoice`, `repair-invoice`, `list-active-addresses`, `instance-report` (replaced by grouped commands).
 - Deprecated `/api/v1/statuses/{status_id}/make_permanent` API endpoint (IPFS integration).
+- Deprecated `load-portable-object`, `create-monero-signature`, `verify-monero-signature` and `get-payment-address` commands.
+- Deprecated `get-config` command (replaced with `config get`).
+- Deprecated `update-config` command (replaced with `config set`).
+- Deprecated `add-filter-rule` command (replaced with `filter add`).
+- Deprecated `remove-filter-rule` command (replaced with `filter remove`).
+- Deprecated `list-filter-rules` command (replaced with `filter list`).
+- Deprecated `generate-invite-code` command (replaced with `invite create`).
+- Deprecated `list-invite-codes` command (replaced with `invite list`).
+- Deprecated `create-account` command (replaced with `account create`).
+- Deprecated `create-system-account` command (replaced with `account create-system`).
+- Deprecated `list-accounts` command (replaced with `account list`).
+- Deprecated `set-password` command (replaced with `account password`).
+- Deprecated `set-role` command (replaced with `account role`).
+- Deprecated `revoke-oauth-tokens` command (replaced with `account logout`).
+- Deprecated `import-object` command (replaced with `ap import`).
+- Deprecated `fetch-object` command (replaced with `ap fetch`).
+- Deprecated `webfinger` command (replaced with `ap webfinger`).
+- Deprecated `create-activity` command (replaced with `ap create`).
+- Deprecated `send-activity` command (replaced with `ap send`).
+- Deprecated `delete-user` command (replaced with `account delete` and `user delete`).
+- Deprecated `create-post` command (replaced with `post create`).
+- Deprecated `import-posts` command (replaced with `account import-posts`).
+- Deprecated `export-posts` command (replaced with `account export-posts`).
+- Deprecated `delete-post` command (replaced with `post delete`).
+- Deprecated `add-emoji` command (replaced with `emoji add`).
+- Deprecated `import-emoji` command (replaced with `emoji copy`).
+- Deprecated `delete-emoji` command (replaced with `emoji delete`).
+- Deprecated `delete-extraneous-posts` command (replaced with `prune posts`).
+- Deprecated `prune-reposts` command (replaced with `prune reposts`).
+- Deprecated `delete-unused-attachments` command (replaced with `prune attachments`).
+- Deprecated `delete-empty-profiles` command (replaced with `prune profiles`).
+- Deprecated `list-local-files` command (replaced with `media local`).
+- Deprecated `delete-orphaned-files` command (replaced with `media delete-orphaned`).
+- Deprecated `list-unreachable-actors` command (replaced with `user unreachable`).
+- Deprecated `create-monero-wallet` command (replaced with `monero create`).
+- Deprecated `reopen-invoice` command (replaced with `invoice reopen`).
+- Deprecated `repair-invoice` command (replcaed with `invoice repair`).
+- Deprecated `list-active-addresses` command (replaced with `monero active-addresses`).
+- Deprecated `instance-report` command (replaced with `status`).
 
 ### Fixed
 
