@@ -476,6 +476,8 @@ async fn get_status(
     let db_client = &**get_database_client(&db_pool).await?;
     let maybe_current_user = match auth {
         Some(auth) => Some(get_current_user(db_client, auth.token()).await?),
+        None if config.profile_access_limited =>
+            return Err(MastodonError::PermissionError),
         None => None,
     };
     let post = get_post_by_id_for_view(
