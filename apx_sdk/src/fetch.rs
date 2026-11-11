@@ -256,7 +256,7 @@ pub async fn fetch_object(
         };
         // Redirected
         redirect_count += 1;
-        if redirect_count >= REDIRECT_LIMIT {
+        if redirect_count > REDIRECT_LIMIT {
             return Err(FetchError::RedirectionError);
         };
         target_url = response.headers()

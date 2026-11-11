@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Changed allowed number of redirects in `fetch_object` to 3.
+
 ## [0.28.0] - 2026-11-03
 
 ### Added
